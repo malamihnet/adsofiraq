@@ -94,10 +94,7 @@ class CampaignController extends Controller
     public function show(Campaign $campaign): View
     {
         if ($campaign->status !== 'approved') {
-            $user = auth()->user();
-            if (! $user || (! $user->isAdmin() && $user->id !== $campaign->user_id)) {
-                abort(404);
-            }
+            abort(404);
         }
 
         $this->authorize('view', $campaign);
@@ -121,6 +118,25 @@ class CampaignController extends Controller
         $isWatched = $user ? $campaign->isWatchedBy($user) : false;
 
         return view('campaigns.show', compact('campaign', 'relatedCampaigns', 'isBookmarked', 'isWatched'));
+    }
+
+    public function pendingReview(Campaign $campaign): View|RedirectResponse
+    {
+        $user = auth()->user();
+
+        if (! $user || (! $user->isAdmin() && $user->id !== $campaign->user_id)) {
+            abort(403);
+        }
+
+        if ($campaign->status === 'approved') {
+            return redirect()
+                ->route('campaigns.show', $campaign)
+                ->with('success', 'This campaign is now live on the archive.');
+        }
+
+        return view('campaigns.pending-review', [
+            'campaign' => $campaign,
+        ]);
     }
 
     public function create(): View
@@ -174,8 +190,9 @@ class CampaignController extends Controller
 
             Log::info('Campaign created', ['campaign_id' => $campaign->id, 'user_id' => $request->user()->id]);
 
-            return redirect()->route('campaigns.show', $campaign)
-                ->with('success', 'Campaign submitted successfully and is pending review.');
+            return redirect()
+                ->route('campaigns.pending-review', $campaign)
+                ->with('success', 'Your campaign has been submitted successfully and is pending review.');
         } catch (\Throwable $e) {
             report($e);
 

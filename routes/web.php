@@ -36,6 +36,7 @@ Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns.
 Route::middleware(['auth', 'verified', 'noindex'])->group(function () {
     Route::get('/campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
     Route::post('/campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
+    Route::get('/campaigns/{campaign:slug}/pending-review', [CampaignController::class, 'pendingReview'])->name('campaigns.pending-review');
 });
 
 Route::get('/campaigns/{campaign:slug}', [CampaignController::class, 'show'])->name('campaigns.show');
