@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        @apply scroll-smooth;
+    }
+}
+
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium tracking-wide transition-colors duration-200;
+    }
+
+    .btn-primary {
+        @apply btn bg-archive-black text-white hover:bg-neutral-800;
+    }
+
+    .btn-outline {
+        @apply btn border border-archive-black text-archive-black hover:bg-archive-black hover:text-white;
+    }
+
+    .input-field {
+        @apply w-full border border-archive-border bg-white px-4 py-2.5 text-sm text-archive-black placeholder:text-neutral-400 focus:border-archive-black focus:outline-none focus:ring-0;
+    }
+
+    .section-title {
+        @apply font-display text-3xl font-normal tracking-tight text-archive-black md:text-4xl;
+    }
+
+    .section-label {
+        @apply text-xs font-medium uppercase tracking-widest text-archive-gray;
+    }
+
+    /* Plyr — Ads of Iraq cinematic theme */
+    .campaign-plyr {
+        --plyr-color-main: #ffffff;
+        --plyr-video-background: #000000;
+        --plyr-focus-visible-color: #ffffff;
+        --plyr-video-control-color: #ffffff;
+        --plyr-video-control-color-hover: #0a0a0a;
+        --plyr-video-control-background-hover: #ffffff;
+        --plyr-range-fill-background: #ffffff;
+        --plyr-video-progress-buffered-background: rgba(255, 255, 255, 0.25);
+        --plyr-font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+        --plyr-control-radius: 2px;
+        --plyr-menu-radius: 2px;
+
+        @apply w-full overflow-hidden rounded-sm bg-black;
+    }
+
+    .campaign-plyr .plyr {
+        @apply rounded-sm;
+    }
+
+    .campaign-plyr .plyr--video {
+        @apply bg-black;
+    }
+
+    .campaign-plyr .plyr__poster {
+        background-color: #000;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .campaign-plyr video {
+        background-color: #000;
+        object-fit: cover;
+    }
+}

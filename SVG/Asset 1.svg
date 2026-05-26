@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 503.93 202.61">
+  <defs>
+    <style>
+      .cls-1 {
+        font-size: 36.89px;
+      }
+
+      .cls-1, .cls-2 {
+        fill: #231f20;
+        font-family: SchibstedGrotesk-BoldItalic, 'Schibsted Grotesk';
+        font-style: italic;
+        font-weight: 700;
+      }
+
+      .cls-2 {
+        font-size: 73.78px;
+      }
+    </style>
+  </defs>
+  <g id="Layer_1-2" data-name="Layer 1">
+    <g>
+      <path d="M260.79,113.57l-3.73-36.68-28.82,3.66-13.86,20.9,18.32,17.37c2.06-.67,3.59-1.27,5.75-1.53l-16.04,8.78c-10.55,5.41-20.38,11.32-30.3,17.86l-30.28,21.07,35.61-58.69-36.09-35.12,58.09-.06L264.96,0l3.83,40.35,3.25,28.1,41.93-.1-40.91,6.48,3.4,26.97,4.65,36.3,8.36,64.5-33.51-36.09-31.42-33.26,14.62-7.55,25.36,25.55-3.72-37.68ZM256.27,69.32l-2.89-26.64-18.18,27.39,21.07-.75ZM205.75,93.06l6.73-10.78-16.04,1.83,9.31,8.95ZM215.73,124.71l-10.27-10.29-12.74,19.08,23-8.79Z"/>
+      <text class="cls-2" transform="translate(4 123.04)"><tspan x="0" y="0">ADS</tspan></text>
+      <text class="cls-1" transform="translate(105.86 160.04)"><tspan x="0" y="0">OF</tspan></text>
+      <text class="cls-2" transform="translate(320.05 123.04)"><tspan x="0" y="0">IRAQ</tspan></text>
+    </g>
+  </g>
+</svg>
