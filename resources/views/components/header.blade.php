@@ -20,6 +20,7 @@
         ['route' => 'agencies.*', 'href' => route('agencies.index'), 'label' => 'Agencies'],
         ['route' => 'brands.*', 'href' => route('brands.index'), 'label' => 'Brands'],
         ['route' => 'people.*', 'href' => route('people.index'), 'label' => 'People'],
+        ['route' => 'campaigns.create', 'href' => $submitUrl, 'label' => 'Submit'],
     ];
 
     $logoUrl = url('/images/Logo-main.svg');
@@ -68,12 +69,6 @@
             @guest
                 <a href="{{ route('login') }}" class="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white">Login</a>
                 <a href="{{ route('register') }}" class="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white">Register</a>
-                <a href="{{ $submitUrl }}" class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white" aria-label="Submit">
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3.75m0 0L8.25 7.5M12 3.75l3.75 3.75M4.5 13.5v4.875c0 .621.504 1.125 1.125 1.125h13.25c.621 0 1.125-.504 1.125-1.125V13.5"/>
-                    </svg>
-                    <span>Submit</span>
-                </a>
             @else
                 <a
                     href="{{ route('profile.show.redirect') }}"
@@ -96,12 +91,6 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                         </svg>
                         <span>Watching</span>
-                    </a>
-                    <a href="{{ $submitUrl }}" class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white" aria-label="Submit">
-                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3.75m0 0L8.25 7.5M12 3.75l3.75 3.75M4.5 13.5v4.875c0 .621.504 1.125 1.125 1.125h13.25c.621 0 1.125-.504 1.125-1.125V13.5"/>
-                        </svg>
-                        <span>Submit</span>
                     </a>
                     <form method="POST" action="{{ route('logout') }}" class="inline-flex">
                         @csrf
@@ -173,12 +162,6 @@
             @guest
                 <a href="{{ route('login') }}" @click="open = false" class="px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 hover:text-white">Login</a>
                 <a href="{{ route('register') }}" @click="open = false" class="px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 hover:text-white">Register</a>
-                <a href="{{ $submitUrl }}" @click="open = false" class="inline-flex items-center gap-2 px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 hover:text-white">
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3.75m0 0L8.25 7.5M12 3.75l3.75 3.75M4.5 13.5v4.875c0 .621.504 1.125 1.125 1.125h13.25c.621 0 1.125-.504 1.125-1.125V13.5"/>
-                    </svg>
-                    Submit
-                </a>
             @else
                 <div class="flex items-center gap-3 px-2 py-3">
                     <a href="{{ route('profile.show.redirect') }}" @click="open = false" class="flex min-w-0 items-center gap-3">
@@ -205,12 +188,6 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                         </svg>
                         Watching
-                    </a>
-                    <a href="{{ $submitUrl }}" @click="open = false" class="inline-flex items-center gap-2 px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 hover:text-white">
-                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3.75m0 0L8.25 7.5M12 3.75l3.75 3.75M4.5 13.5v4.875c0 .621.504 1.125 1.125 1.125h13.25c.621 0 1.125-.504 1.125-1.125V13.5"/>
-                        </svg>
-                        Submit
                     </a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
