@@ -40,4 +40,14 @@ return Application::configure(basePath: dirname(__DIR__))
                     ->with('error', 'Invalid or expired verification link.');
             }
         });
+
+        $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, \Illuminate\Http\Request $request) {
+            if ($request->routeIs('campaigns.store', 'campaigns.update')) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'media' => 'The uploaded file is too large. On cPanel, increase PHP upload_max_filesize and post_max_size, then try again.',
+                    ]);
+            }
+        });
     })->create();

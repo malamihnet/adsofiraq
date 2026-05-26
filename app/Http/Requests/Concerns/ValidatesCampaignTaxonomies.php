@@ -53,8 +53,6 @@ trait ValidatesCampaignTaxonomies
                 $value = trim((string) $value);
 
                 if ($value === '') {
-                    $validator->errors()->add("{$field}.{$index}", 'This value is invalid.');
-
                     continue;
                 }
 

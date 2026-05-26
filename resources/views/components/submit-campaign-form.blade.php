@@ -7,6 +7,25 @@
         @method('PUT')
     @endif
 
+    @if ($errors->any())
+        <div class="border border-red-300 bg-red-50 px-4 py-4 text-sm text-red-800" role="alert">
+            <p class="font-medium">Please fix the following before submitting:</p>
+            <ul class="mt-2 list-inside list-disc space-y-1">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @error('form')
+        <div class="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $message }}</div>
+    @enderror
+
+    @error('media')
+        <div class="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $message }}</div>
+    @enderror
+
     <div class="grid gap-6 md:grid-cols-2">
         <div class="md:col-span-2">
             <label class="section-label mb-2 block">Campaign Title *</label>
@@ -28,11 +47,12 @@
         <div>
             <label class="section-label mb-2 block">Publish / Creation Date</label>
             <input type="date" name="published_at" value="{{ old('published_at', $campaign?->published_at?->format('Y-m-d')) }}" class="input-field">
+            @error('published_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
 
         <div class="md:col-span-2">
-            <label class="section-label mb-2 block">Description *</label>
-            <textarea name="description" rows="6" required class="input-field">{{ old('description', $campaign?->description) }}</textarea>
+            <label class="section-label mb-2 block">Description</label>
+            <textarea name="description" rows="6" class="input-field" placeholder="Optional summary of the campaign">{{ old('description', $campaign?->description) }}</textarea>
             @error('description')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
 
@@ -82,5 +102,11 @@
     <div class="border-t border-archive-border pt-8">
         <button type="submit" class="btn-primary">{{ $campaign ? 'Update Campaign' : 'Submit Campaign' }}</button>
         <p class="mt-4 text-sm text-archive-gray">Submitted campaigns require admin approval before appearing publicly.</p>
+        <p class="mt-2 text-xs text-archive-gray">
+            Large uploads may fail if server limits are too low. On cPanel, check PHP
+            <code class="text-xs">upload_max_filesize</code>,
+            <code class="text-xs">post_max_size</code>, and
+            <code class="text-xs">max_file_uploads</code>.
+        </p>
     </div>
 </form>

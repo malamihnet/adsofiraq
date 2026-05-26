@@ -16,6 +16,7 @@ use App\Services\CampaignVideoService;
 use App\Services\TaxonomyService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class CampaignController extends Controller
@@ -131,45 +132,64 @@ class CampaignController extends Controller
 
     public function store(StoreCampaignRequest $request): RedirectResponse
     {
-        $campaign = Campaign::create([
-            'user_id' => $request->user()->id,
-            'title' => $request->title,
-            'published_at' => $request->published_at,
-            'description' => $request->description,
-            'credits' => $request->credits,
-            'status' => 'pending',
-            'is_student' => $request->boolean('is_student'),
-            'is_nsfw' => $request->boolean('is_nsfw'),
-            'submission_notes' => $request->submission_notes,
-        ]);
+        Log::info('Campaign submit started', ['user_id' => $request->user()->id]);
 
-        $this->taxonomySyncService->syncAll(
-            $campaign,
-            agencies: $request->input('agencies', []),
-            brands: $request->input('brands', []),
-            industries: $request->input('industries', []),
-            mediumTypes: $request->input('medium_types', []),
-            countries: $request->input('countries', []),
-        );
-
-        $this->videoService->syncFromRequest($campaign, $request);
-
-        $manualThumbnail = $request->hasFile('thumbnail');
-
-        if ($manualThumbnail) {
-            $campaign->update([
-                'thumbnail_path' => $this->uploadService->storeThumbnail($campaign, $request->file('thumbnail')),
+        try {
+            $campaign = Campaign::create([
+                'user_id' => $request->user()->id,
+                'title' => $request->title,
+                'published_at' => $request->published_at,
+                'description' => $request->description ?? '',
+                'credits' => $request->credits,
+                'status' => 'pending',
+                'is_student' => $request->boolean('is_student'),
+                'is_nsfw' => $request->boolean('is_nsfw'),
+                'submission_notes' => $request->submission_notes,
             ]);
+
+            $this->taxonomySyncService->syncAll(
+                $campaign,
+                agencies: $request->input('agencies', []),
+                brands: $request->input('brands', []),
+                industries: $request->input('industries', []),
+                mediumTypes: $request->input('medium_types', []),
+                countries: $request->input('countries', []),
+            );
+
+            $this->videoService->syncFromRequest($campaign, $request);
+
+            $manualThumbnail = $request->hasFile('thumbnail');
+
+            if ($manualThumbnail) {
+                $campaign->update([
+                    'thumbnail_path' => $this->uploadService->storeThumbnail($campaign, $request->file('thumbnail')),
+                ]);
+            }
+
+            $firstNewAsset = $request->hasFile('assets')
+                ? $this->uploadService->storeAssets($campaign, $request->file('assets'))
+                : null;
+
+            $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
+
+            Log::info('Campaign created', ['campaign_id' => $campaign->id, 'user_id' => $request->user()->id]);
+
+            return redirect()->route('campaigns.show', $campaign)
+                ->with('success', 'Campaign submitted successfully and is pending review.');
+        } catch (\Throwable $e) {
+            report($e);
+
+            Log::warning('Campaign submit failed', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'form' => 'We could not save your campaign. Please check your files and try again.',
+                ]);
         }
-
-        $firstNewAsset = $request->hasFile('assets')
-            ? $this->uploadService->storeAssets($campaign, $request->file('assets'))
-            : null;
-
-        $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
-
-        return redirect()->route('campaigns.show', $campaign)
-            ->with('success', 'Your campaign has been submitted and is pending review.');
     }
 
     public function edit(Campaign $campaign): View
