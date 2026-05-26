@@ -124,9 +124,16 @@ class CampaignController extends Controller
     {
         $user = auth()->user();
 
-        if (! $user || (! $user->isAdmin() && $user->id !== $campaign->user_id)) {
-            abort(403);
-        }
+        Log::info('Pending review access check', [
+            'campaign_id' => $campaign->id,
+            'campaign_user_id' => $campaign->user_id ?? null,
+            'submitted_by' => $campaign->getAttribute('submitted_by'),
+            'created_by' => $campaign->getAttribute('created_by'),
+            'auth_id' => auth()->id(),
+            'is_admin' => $user?->isAdmin(),
+        ]);
+
+        $this->authorize('viewPendingReview', $campaign);
 
         if ($campaign->status === 'approved') {
             return redirect()
@@ -152,7 +159,7 @@ class CampaignController extends Controller
 
         try {
             $campaign = Campaign::create([
-                'user_id' => $request->user()->id,
+                'user_id' => auth()->id(),
                 'title' => $request->title,
                 'published_at' => $request->published_at,
                 'description' => $request->description ?? '',
@@ -191,7 +198,7 @@ class CampaignController extends Controller
             Log::info('Campaign created', ['campaign_id' => $campaign->id, 'user_id' => $request->user()->id]);
 
             return redirect()
-                ->route('campaigns.pending-review', $campaign)
+                ->route('campaigns.pending-review', $campaign->fresh())
                 ->with('success', 'Your campaign has been submitted successfully and is pending review.');
         } catch (\Throwable $e) {
             report($e);

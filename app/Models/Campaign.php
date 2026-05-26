@@ -143,6 +143,32 @@ class Campaign extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function isOwnedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        $authId = (int) $user->id;
+
+        foreach (['user_id', 'submitted_by', 'created_by'] as $ownerColumn) {
+            $ownerId = $this->getAttribute($ownerColumn);
+
+            if ($ownerId !== null && $authId === (int) $ownerId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        $field = $field ?: $this->getRouteKeyName();
+
+        return static::query()->where($field, $value)->first();
+    }
+
     public function brands(): BelongsToMany
     {
         return $this->belongsToMany(Brand::class, 'brand_campaign')->withTimestamps();

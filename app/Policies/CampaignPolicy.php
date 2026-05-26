@@ -18,7 +18,12 @@ class CampaignPolicy
             return true;
         }
 
-        return $user && ($user->isAdmin() || $user->id === $campaign->user_id);
+        return $user && ($user->isAdmin() || $campaign->isOwnedBy($user));
+    }
+
+    public function viewPendingReview(User $user, Campaign $campaign): bool
+    {
+        return $user->isAdmin() || $campaign->isOwnedBy($user);
     }
 
     public function create(User $user): bool
@@ -32,13 +37,13 @@ class CampaignPolicy
             return true;
         }
 
-        return $user->id === $campaign->user_id
+        return $campaign->isOwnedBy($user)
             && in_array($campaign->status, ['pending', 'rejected']);
     }
 
     public function delete(User $user, Campaign $campaign): bool
     {
-        return $user->isAdmin() || $user->id === $campaign->user_id;
+        return $user->isAdmin() || $campaign->isOwnedBy($user);
     }
 
     public function moderate(User $user, Campaign $campaign): bool
