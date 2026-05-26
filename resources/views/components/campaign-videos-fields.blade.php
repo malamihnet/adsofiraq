@@ -43,11 +43,26 @@
     <p class="section-label mb-2">Videos</p>
     <p class="mb-4 text-xs text-archive-gray">
         You can add multiple campaign videos. Each video can be an uploaded file, YouTube link, or Vimeo link.
+        For large videos, we recommend adding a Vimeo or YouTube link instead of uploading directly.
     </p>
+
+    @php $maxVideoMb = max(1, (int) round((int) config('upload.max_video_kb', 51200) / 1024)); @endphp
 
     @error('videos')
         <p class="mb-4 text-sm text-red-600">{{ $message }}</p>
     @enderror
+
+    @foreach(old('videos', []) as $videoIndex => $videoRow)
+        @error("videos.{$videoIndex}.file")
+            <p class="mb-2 text-sm text-red-600">Video {{ (int) $videoIndex + 1 }}: {{ $message }}</p>
+        @enderror
+        @error("videos.{$videoIndex}.url")
+            <p class="mb-2 text-sm text-red-600">Video {{ (int) $videoIndex + 1 }}: {{ $message }}</p>
+        @enderror
+        @error("videos.{$videoIndex}.type")
+            <p class="mb-2 text-sm text-red-600">Video {{ (int) $videoIndex + 1 }}: {{ $message }}</p>
+        @enderror
+    @endforeach
 
     <div class="space-y-6">
         <template x-for="(row, index) in rows" :key="row.key">
@@ -85,7 +100,7 @@
                         class="input-field"
                         :disabled="row.type !== 'file'"
                     >
-                    <p class="text-xs text-archive-gray">MP4, WebM, or MOV. Max {{ (int) config('upload.max_video_kb') }} KB.</p>
+                    <p class="text-xs text-archive-gray">MP4, WebM, or MOV. Max {{ $maxVideoMb }}MB per file.</p>
                     <p class="text-xs text-archive-gray">If no thumbnail or still is uploaded, Ads of Iraq will try to use a frame from your uploaded video.</p>
                     <template x-if="row.hasExistingFile && row.existingFileUrl">
                         <p class="text-xs text-archive-gray">

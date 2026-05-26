@@ -60,13 +60,15 @@ class StoreCampaignRequest extends FormRequest
 
     public function messages(): array
     {
+        $maxMb = max(1, (int) round((int) config('upload.max_video_kb', 51200) / 1024));
+
         return [
             'title.required' => 'Please enter a campaign title.',
             'thumbnail.max' => 'The thumbnail is too large.',
             'thumbnail.image' => 'The thumbnail must be an image file.',
             'assets.*.max' => 'One or more stills are too large.',
             'assets.*.image' => 'Stills must be image files (JPG, PNG, or WebP).',
-            'videos.*.file.max' => 'The uploaded video file is too large.',
+            'videos.*.file.max' => "Video file is too large. Please upload under {$maxMb}MB or use a video link.",
         ];
     }
 
@@ -87,9 +89,19 @@ class StoreCampaignRequest extends FormRequest
             $validator->errors()->add('brands', 'Please add at least one brand or client name.');
         }
 
-        if (! $this->hasMedia()) {
-            $validator->errors()->add('media', 'Please add at least one still, thumbnail, or video.');
+        if ($this->hasInvalidVideoFileUpload()) {
+            return;
         }
+
+        if ($this->hasMedia()) {
+            return;
+        }
+
+        if ($validator->errors()->has('media')) {
+            return;
+        }
+
+        $validator->errors()->add('media', 'Please add at least one still, thumbnail, or video (upload or YouTube/Vimeo link).');
     }
 
     protected function hasMedia(): bool
@@ -106,20 +118,8 @@ class StoreCampaignRequest extends FormRequest
             }
         }
 
-        foreach ($this->input('videos', []) as $index => $row) {
-            if (! is_array($row) || empty($row['type'])) {
-                continue;
-            }
-
-            if ($row['type'] === 'file' && $this->hasFile("videos.{$index}.file")) {
-                if ($this->file("videos.{$index}.file")?->isValid()) {
-                    return true;
-                }
-            }
-
-            if (in_array($row['type'], ['youtube', 'vimeo'], true) && trim((string) ($row['url'] ?? '')) !== '') {
-                return true;
-            }
+        if ($this->hasValidVideoFileUpload() || $this->hasValidVideoUrl()) {
+            return true;
         }
 
         return false;

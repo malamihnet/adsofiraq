@@ -107,11 +107,14 @@ Verify uploads work by submitting a test campaign after deployment.
 
 ## 7. PHP Configuration
 
-In cPanel → **MultiPHP INI Editor**, ensure:
+In cPanel → **MultiPHP INI Editor**, ensure (recommended for campaign video uploads):
 
-- `upload_max_filesize` ≥ 5M
-- `post_max_size` ≥ 10M
-- `memory_limit` ≥ 128M
+- `upload_max_filesize` = 100M or higher
+- `post_max_size` = 120M or higher (must be larger than `upload_max_filesize`)
+- `max_file_uploads` = 20 or higher
+- `max_execution_time` = 300
+- `max_input_time` = 300
+- `memory_limit` ≥ 256M
 - PHP version ≥ 8.2
 
 Match `.env` upload limits:

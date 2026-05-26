@@ -103,10 +103,9 @@
         <button type="submit" class="btn-primary">{{ $campaign ? 'Update Campaign' : 'Submit Campaign' }}</button>
         <p class="mt-4 text-sm text-archive-gray">Submitted campaigns require admin approval before appearing publicly.</p>
         <p class="mt-2 text-xs text-archive-gray">
-            Large uploads may fail if server limits are too low. On cPanel, check PHP
-            <code class="text-xs">upload_max_filesize</code>,
-            <code class="text-xs">post_max_size</code>, and
-            <code class="text-xs">max_file_uploads</code>.
+            Large video uploads may fail on shared hosting. Prefer a YouTube or Vimeo link for big files.
+            On cPanel, set <code class="text-xs">upload_max_filesize</code> and <code class="text-xs">post_max_size</code>
+            to at least 100M / 120M.
         </p>
     </div>
 </form>
