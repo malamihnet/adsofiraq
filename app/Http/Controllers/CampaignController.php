@@ -7,9 +7,11 @@ use App\Http\Requests\UpdateCampaignRequest;
 use App\Models\Agency;
 use App\Models\Brand;
 use App\Models\Campaign;
+use App\Models\CampaignRevision;
 use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
+use App\Services\CampaignRevisionUploadService;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
 use App\Services\CampaignVideoService;
@@ -26,6 +28,7 @@ class CampaignController extends Controller
         protected CampaignUploadService $uploadService,
         protected CampaignVideoService $videoService,
         protected CampaignTaxonomySyncService $taxonomySyncService,
+        protected CampaignRevisionUploadService $revisionUploadService,
     ) {}
 
     public function index(Request $request): View
@@ -135,7 +138,9 @@ class CampaignController extends Controller
 
         $this->authorize('viewPendingReview', $campaign);
 
-        if ($campaign->status === 'approved') {
+        $campaign->loadMissing('pendingRevision');
+
+        if ($campaign->status === 'approved' && $campaign->pendingRevision === null) {
             return redirect()
                 ->route('campaigns.show', $campaign)
                 ->with('success', 'This campaign is now live on the archive.');
@@ -221,13 +226,71 @@ class CampaignController extends Controller
         $this->authorize('update', $campaign);
 
         return view('campaigns.edit', array_merge(
-            ['campaign' => $campaign->load(['assets', 'videos', 'agencies', 'brands', 'industries', 'mediumTypes', 'countries'])],
+            ['campaign' => $campaign->load(['assets', 'videos', 'agencies', 'brands', 'industries', 'mediumTypes', 'countries', 'pendingRevision'])],
             $this->formData($campaign)
         ));
     }
 
     public function update(UpdateCampaignRequest $request, Campaign $campaign): RedirectResponse
     {
+        if (! $request->user()->isAdmin() && $campaign->status === 'approved') {
+            $revision = CampaignRevision::query()
+                ->where('campaign_id', $campaign->id)
+                ->where('status', 'pending')
+                ->latest('id')
+                ->first();
+
+            if (! $revision) {
+                $revision = CampaignRevision::create([
+                    'campaign_id' => $campaign->id,
+                    'user_id' => $request->user()->id,
+                    'revision_payload' => [],
+                    'status' => 'pending',
+                    'submitted_at' => now(),
+                ]);
+            } else {
+                $revision->update(['submitted_at' => now()]);
+            }
+
+            $payload = [
+                'title' => $request->title,
+                'published_at' => $request->published_at,
+                'description' => $request->description,
+                'credits' => $request->credits,
+                'is_student' => $request->boolean('is_student'),
+                'is_nsfw' => $request->boolean('is_nsfw'),
+                'submission_notes' => $request->submission_notes,
+                'taxonomies' => [
+                    'agencies' => $request->input('agencies', []),
+                    'brands' => $request->input('brands', []),
+                    'industries' => $request->input('industries', []),
+                    'medium_types' => $request->input('medium_types', []),
+                    'countries' => $request->input('countries', []),
+                ],
+                'thumbnail_path' => null,
+                'assets_paths' => [],
+                'videos' => [],
+            ];
+
+            if ($request->hasFile('thumbnail')) {
+                $payload['thumbnail_path'] = $this->revisionUploadService->storeThumbnail($revision, $request->file('thumbnail'));
+            }
+
+            if ($request->hasFile('assets')) {
+                $payload['assets_paths'] = $this->revisionUploadService->storeAssets($revision, $request->file('assets'));
+            }
+
+            $payload['videos'] = $this->revisionUploadService->buildVideosPayload($revision, $request);
+
+            $revision->update([
+                'revision_payload' => $payload,
+            ]);
+
+            return redirect()
+                ->route('campaigns.pending-review', $campaign)
+                ->with('success', 'Your campaign update has been submitted for review. The currently published version remains live until approval.');
+        }
+
         $data = [
             'title' => $request->title,
             'published_at' => $request->published_at,
@@ -276,6 +339,12 @@ class CampaignController extends Controller
             : null;
 
         $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
+
+        if (! $request->user()->isAdmin()) {
+            return redirect()
+                ->route('campaigns.pending-review', $campaign)
+                ->with('success', 'Your campaign has been updated and is pending review.');
+        }
 
         return redirect()->route('campaigns.show', $campaign)
             ->with('success', 'Campaign updated successfully.');

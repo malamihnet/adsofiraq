@@ -15,7 +15,11 @@
         @endif
 
         <p class="text-lg leading-relaxed text-archive-black">
-            Your campaign has been submitted successfully and is pending review.
+            @if($campaign->status === 'approved' && $campaign->pendingRevision)
+                Your campaign update has been submitted for review. The currently published version remains live until approval.
+            @else
+                Your campaign has been submitted successfully and is pending review.
+            @endif
         </p>
 
         <p class="mt-4 font-display text-xl text-archive-black">{{ $campaign->title }}</p>
@@ -31,8 +35,12 @@
 
         <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
             <a href="{{ route('home') }}" class="btn-primary">Back to Home</a>
-            <a href="{{ route('profile.show.redirect') }}" class="btn-outline">View My Profile</a>
+            <a href="{{ route('profile.campaigns') }}" class="btn-outline">My Campaigns</a>
+            <a href="{{ route('campaigns.edit', $campaign) }}" class="btn-outline">Edit Campaign</a>
             <a href="{{ route('campaigns.create') }}" class="btn-outline">Submit Another Campaign</a>
+            @if($campaign->status === 'approved')
+                <a href="{{ route('campaigns.show', $campaign) }}" class="btn-outline">View Public Campaign</a>
+            @endif
         </div>
     </div>
 </div>

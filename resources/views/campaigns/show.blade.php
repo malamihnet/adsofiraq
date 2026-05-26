@@ -9,11 +9,15 @@
 
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-12 md:px-8">
-    @if($campaign->status !== 'approved' && auth()->check() && (auth()->user()->isAdmin() || auth()->id() === $campaign->user_id))
-        <div class="mb-8 flex items-center gap-4 border border-archive-border p-4">
-            <x-status-badge :status="$campaign->status" />
-            @if(auth()->user()->can('update', $campaign))
-                <a href="{{ route('campaigns.edit', $campaign) }}" class="text-sm underline">Edit</a>
+    @if(auth()->check() && auth()->user()->can('update', $campaign))
+        <div class="mb-8 flex flex-wrap items-center gap-4 border border-archive-border p-4">
+            @if($campaign->status !== 'approved')
+                <x-status-badge :status="$campaign->status" />
+            @endif
+            <a href="{{ route('campaigns.edit', $campaign) }}" class="text-sm underline">Edit Campaign</a>
+
+            @if($campaign->status === 'approved' && $campaign->pendingRevision)
+                <span class="text-sm text-archive-gray">Your changes are pending review. Public visitors still see the approved version.</span>
             @endif
         </div>
     @endif

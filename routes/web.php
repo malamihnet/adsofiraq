@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CheckNewCampaignsController;
 use App\Http\Controllers\Admin\ImportAdsOfWorldController;
 use App\Http\Controllers\Admin\ImportCampaignController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\CampaignRevisionController as AdminCampaignRevisionController;
 use App\Http\Controllers\Admin\TaxonomyController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AgencyController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PersonApplicationController;
 use App\Http\Controllers\PersonController;
+use App\Http\Controllers\ProfileCampaignsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserProfileController;
 use Illuminate\Support\Facades\Route;
@@ -72,6 +74,7 @@ Route::middleware(['auth', 'verified', 'noindex'])->group(function () {
 
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/profile', [ProfileController::class, 'showRedirect'])->name('profile.show.redirect');
+    Route::get('/profile/campaigns', [ProfileCampaignsController::class, 'index'])->name('profile.campaigns');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
 });
@@ -121,6 +124,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::put('/campaigns/{campaign}/hero', [AdminCampaignController::class, 'updateHero'])->name('campaigns.hero');
     Route::put('/campaigns/{campaign}/verification', [AdminCampaignController::class, 'updateVerification'])->name('campaigns.verification');
     Route::delete('/campaigns/{campaign}', [AdminCampaignController::class, 'destroy'])->name('campaigns.destroy');
+
+    Route::get('/revisions', [AdminCampaignRevisionController::class, 'index'])->name('revisions.index');
+    Route::get('/revisions/{revision}', [AdminCampaignRevisionController::class, 'show'])->name('revisions.show');
+    Route::post('/revisions/{revision}/approve', [AdminCampaignRevisionController::class, 'approve'])->name('revisions.approve');
+    Route::post('/revisions/{revision}/reject', [AdminCampaignRevisionController::class, 'reject'])->name('revisions.reject');
 
     Route::get('/brands', [TaxonomyController::class, 'brands'])->name('brands.index');
     Route::get('/brands/{id}', [TaxonomyController::class, 'showBrand'])->name('brands.show')->whereNumber('id');

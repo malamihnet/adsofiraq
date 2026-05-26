@@ -7,6 +7,7 @@
         <a href="{{ route('admin.campaigns.create') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Add Campaign</a>
         <a href="{{ route('admin.import-campaign.create') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Import Campaign</a>
         <a href="{{ route('admin.check-new-campaigns.index') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Check New Campaigns</a>
+        <a href="{{ route('admin.revisions.index') }}" class="block py-2 hover:underline">Revisions</a>
         <a href="{{ route('admin.brands.index') }}" class="block py-2 hover:underline">Brands</a>
         <a href="{{ route('admin.agencies.index') }}" class="block py-2 hover:underline">Agencies</a>
         <a href="{{ route('admin.people.index') }}" class="block py-2 hover:underline">People</a>

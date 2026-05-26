@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -160,6 +161,21 @@ class Campaign extends Model
         }
 
         return false;
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(CampaignRevision::class);
+    }
+
+    public function pendingRevision(): HasOne
+    {
+        return $this->hasOne(CampaignRevision::class)->where('status', 'pending')->latest('id');
+    }
+
+    public function hasPendingRevision(): bool
+    {
+        return $this->pendingRevision()->exists();
     }
 
     public function resolveRouteBinding($value, $field = null): ?Model

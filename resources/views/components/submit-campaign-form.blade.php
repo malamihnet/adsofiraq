@@ -26,6 +26,18 @@
         <div class="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{{ $message }}</div>
     @enderror
 
+    @if($campaign && $campaign->status === 'approved')
+        <div class="border border-archive-border bg-archive-light px-4 py-4 text-sm">
+            @if($campaign->pendingRevision)
+                <p class="font-medium text-archive-black">You already have changes pending review.</p>
+                <p class="mt-1 text-archive-gray">Editing will update the pending version. The currently published version remains live until approval.</p>
+            @else
+                <p class="font-medium text-archive-black">Edits to approved campaigns require admin review.</p>
+                <p class="mt-1 text-archive-gray">Your changes will be submitted for review. The currently published version remains live until approval.</p>
+            @endif
+        </div>
+    @endif
+
     <div class="grid gap-6 md:grid-cols-2">
         <div class="md:col-span-2">
             <label class="section-label mb-2 block">Campaign Title *</label>
