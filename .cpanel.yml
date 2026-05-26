@@ -1,13 +1,11 @@
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/adsofiraq/public_html
-    - /bin/cp -R app $DEPLOYPATH
-    - /bin/cp -R bootstrap $DEPLOYPATH
-    - /bin/cp -R config $DEPLOYPATH
-    - /bin/cp -R database $DEPLOYPATH
-    - /bin/cp -R public/* $DEPLOYPATH
-    - /bin/cp -R resources $DEPLOYPATH
-    - /bin/cp -R routes $DEPLOYPATH
-    - /bin/cp artisan $DEPLOYPATH
-    - /bin/cp composer.json $DEPLOYPATH
-    - /bin/cp composer.lock $DEPLOYPATH
+    - export ROOTPATH=/home/adsofiraq
+    - export PUBLICPATH=/home/adsofiraq/public_html
+    - /bin/cp -R app $ROOTPATH
+    - /bin/cp -R bootstrap $ROOTPATH
+    - /bin/cp -R config $ROOTPATH
+    - /bin/cp -R database $ROOTPATH
+    - /bin/cp -R resources $ROOTPATH
+    - /bin/cp -R routes $ROOTPATH
+    - /bin/cp -R public/* $PUBLICPATH
