@@ -32,6 +32,12 @@ Route::get('/terms-policies', [PageController::class, 'termsPolicies'])->name('p
 Route::get('/editorial-standards', [PageController::class, 'editorialStandards'])->name('pages.editorial-standards');
 
 Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
+
+Route::middleware(['auth', 'verified', 'noindex'])->group(function () {
+    Route::get('/campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
+    Route::post('/campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
+});
+
 Route::get('/campaigns/{campaign:slug}', [CampaignController::class, 'show'])->name('campaigns.show');
 
 Route::get('/agencies', [AgencyController::class, 'index'])->name('agencies.index');
@@ -49,8 +55,6 @@ Route::get('/users/{user:username}', [UserProfileController::class, 'show'])->na
 
 // Requires verified email
 Route::middleware(['auth', 'verified', 'noindex'])->group(function () {
-    Route::get('/campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
-    Route::post('/campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
     Route::get('/campaigns/{campaign:slug}/edit', [CampaignController::class, 'edit'])->name('campaigns.edit');
     Route::put('/campaigns/{campaign:slug}', [CampaignController::class, 'update'])->name('campaigns.update');
 
