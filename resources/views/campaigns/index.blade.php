@@ -103,6 +103,7 @@
                     <label class="section-label mb-2 block">Sort</label>
                     <select name="sort" class="input-field">
                         <option value="latest" @selected(request('sort', 'latest') === 'latest')>Latest</option>
+                        <option value="oldest" @selected(request('sort') === 'oldest')>Oldest</option>
                         <option value="views" @selected(request('sort') === 'views')>Most viewed</option>
                         <option value="bookmarks" @selected(request('sort') === 'bookmarks')>Most bookmarked</option>
                     </select>

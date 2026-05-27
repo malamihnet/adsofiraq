@@ -26,6 +26,7 @@ class ImportBatch extends Model
         'stop_after_existing',
         'queue_order_mode',
         'purpose',
+        'import_mode',
         'imported_count',
         'failed_count',
         'skipped_count',

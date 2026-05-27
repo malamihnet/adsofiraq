@@ -105,6 +105,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
 
     Route::get('/check-new-campaigns', [CheckNewCampaignsController::class, 'index'])->name('check-new-campaigns.index');
     Route::post('/check-new-campaigns', [CheckNewCampaignsController::class, 'start'])->name('check-new-campaigns.start');
+    Route::post('/check-new-campaigns/full-rebuild', [CheckNewCampaignsController::class, 'startFullRebuild'])->name('check-new-campaigns.start-full-rebuild');
     Route::get('/check-new-campaigns/{batch}', [CheckNewCampaignsController::class, 'show'])->name('check-new-campaigns.show');
     Route::get('/check-new-campaigns/{batch}/status', [CheckNewCampaignsController::class, 'status'])->name('check-new-campaigns.status');
     Route::post('/check-new-campaigns/{batch}/process', [CheckNewCampaignsController::class, 'process'])->name('check-new-campaigns.process');

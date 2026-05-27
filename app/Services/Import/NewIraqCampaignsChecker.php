@@ -2,13 +2,16 @@
 
 namespace App\Services\Import;
 
-use App\Exceptions\CampaignImportException;
 use App\Models\Campaign;
 use App\Models\ImportBatch;
 use Illuminate\Support\Facades\Log;
 
 class NewIraqCampaignsChecker
 {
+    public const MODE_INCREMENTAL = 'incremental';
+
+    public const MODE_FULL_REBUILD = 'full_rebuild';
+
     public function __construct(
         protected CampaignPageFetcher $fetcher,
         protected CampaignUrlNormalizer $urlNormalizer,
@@ -20,6 +23,11 @@ class NewIraqCampaignsChecker
         return 'https://www.adsoftheworld.com/countries/iraq';
     }
 
+    public function isFullRebuild(ImportBatch $batch): bool
+    {
+        return ($batch->import_mode ?? self::MODE_INCREMENTAL) === self::MODE_FULL_REBUILD;
+    }
+
     /**
      * Initialize batch crawl state using page 1 HTML.
      */
@@ -28,38 +36,53 @@ class NewIraqCampaignsChecker
         $baseUrl = $this->iraqCountryUrl();
         $firstHtml = $this->fetchCountryPage($baseUrl);
         $maxPage = $this->listingParser->detectMaxPage($firstHtml);
+        $fullRebuild = $this->isFullRebuild($batch);
 
         $batch->update([
             'country_url' => $baseUrl,
             'crawl_max_page' => $maxPage,
-            'crawl_next_page' => 1,
+            'crawl_next_page' => $fullRebuild ? $maxPage : 1,
             'consecutive_existing' => 0,
-            'stop_after_existing' => max(1, (int) config('import.new_import_stop_after_existing', 20)),
-            'queue_order_mode' => 'newest_first',
+            'stop_after_existing' => $fullRebuild
+                ? 0
+                : max(1, (int) config('import.new_import_stop_after_existing', 20)),
+            'queue_order_mode' => $fullRebuild ? 'oldest_first' : 'newest_first',
         ]);
     }
 
     /**
-     * Crawl exactly one country page (newest pages first) and enqueue NEW campaigns.
-     * Stops early if it hits stop_after_existing consecutive existing campaigns.
+     * Crawl one country page and enqueue campaigns not yet imported.
      *
-     * @return array{page: int, discovered: int, enqueued: int, existing: int, stopped: bool}
+     * Incremental: pages 1 → max (newest first), stop after N consecutive existing.
+     * Full rebuild: pages max → 1 (oldest first), reverse card order per page, no early stop.
+     *
+     * @return array{page: int, page_url: string, urls_found: int, discovered: int, enqueued: int, existing: int, stopped: bool, action: string}
      */
     public function crawlNextPageAndEnqueue(ImportBatch $batch, int $enqueueLimit = 10): array
     {
         $batch = $batch->fresh();
+        $fullRebuild = $this->isFullRebuild($batch);
 
         $maxPage = (int) ($batch->crawl_max_page ?? 1);
         $nextPage = (int) ($batch->crawl_next_page ?? 1);
         $stopAfter = (int) ($batch->stop_after_existing ?? config('import.new_import_stop_after_existing', 20));
+        $stopOnExistingStreak = ! $fullRebuild && $stopAfter > 0;
 
-        if ($nextPage > $maxPage) {
-            return ['page' => $nextPage, 'discovered' => 0, 'enqueued' => 0, 'existing' => 0, 'stopped' => true];
+        if ($fullRebuild) {
+            if ($nextPage < 1) {
+                return $this->emptyCrawlResult($nextPage, $maxPage, stopped: true);
+            }
+        } elseif ($nextPage > $maxPage) {
+            return $this->emptyCrawlResult($nextPage, $maxPage, stopped: true);
         }
 
         $pageUrl = $nextPage === 1 ? $this->iraqCountryUrl() : $this->iraqCountryUrl().'?page='.$nextPage;
         $html = $this->fetchCountryPage($pageUrl);
         $paths = $this->listingParser->extractCampaignPaths($html);
+
+        if ($fullRebuild) {
+            $paths = array_reverse($paths);
+        }
 
         $discovered = 0;
         $enqueued = 0;
@@ -74,7 +97,6 @@ class NewIraqCampaignsChecker
 
             $url = $this->urlNormalizer->normalize('https://www.adsoftheworld.com'.$path);
 
-            // If already queued in this batch, ignore.
             if ($batch->queueItems()->where('url', $url)->exists()) {
                 continue;
             }
@@ -86,7 +108,7 @@ class NewIraqCampaignsChecker
                 $consecutiveExisting++;
                 $batch->increment('existing_skipped_count');
 
-                if ($consecutiveExisting >= $stopAfter) {
+                if ($stopOnExistingStreak && $consecutiveExisting >= $stopAfter) {
                     $stopped = true;
                     break;
                 }
@@ -94,7 +116,6 @@ class NewIraqCampaignsChecker
                 continue;
             }
 
-            // Found a new campaign — reset the "existing streak".
             $consecutiveExisting = 0;
 
             $batch->queueItems()->create([
@@ -111,15 +132,19 @@ class NewIraqCampaignsChecker
             }
         }
 
+        $followingPage = $fullRebuild ? $nextPage - 1 : $nextPage + 1;
+        $brokeForEnqueueLimit = $enqueued >= max(1, $enqueueLimit);
+
         $batch->update([
-            'crawl_next_page' => $nextPage + 1,
+            'crawl_next_page' => $brokeForEnqueueLimit ? $nextPage : $followingPage,
             'consecutive_existing' => $consecutiveExisting,
         ]);
 
         $action = $stopped ? 'completed_stop_existing' : ($enqueued > 0 ? 'urls_found' : ($discovered > 0 ? 'existing_url' : 'crawling_page'));
 
-        Log::info('AOTW Iraq incremental crawl: page scanned.', [
+        Log::info('AOTW Iraq crawl: page scanned.', [
             'batch_id' => $batch->id,
+            'import_mode' => $batch->import_mode,
             'page' => $nextPage,
             'page_url' => $pageUrl,
             'max_page' => $maxPage,
@@ -145,6 +170,23 @@ class NewIraqCampaignsChecker
         ];
     }
 
+    /**
+     * @return array{page: int, page_url: string, urls_found: int, discovered: int, enqueued: int, existing: int, stopped: bool, action: string}
+     */
+    protected function emptyCrawlResult(int $page, int $maxPage, bool $stopped): array
+    {
+        return [
+            'page' => $page,
+            'page_url' => '',
+            'urls_found' => 0,
+            'discovered' => 0,
+            'enqueued' => 0,
+            'existing' => 0,
+            'stopped' => $stopped,
+            'action' => 'completed',
+        ];
+    }
+
     protected function fetchCountryPage(string $url): string
     {
         return $this->fetcher->fetch(
@@ -153,6 +195,4 @@ class NewIraqCampaignsChecker
             (int) config('import.country_page_retries', 3),
         );
     }
-
 }
-

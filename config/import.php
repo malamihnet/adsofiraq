@@ -58,4 +58,6 @@ return [
 
     'new_import_stop_after_existing' => (int) env('NEW_IMPORT_STOP_AFTER_EXISTING', 20),
 
+    'full_rebuild_enqueue_per_page' => (int) env('IMPORT_FULL_REBUILD_ENQUEUE_PER_PAGE', 100),
+
 ];

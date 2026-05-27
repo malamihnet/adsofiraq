@@ -84,6 +84,9 @@ class CampaignController extends Controller
         } elseif ($sort === 'bookmarks') {
             $query->orderByDesc('bookmarks_count');
             $useManualOrdering = false;
+        } elseif ($sort === 'oldest') {
+            $query->orderBy('approved_at')->orderBy('id');
+            $useManualOrdering = false;
         }
 
         $eagerLoads = ['brands', 'agencies', 'industries', 'mediumTypes', 'countries'];

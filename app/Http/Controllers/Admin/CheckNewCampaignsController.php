@@ -21,38 +21,48 @@ class CheckNewCampaignsController extends Controller
 
     public function index(): View
     {
-        $last = ImportBatch::query()
+        $lastIncremental = ImportBatch::query()
             ->where('purpose', 'check_new_iraq')
+            ->where(function ($q) {
+                $q->where('import_mode', NewIraqCampaignsChecker::MODE_INCREMENTAL)
+                    ->orWhereNull('import_mode');
+            })
+            ->orderByDesc('created_at')
+            ->first();
+
+        $lastFullRebuild = ImportBatch::query()
+            ->where('purpose', 'check_new_iraq')
+            ->where('import_mode', NewIraqCampaignsChecker::MODE_FULL_REBUILD)
             ->orderByDesc('created_at')
             ->first();
 
         return view('admin.check-new-campaigns.index', [
-            'lastBatch' => $last,
+            'lastIncrementalBatch' => $lastIncremental,
+            'lastFullRebuildBatch' => $lastFullRebuild,
         ]);
     }
 
     public function start(Request $request): RedirectResponse
     {
-        $batch = ImportBatch::create([
-            'user_id' => $request->user()->id,
-            'country_url' => $this->checker->iraqCountryUrl(),
-            'purpose' => 'check_new_iraq',
-            'status' => 'queued',
-            'total_urls' => 0,
-            'queue_order_mode' => 'newest_first',
-            'existing_skipped_count' => 0,
-            'stop_after_existing' => max(1, (int) config('import.new_import_stop_after_existing', 20)),
-        ]);
-
-        $this->checker->initializeBatch($batch);
+        $batch = $this->createBatch($request, NewIraqCampaignsChecker::MODE_INCREMENTAL);
 
         return redirect()
             ->route('admin.check-new-campaigns.show', $batch)
             ->with('success', 'Checker started. Keep this page open while it runs.');
     }
 
+    public function startFullRebuild(Request $request): RedirectResponse
+    {
+        $batch = $this->createBatch($request, NewIraqCampaignsChecker::MODE_FULL_REBUILD);
+
+        return redirect()
+            ->route('admin.check-new-campaigns.show', $batch)
+            ->with('success', 'Fresh Iraq import started (oldest first). Keep this page open until it completes.');
+    }
+
     public function show(ImportBatch $batch): View
     {
+        $this->assertIraqCheckerBatch($batch);
         $this->resetStuckItems($batch);
 
         return view('admin.check-new-campaigns.progress', [
@@ -63,6 +73,7 @@ class CheckNewCampaignsController extends Controller
 
     public function status(ImportBatch $batch): JsonResponse
     {
+        $this->assertIraqCheckerBatch($batch);
         $this->resetStuckItems($batch);
 
         return response()->json($this->statusArray($batch->fresh()));
@@ -70,16 +81,14 @@ class CheckNewCampaignsController extends Controller
 
     public function process(ImportBatch $batch, Request $request): JsonResponse
     {
+        $this->assertIraqCheckerBatch($batch);
+
         $timeout = (int) config('import.bulk_process_timeout', 120);
         @set_time_limit($timeout);
         @ini_set('max_execution_time', (string) $timeout);
 
         $this->resetStuckItems($batch);
         $batch = $batch->fresh();
-
-        if ($batch->purpose !== 'check_new_iraq') {
-            return response()->json(['ok' => false, 'error' => 'Invalid batch purpose.'], 400);
-        }
 
         if ($batch->status === 'queued') {
             $batch->update([
@@ -99,6 +108,7 @@ class CheckNewCampaignsController extends Controller
 
         $lastAction = null;
         $lastError = null;
+        $fullRebuild = $this->checker->isFullRebuild($batch);
 
         try {
             $hasPending = $batch->queueItems()->where('status', 'pending')->exists();
@@ -106,7 +116,10 @@ class CheckNewCampaignsController extends Controller
 
             if (! $hasPending) {
                 $lastAction = 'crawling_page';
-                $crawlInfo = $this->checker->crawlNextPageAndEnqueue($batch, enqueueLimit: 10);
+                $enqueueLimit = $fullRebuild
+                    ? (int) config('import.full_rebuild_enqueue_per_page', 100)
+                    : 10;
+                $crawlInfo = $this->checker->crawlNextPageAndEnqueue($batch, enqueueLimit: $enqueueLimit);
                 $lastAction = (string) ($crawlInfo['action'] ?? 'crawling_page');
             }
 
@@ -126,7 +139,9 @@ class CheckNewCampaignsController extends Controller
                 }
             } else {
                 $stopped = (bool) ($crawlInfo['stopped'] ?? false);
-                $reachedEnd = (int) ($batch->crawl_next_page ?? 1) > (int) ($batch->crawl_max_page ?? 1);
+                $reachedEnd = $fullRebuild
+                    ? (int) ($batch->crawl_next_page ?? 1) < 1
+                    : (int) ($batch->crawl_next_page ?? 1) > (int) ($batch->crawl_max_page ?? 1);
 
                 if ($stopped) {
                     $lastAction = 'completed_stop_existing';
@@ -147,8 +162,9 @@ class CheckNewCampaignsController extends Controller
 
             Log::info('Check new campaigns process', [
                 'batch_id' => $batch->id,
+                'import_mode' => $batch->import_mode,
                 'status' => $batch->status,
-                'current_page' => (int) ($batch->crawl_next_page ?? 1) - 1,
+                'current_page' => $progress['crawl_display_page'] ?? null,
                 'max_page' => (int) ($batch->crawl_max_page ?? 1),
                 'urls_found' => $crawlInfo['urls_found'] ?? null,
                 'pending' => $progress['pending'] ?? 0,
@@ -191,10 +207,7 @@ class CheckNewCampaignsController extends Controller
 
     public function pause(ImportBatch $batch): JsonResponse
     {
-        if ($batch->purpose !== 'check_new_iraq') {
-            return response()->json(['ok' => false, 'error' => 'Invalid batch purpose.'], 400);
-        }
-
+        $this->assertIraqCheckerBatch($batch);
         $batch->update(['status' => 'paused']);
 
         return response()->json(['ok' => true, 'progress' => $this->statusArray($batch->fresh())]);
@@ -202,9 +215,7 @@ class CheckNewCampaignsController extends Controller
 
     public function resume(ImportBatch $batch): JsonResponse
     {
-        if ($batch->purpose !== 'check_new_iraq') {
-            return response()->json(['ok' => false, 'error' => 'Invalid batch purpose.'], 400);
-        }
+        $this->assertIraqCheckerBatch($batch);
 
         if ($batch->status !== 'completed') {
             $batch->update([
@@ -219,9 +230,7 @@ class CheckNewCampaignsController extends Controller
 
     public function retryFailed(ImportBatch $batch): JsonResponse
     {
-        if ($batch->purpose !== 'check_new_iraq') {
-            return response()->json(['ok' => false, 'error' => 'Invalid batch purpose.'], 400);
-        }
+        $this->assertIraqCheckerBatch($batch);
 
         $this->resetStuckItems($batch);
         $count = $this->processor->retryFailed($batch->fresh());
@@ -233,22 +242,58 @@ class CheckNewCampaignsController extends Controller
         ]);
     }
 
+    protected function createBatch(Request $request, string $importMode): ImportBatch
+    {
+        $fullRebuild = $importMode === NewIraqCampaignsChecker::MODE_FULL_REBUILD;
+
+        $batch = ImportBatch::create([
+            'user_id' => $request->user()->id,
+            'country_url' => $this->checker->iraqCountryUrl(),
+            'purpose' => 'check_new_iraq',
+            'import_mode' => $importMode,
+            'status' => 'queued',
+            'total_urls' => 0,
+            'queue_order_mode' => $fullRebuild ? 'oldest_first' : 'newest_first',
+            'existing_skipped_count' => 0,
+            'stop_after_existing' => $fullRebuild
+                ? 0
+                : max(1, (int) config('import.new_import_stop_after_existing', 20)),
+        ]);
+
+        $this->checker->initializeBatch($batch);
+
+        return $batch->fresh();
+    }
+
+    protected function assertIraqCheckerBatch(ImportBatch $batch): void
+    {
+        if ($batch->purpose !== 'check_new_iraq') {
+            abort(404);
+        }
+    }
+
     protected function statusArray(ImportBatch $batch): array
     {
         $progress = $this->processor->batchProgress($batch);
+        $fullRebuild = $this->checker->isFullRebuild($batch);
 
         $progress['purpose'] = $batch->purpose;
+        $progress['import_mode'] = $batch->import_mode ?? NewIraqCampaignsChecker::MODE_INCREMENTAL;
         $progress['existing_skipped'] = (int) ($batch->existing_skipped_count ?? 0);
         $progress['crawl_next_page'] = (int) ($batch->crawl_next_page ?? 1);
         $progress['crawl_max_page'] = (int) ($batch->crawl_max_page ?? 1);
         $progress['stop_after_existing'] = (int) ($batch->stop_after_existing ?? config('import.new_import_stop_after_existing', 20));
         $progress['consecutive_existing'] = (int) ($batch->consecutive_existing ?? 0);
-
-        $progress['queue_order_label'] = 'Newest pages first';
+        $progress['crawl_display_page'] = $this->crawlDisplayPage($batch);
+        $progress['queue_order_label'] = $fullRebuild
+            ? 'Oldest pages first (full rebuild)'
+            : 'Newest pages first (incremental)';
 
         $pending = (int) ($progress['pending'] ?? 0);
         $processing = (int) ($progress['processing'] ?? 0);
-        $needsCrawl = $progress['crawl_next_page'] <= $progress['crawl_max_page'];
+        $needsCrawl = $fullRebuild
+            ? $progress['crawl_next_page'] >= 1
+            : $progress['crawl_next_page'] <= $progress['crawl_max_page'];
         $isActive = in_array($batch->status, ['queued', 'processing'], true);
 
         if (! $progress['completed'] && (int) ($progress['total'] ?? 0) === 0) {
@@ -267,6 +312,22 @@ class CheckNewCampaignsController extends Controller
         return $progress;
     }
 
+    protected function crawlDisplayPage(ImportBatch $batch): int
+    {
+        $next = (int) ($batch->crawl_next_page ?? 1);
+        $max = (int) ($batch->crawl_max_page ?? 1);
+
+        if ($this->checker->isFullRebuild($batch)) {
+            if ($next < 1) {
+                return 0;
+            }
+
+            return min($next, $max);
+        }
+
+        return max(0, $next - 1);
+    }
+
     protected function resetStuckItems(ImportBatch $batch): void
     {
         $minutes = (int) config('import.bulk_stuck_item_minutes', 3);
@@ -277,4 +338,3 @@ class CheckNewCampaignsController extends Controller
             ->update(['status' => 'pending']);
     }
 }
-

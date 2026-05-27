@@ -5,7 +5,12 @@
 @section('content')
 <div class="mb-8">
     <a href="{{ route('admin.check-new-campaigns.index') }}" class="text-sm underline">&larr; Check New Campaigns</a>
-    <h1 class="section-title mt-4">Check for New Iraq Campaigns</h1>
+    @php
+        $fullRebuild = ($progress['import_mode'] ?? 'incremental') === 'full_rebuild';
+    @endphp
+    <h1 class="section-title mt-4">
+        {{ $fullRebuild ? 'Fresh Iraq Import (Full Rebuild)' : 'Check for New Iraq Campaigns' }}
+    </h1>
     <p class="mt-2 text-sm text-archive-gray break-all">Run ID: {{ $batch->id }}</p>
 </div>
 
@@ -20,13 +25,22 @@
     data-delay-min="{{ min(config('import.bulk_process_delay_ms', 3000), config('import.bulk_process_delay_max_ms', 5000)) }}"
     data-delay-max="{{ max(config('import.bulk_process_delay_ms', 3000), config('import.bulk_process_delay_max_ms', 5000)) }}"
     data-auto-start="{{ (!$progress['completed'] && !$progress['paused']) ? '1' : '0' }}"
+    data-full-rebuild="{{ $fullRebuild ? '1' : '0' }}"
 >
     <div class="mb-6 border border-archive-border bg-archive-light px-5 py-4">
         <p class="text-sm font-semibold">Keep this page open while the import runs.</p>
-        <p class="mt-2 text-sm text-archive-gray">
-            This tool scans newest pages first and imports only new campaigns. It stops automatically after
-            <strong>{{ $progress['stop_after_existing'] }}</strong> consecutive existing campaigns.
-        </p>
+        @if($fullRebuild)
+            <p class="mt-2 text-sm text-archive-gray">
+                Full rebuild: scans from the <strong>oldest</strong> listing page backward and imports all Iraq campaigns
+                in chronological order. It does not stop after existing campaigns.
+            </p>
+        @else
+            <p class="mt-2 text-sm text-archive-gray">
+                Incremental: scans <strong>newest</strong> pages first and imports only new campaigns. It stops automatically after
+                <strong>{{ $progress['stop_after_existing'] }}</strong> consecutive existing campaigns.
+            </p>
+        @endif
+        <p class="mt-2 text-xs text-archive-gray">{{ $progress['queue_order_label'] ?? '' }}</p>
     </div>
 
     <div id="checker-error" class="mb-4 hidden border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"></div>
@@ -91,9 +105,9 @@
         </div>
         <div>
             <p class="text-archive-gray">Current page</p>
-            <p id="meta-page" class="mt-1 font-mono text-archive-black">{{ max(1, ($progress['crawl_next_page'] ?? 1) - 1) }} / {{ $progress['crawl_max_page'] ?? 1 }}</p>
+            <p id="meta-page" class="mt-1 font-mono text-archive-black">{{ $progress['crawl_display_page'] ?? 0 }} / {{ $progress['crawl_max_page'] ?? 1 }}</p>
         </div>
-        <div>
+        <div @if($fullRebuild) class="hidden" @endif>
             <p class="text-archive-gray">Existing streak</p>
             <p id="meta-streak" class="mt-1 font-mono text-archive-black">{{ $progress['consecutive_existing'] ?? 0 }} / {{ $progress['stop_after_existing'] ?? 20 }}</p>
         </div>
@@ -210,10 +224,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function randDelay() { return delayMin + Math.floor(Math.random() * (delayMax - delayMin + 1)); }
 
     function currentPageLabel(p) {
-        const next = parseInt(p.crawl_next_page || 1, 10);
         const max = parseInt(p.crawl_max_page || 1, 10);
-        const current = Math.max(1, Math.min(next - 1, max));
-        return current + ' / ' + max;
+        const display = parseInt(p.crawl_display_page ?? 0, 10);
+        return display + ' / ' + max;
     }
 
     async function fetchJson(url, method) {
@@ -260,7 +273,9 @@ document.addEventListener('DOMContentLoaded', function () {
         setText(els.newFound, p.total);
         setText(els.currentUrl, p.current_url || p.next_pending_url || '—');
         setText(els.page, currentPageLabel(p));
-        setText(els.streak, (p.consecutive_existing || 0) + ' / ' + (p.stop_after_existing || 20));
+        if (els.streak && root.dataset.fullRebuild !== '1') {
+            setText(els.streak, (p.consecutive_existing || 0) + ' / ' + (p.stop_after_existing || 20));
+        }
         setText(els.status, p.status || '—');
 
         paused = !!p.paused;
