@@ -81,7 +81,6 @@
                 </a>
 
                 <a href="{{ route('profile.campaigns') }}" class="{{ $accountLink }} {{ request()->routeIs('profile.campaigns') ? '!text-white' : '' }}">My Campaigns</a>
-                <a href="{{ route('profile.edit') }}" class="{{ $accountLink }} {{ request()->routeIs('profile.edit') ? '!text-white' : '' }}">Edit Profile</a>
 
                 @if($authUser->hasVerifiedEmail())
                     <a href="{{ $bookmarksUrl }}" class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] {{ request()->routeIs('bookmarks.*') ? 'text-white' : 'text-white/70 hover:text-white' }}" aria-label="Bookmarks">
@@ -181,7 +180,6 @@
                 <div class="my-2 border-t border-white/10"></div>
 
                 <a href="{{ route('profile.campaigns') }}" @click="open = false" class="px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 hover:text-white">My Campaigns</a>
-                <a href="{{ route('profile.edit') }}" @click="open = false" class="px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 hover:text-white">Edit Profile</a>
 
                 @if($authUser->hasVerifiedEmail())
                     <a href="{{ $bookmarksUrl }}" @click="open = false" class="inline-flex items-center gap-2 px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 hover:text-white">
