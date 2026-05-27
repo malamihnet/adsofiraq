@@ -22,8 +22,14 @@
         ['route' => 'agencies.*', 'href' => route('agencies.index'), 'label' => 'Agencies'],
         ['route' => 'brands.*', 'href' => route('brands.index'), 'label' => 'Brands'],
         ['route' => 'people.*', 'href' => route('people.index'), 'label' => 'People'],
-        ['route' => 'campaigns.create', 'href' => $submitUrl, 'label' => 'Submit'],
+        ['route' => 'campaigns.create', 'href' => $submitUrl, 'label' => 'Submit', 'icon' => 'upload'],
     ];
+
+    $uploadIcon = <<<'SVG'
+<svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V3.75m0 0L8.25 7.5M12 3.75l3.75 3.75M4.5 13.5v4.875c0 .621.504 1.125 1.125 1.125h13.25c.621 0 1.125-.504 1.125-1.125V13.5"/>
+</svg>
+SVG;
 
     $logoUrl = url('/images/Logo-main.svg');
 
@@ -41,10 +47,15 @@
                         href="{{ $link['href'] }}"
                         @class([
                             'text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-150',
+                            isset($link['icon']) ? 'inline-flex items-center gap-1.5' : '',
                             $navLink($link['route'], $link['href'], $link['label']),
                         ])
+                        @if(($link['icon'] ?? null) === 'upload') aria-label="Submit campaign" @endif
                     >
-                        {{ $link['label'] }}
+                        @if(($link['icon'] ?? null) === 'upload')
+                            {!! $uploadIcon !!}
+                        @endif
+                        <span>{{ $link['label'] }}</span>
                     </a>
                 @endforeach
             </nav>
@@ -152,10 +163,15 @@
                     @click="open = false"
                     @class([
                         'px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors',
+                        isset($link['icon']) ? 'inline-flex items-center gap-2' : '',
                         request()->routeIs($link['route']) ? 'text-white' : 'text-white/70 hover:text-white',
                     ])
+                    @if(($link['icon'] ?? null) === 'upload') aria-label="Submit campaign" @endif
                 >
-                    {{ $link['label'] }}
+                    @if(($link['icon'] ?? null) === 'upload')
+                        {!! $uploadIcon !!}
+                    @endif
+                    <span>{{ $link['label'] }}</span>
                 </a>
             @endforeach
 
