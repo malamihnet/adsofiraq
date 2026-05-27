@@ -4,19 +4,19 @@
 
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-12 md:px-8 md:py-16">
-    <div class="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-            <p class="section-label mb-2">Profile</p>
-            <h1 class="section-title">My Campaigns</h1>
+    <div class="mb-10 space-y-8">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div class="min-w-0">
+                <p class="section-label mb-2">Profile</p>
+                <h1 class="section-title">My Campaigns</h1>
+            </div>
+            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end lg:max-w-xl lg:shrink-0">
+                <a href="{{ route('campaigns.create') }}" class="btn-primary w-full shrink-0 sm:w-auto">Submit a Campaign</a>
+                <a href="{{ route('profile.edit') }}" class="btn-outline w-full shrink-0 text-xs sm:w-auto">Edit profile</a>
+                <a href="{{ route('profile.show.redirect') }}" class="btn-outline w-full shrink-0 text-xs sm:w-auto">Back to Profile</a>
+            </div>
         </div>
-        <div class="flex flex-wrap gap-3">
-            <a href="{{ route('campaigns.create') }}" class="btn-primary">Submit a Campaign</a>
-            <a href="{{ route('profile.edit') }}" class="btn-outline text-xs">Edit profile</a>
-            <a href="{{ route('profile.show.redirect') }}" class="btn-outline text-xs">Back to Profile</a>
-        </div>
-    </div>
 
-    <div class="mb-10 flex flex-wrap gap-2">
         @php
             $tabs = [
                 'all' => ['label' => 'All', 'count' => $counts['all']],
@@ -27,14 +27,22 @@
             ];
         @endphp
 
-        @foreach($tabs as $key => $info)
-            <a
-                href="{{ route('profile.campaigns', ['tab' => $key]) }}"
-                class="{{ $tab === $key ? 'btn-primary' : 'btn-outline' }} text-xs"
-            >
-                {{ $info['label'] }} ({{ $info['count'] }})
-            </a>
-        @endforeach
+        <nav aria-label="Campaign filters" class="flex flex-wrap gap-3 border-t border-archive-border pt-8">
+            @foreach($tabs as $key => $info)
+                @php $isActive = $tab === $key; @endphp
+                <a
+                    href="{{ route('profile.campaigns', ['tab' => $key]) }}"
+                    @class([
+                        'inline-flex shrink-0 items-center justify-center px-4 py-2.5 text-xs font-medium uppercase tracking-wide transition-colors',
+                        $isActive
+                            ? 'border border-archive-black bg-archive-black text-white'
+                            : 'border border-archive-border bg-white text-archive-black hover:border-archive-black',
+                    ])
+                >
+                    {{ $info['label'] }} ({{ $info['count'] }})
+                </a>
+            @endforeach
+        </nav>
     </div>
 
     @if($campaigns->isEmpty())
@@ -96,15 +104,15 @@
                     </a>
 
                     <div class="mt-auto border-t border-archive-border p-6">
-                        <div class="flex flex-wrap gap-3">
-                            <a href="{{ route('campaigns.edit', $campaign) }}" class="btn-primary text-xs">Edit Campaign</a>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <a href="{{ route('campaigns.edit', $campaign) }}" class="btn-primary shrink-0 text-xs">Edit Campaign</a>
 
                             @if($campaign->status === 'pending' || $campaign->status === 'rejected' || ($campaign->status === 'approved' && $campaign->pendingRevision))
-                                <a href="{{ route('campaigns.pending-review', $campaign) }}" class="btn-outline text-xs">View Pending Review</a>
+                                <a href="{{ route('campaigns.pending-review', $campaign) }}" class="btn-outline shrink-0 text-xs">View Pending Review</a>
                             @endif
 
                             @if($campaign->status === 'approved')
-                                <a href="{{ route('campaigns.show', $campaign) }}" class="btn-outline text-xs">View Public Campaign</a>
+                                <a href="{{ route('campaigns.show', $campaign) }}" class="btn-outline shrink-0 text-xs">View Public Campaign</a>
                             @endif
                         </div>
                     </div>
