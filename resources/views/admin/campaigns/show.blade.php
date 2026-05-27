@@ -89,10 +89,10 @@
             <img src="{{ $campaign->thumbnail_url }}" alt="" class="mb-6 max-h-64 object-cover">
         @endif
         <x-video-embed :campaign="$campaign" />
-        @if($campaign->assets->count())
+        @if($campaign->galleryStills()->isNotEmpty())
             <div class="mt-8">
-                <h2 class="section-label mb-4">Stills / Assets ({{ $campaign->assets->count() }})</h2>
-                <x-image-gallery :assets="$campaign->assets" />
+                <h2 class="section-label mb-4">Stills / Assets ({{ $campaign->galleryStills()->count() }})</h2>
+                <x-campaign-gallery :stills="$campaign->galleryStills()" :title="$campaign->title" />
             </div>
         @endif
         <div class="mt-6 whitespace-pre-line text-sm">{{ $campaign->description }}</div>

@@ -35,6 +35,38 @@
         @apply btn border border-archive-black text-archive-black hover:bg-archive-black hover:text-white;
     }
 
+    .campaign-gallery-lightbox {
+        @apply fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 p-4 md:p-8;
+    }
+
+    .campaign-gallery-lightbox__stage {
+        @apply flex max-h-[85vh] max-w-[min(100%,72rem)] items-center justify-center px-12 md:px-16;
+    }
+
+    .campaign-gallery-lightbox__image {
+        @apply max-h-[85vh] max-w-full object-contain;
+    }
+
+    .campaign-gallery-lightbox__close {
+        @apply absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center border border-white/30 bg-black/60 text-2xl leading-none text-white transition hover:bg-white hover:text-black md:right-6 md:top-6;
+    }
+
+    .campaign-gallery-lightbox__nav {
+        @apply absolute top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center border border-white/30 bg-black/60 text-xl text-white transition hover:bg-white hover:text-black;
+    }
+
+    .campaign-gallery-lightbox__nav--prev {
+        @apply left-2 md:left-6;
+    }
+
+    .campaign-gallery-lightbox__nav--next {
+        @apply right-2 md:right-6;
+    }
+
+    .campaign-gallery-lightbox__counter {
+        @apply absolute bottom-4 left-1/2 -translate-x-1/2 text-xs uppercase tracking-widest text-white/70 md:bottom-6;
+    }
+
     .input-field {
         @apply w-full border border-archive-border bg-white px-4 py-2.5 text-sm text-archive-black placeholder:text-neutral-400 focus:border-archive-black focus:outline-none focus:ring-0;
     }

@@ -279,6 +279,56 @@ class Campaign extends Model
         return $this->hasMany(CampaignAsset::class)->orderBy('sort_order');
     }
 
+    /**
+     * Image stills for the public gallery (deduplicated, sorted, valid URLs only).
+     *
+     * @return \Illuminate\Support\Collection<int, CampaignAsset>
+     */
+    public function galleryStills(): \Illuminate\Support\Collection
+    {
+        if (! $this->relationLoaded('assets')) {
+            $this->load('assets');
+        }
+
+        $thumbnailKey = $this->galleryPathKey($this->thumbnail_path);
+        $seen = [];
+
+        return $this->assets
+            ->filter(fn (CampaignAsset $asset) => $asset->isDisplayableImage())
+            ->sortBy(fn (CampaignAsset $asset) => [$asset->sort_order, $asset->id])
+            ->filter(function (CampaignAsset $asset) use (&$seen, $thumbnailKey) {
+                $key = $asset->galleryPathKey();
+
+                if ($key === null || isset($seen[$key])) {
+                    return false;
+                }
+
+                if ($thumbnailKey !== null && $key === $thumbnailKey) {
+                    return false;
+                }
+
+                $seen[$key] = true;
+
+                return true;
+            })
+            ->values();
+    }
+
+    protected function galleryPathKey(?string $path): ?string
+    {
+        if ($path === null || trim($path) === '') {
+            return null;
+        }
+
+        $normalized = $this->normalizeThumbnailPath($path) ?? trim($path);
+
+        if (filter_var($normalized, FILTER_VALIDATE_URL)) {
+            return strtolower($normalized);
+        }
+
+        return strtolower(ltrim(str_replace('\\', '/', $normalized), '/'));
+    }
+
     public function videos(): HasMany
     {
         return $this->hasMany(CampaignVideo::class)->orderBy('sort_order');
