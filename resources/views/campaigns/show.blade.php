@@ -49,9 +49,10 @@
                 <x-video-embed :campaign="$campaign" />
             </div>
 
-            @if($campaign->galleryStills()->isNotEmpty())
+            @php $galleryStills = $campaign->galleryStills(); @endphp
+            @if($galleryStills->isNotEmpty())
                 <div class="mt-8">
-                    <x-campaign-gallery :stills="$campaign->galleryStills()" :title="$campaign->title" />
+                    <x-campaign-gallery :stills="$galleryStills" :title="$campaign->title" />
                 </div>
             @elseif($campaign->thumbnail_url && ! $campaign->hasVideos())
                 <div class="mt-8 aspect-[16/10] overflow-hidden border border-archive-border">

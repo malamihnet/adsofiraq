@@ -1,6 +1,24 @@
+function dedupeStills(stills) {
+    const seen = new Set();
+
+    return (Array.isArray(stills) ? stills : []).filter((still) => {
+        const url = still?.url;
+
+        if (! url || seen.has(url)) {
+            return false;
+        }
+
+        seen.add(url);
+
+        return true;
+    });
+}
+
 export default function campaignGallery(stills, placeholderUrl) {
+    const items = dedupeStills(stills);
+
     return {
-        stills: Array.isArray(stills) ? stills : [],
+        stills: items,
         placeholder: placeholderUrl,
         active: 0,
         lightboxOpen: false,
@@ -11,12 +29,12 @@ export default function campaignGallery(stills, placeholderUrl) {
             }
         },
 
-        get current() {
-            return this.stills[this.active] ?? null;
+        previewUrl() {
+            return this.stills[this.active]?.url ?? this.placeholder;
         },
 
-        get hasMultiple() {
-            return this.stills.length > 1;
+        previewAlt() {
+            return this.stills[this.active]?.alt ?? 'Campaign still';
         },
 
         select(index) {
@@ -26,7 +44,7 @@ export default function campaignGallery(stills, placeholderUrl) {
         },
 
         openLightbox() {
-            if (! this.current) {
+            if (this.stills.length === 0) {
                 return;
             }
 
@@ -40,7 +58,7 @@ export default function campaignGallery(stills, placeholderUrl) {
         },
 
         next() {
-            if (! this.hasMultiple) {
+            if (this.stills.length < 2) {
                 return;
             }
 
@@ -48,7 +66,7 @@ export default function campaignGallery(stills, placeholderUrl) {
         },
 
         prev() {
-            if (! this.hasMultiple) {
+            if (this.stills.length < 2) {
                 return;
             }
 
@@ -57,6 +75,7 @@ export default function campaignGallery(stills, placeholderUrl) {
 
         onImageError(event) {
             if (event?.target) {
+                event.target.onerror = null;
                 event.target.src = this.placeholder;
             }
         },
