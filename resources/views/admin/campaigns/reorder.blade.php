@@ -103,7 +103,3 @@
     @endif
 </form>
 @endsection
-
-@push('scripts')
-    @vite('resources/js/admin-campaign-reorder.js')
-@endpush

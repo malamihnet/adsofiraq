@@ -1,6 +1,6 @@
 import Sortable from 'sortablejs';
 
-document.addEventListener('DOMContentLoaded', () => {
+export default function initAdminCampaignReorder() {
     const list = document.getElementById('campaign-reorder-list');
     const form = document.getElementById('campaign-reorder-form');
 
@@ -54,4 +54,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
         form.submit();
     });
-});
+}
