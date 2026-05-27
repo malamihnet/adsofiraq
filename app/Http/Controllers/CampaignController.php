@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesArchivePerPage;
 use App\Http\Requests\StoreCampaignRequest;
 use App\Http\Requests\UpdateCampaignRequest;
 use App\Models\Agency;
@@ -24,6 +25,8 @@ use Illuminate\View\View;
 
 class CampaignController extends Controller
 {
+    use ResolvesArchivePerPage;
+
     public function __construct(
         protected TaxonomyService $taxonomyService,
         protected CampaignUploadService $uploadService,
@@ -85,15 +88,18 @@ class CampaignController extends Controller
 
         $eagerLoads = ['brands', 'agencies', 'industries', 'mediumTypes', 'countries'];
 
+        $perPage = $this->resolveArchivePerPage($request);
+
         $campaigns = $this->archiveOrdering->paginate(
             $query,
-            perPage: 24,
+            perPage: $perPage,
             useManualOrdering: $useManualOrdering,
             eagerLoads: $eagerLoads,
         );
 
         return view('campaigns.index', [
             'campaigns' => $campaigns,
+            'perPage' => $perPage,
             'brands' => Brand::orderBy('name')->get(),
             'agencies' => Agency::orderBy('name')->get(),
             'industries' => Industry::orderBy('name')->get(),

@@ -116,6 +116,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     // Route::get('/import-ads-of-world/{batch}', [ImportAdsOfWorldController::class, 'show'])->name('import-ads-of-world.show');
 
     Route::get('/campaigns', [AdminCampaignController::class, 'index'])->name('campaigns.index');
+    Route::get('/campaigns/reorder', [AdminCampaignController::class, 'reorder'])->name('campaigns.reorder');
+    Route::post('/campaigns/reorder', [AdminCampaignController::class, 'updateReorder'])->name('campaigns.reorder.update');
+    Route::post('/campaigns/reorder/reset', [AdminCampaignController::class, 'resetReorder'])->name('campaigns.reorder.reset');
     Route::get('/campaigns/create', [AdminCampaignController::class, 'create'])->name('campaigns.create');
     Route::post('/campaigns', [AdminCampaignController::class, 'store'])->name('campaigns.store');
     Route::get('/campaigns/{campaign:id}/edit', [AdminCampaignController::class, 'edit'])->name('campaigns.edit');

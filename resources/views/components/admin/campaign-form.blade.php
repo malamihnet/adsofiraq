@@ -142,21 +142,11 @@
                 <p class="mt-1 text-xs text-archive-gray">Hero order is optional. By default, the latest campaign approved on Ads of Iraq appears first.</p>
             </div>
 
-            <div>
-                <label class="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="enable_manual_archive_position" value="1" id="enable-manual-archive-position"
-                        @checked(old('enable_manual_archive_position', $campaign?->manual_order !== null)) class="rounded border-archive-border">
-                    Enable custom archive position
-                </label>
-                @error('enable_manual_archive_position')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                <label class="section-label mb-2 mt-4 block" for="manual_order">Custom archive position</label>
-                <input type="number" name="manual_order" id="manual_order" min="1"
-                    value="{{ old('manual_order', $campaign?->manual_order) }}" class="input-field max-w-[120px]" placeholder="1">
-                <p class="mt-1 text-xs text-archive-gray">
-                    Leave empty to use normal archive ordering. Examples: <strong>1</strong> = always first in the archive,
-                    <strong>50</strong> = fixed around position 50. Not shown publicly as “pinned”.
+            <div class="md:col-span-2">
+                <p class="text-sm text-archive-gray">
+                    Archive order is managed on the
+                    <a href="{{ route('admin.campaigns.reorder') }}" class="underline">drag &amp; drop reorder page</a>.
                 </p>
-                @error('manual_order')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
 
             <div class="md:col-span-2">
@@ -178,19 +168,14 @@
         document.addEventListener('DOMContentLoaded', () => {
             const status = document.getElementById('admin-campaign-status');
             const hero = document.getElementById('admin-campaign-is-hero');
-            const manualToggle = document.getElementById('enable-manual-archive-position');
-            const manualInput = document.getElementById('manual_order');
             if (!status) return;
 
             const sync = () => {
                 const approved = status.value === 'approved';
                 if (hero) hero.disabled = !approved;
-                if (manualToggle) manualToggle.disabled = !approved;
-                if (manualInput) manualInput.disabled = !approved || (manualToggle && !manualToggle.checked);
             };
 
             status.addEventListener('change', sync);
-            if (manualToggle) manualToggle.addEventListener('change', sync);
             sync();
         });
     </script>

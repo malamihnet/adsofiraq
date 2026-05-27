@@ -10,9 +10,22 @@
     </div>
 
     <form method="GET" action="{{ route('campaigns.index') }}" class="mb-8">
-        <div class="flex gap-4">
+        <div class="flex flex-wrap gap-4">
             <input type="search" name="search" value="{{ request('search') }}" placeholder="Search campaigns..."
-                   class="input-field flex-1">
+                   class="input-field min-w-[200px] flex-1">
+            @foreach(request()->except(['search', 'page']) as $key => $value)
+                @if(is_string($value) || is_numeric($value))
+                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                @endif
+            @endforeach
+            <label class="flex items-center gap-2 text-sm">
+                <span class="text-archive-gray">Per page</span>
+                <select name="per_page" class="input-field w-auto min-w-[5rem]" onchange="this.form.submit()">
+                    @foreach([24, 50, 100] as $size)
+                        <option value="{{ $size }}" @selected(($perPage ?? 24) === $size)>{{ $size }}</option>
+                    @endforeach
+                </select>
+            </label>
             <button type="submit" class="btn-primary">Search</button>
         </div>
     </form>
@@ -20,9 +33,11 @@
     <div class="grid gap-8 lg:grid-cols-4">
         <aside class="lg:col-span-1">
             <form method="GET" action="{{ route('campaigns.index') }}" class="space-y-6 border border-archive-border p-6">
-                @if(request('search'))
-                    <input type="hidden" name="search" value="{{ request('search') }}">
-                @endif
+                @foreach(request()->except(['brand', 'agency', 'industry', 'medium', 'country', 'year', 'sort', 'page']) as $key => $value)
+                    @if(is_string($value) || is_numeric($value))
+                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                    @endif
+                @endforeach
 
                 <div>
                     <label class="section-label mb-2 block">Brand</label>
@@ -90,6 +105,15 @@
                         <option value="latest" @selected(request('sort', 'latest') === 'latest')>Latest</option>
                         <option value="views" @selected(request('sort') === 'views')>Most viewed</option>
                         <option value="bookmarks" @selected(request('sort') === 'bookmarks')>Most bookmarked</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="section-label mb-2 block">Per page</label>
+                    <select name="per_page" class="input-field">
+                        @foreach([24, 50, 100] as $size)
+                            <option value="{{ $size }}" @selected(($perPage ?? 24) === $size)>{{ $size }}</option>
+                        @endforeach
                     </select>
                 </div>
 

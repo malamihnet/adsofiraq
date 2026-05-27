@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminCampaignStoreRequest;
+use App\Http\Requests\Admin\CampaignArchiveReorderRequest;
 use App\Http\Requests\Admin\UpdateCampaignHeroRequest;
 use App\Http\Requests\Admin\UpdatePlatformVerificationRequest;
 use App\Models\Agency;
@@ -13,7 +14,8 @@ use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
 use App\Models\User;
-use App\Services\CampaignManualOrderService;
+use App\Services\CampaignArchiveOrderingService;
+use App\Services\CampaignArchiveReorderService;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
 use App\Services\CampaignVideoService;
@@ -31,7 +33,8 @@ class CampaignController extends Controller
         protected CampaignVideoService $videoService,
         protected PlatformVerificationService $verificationService,
         protected CampaignTaxonomySyncService $taxonomySyncService,
-        protected CampaignManualOrderService $manualOrderService,
+        protected CampaignArchiveOrderingService $archiveOrdering,
+        protected CampaignArchiveReorderService $archiveReorder,
     ) {}
 
     public function index(Request $request): View
@@ -116,12 +119,6 @@ class CampaignController extends Controller
             $this->verificationService->update($campaign, $request->user(), true);
         }
 
-        $this->manualOrderService->syncFromRequest(
-            $campaign->fresh(),
-            $request->boolean('enable_manual_archive_position'),
-            $request->input('manual_order') !== null ? (int) $request->input('manual_order') : null,
-        );
-
         return redirect()->route('admin.campaigns.show', $campaign)
             ->with('success', 'Campaign created successfully.');
     }
@@ -182,12 +179,6 @@ class CampaignController extends Controller
         if ($request->boolean('is_verified')) {
             $this->verificationService->update($campaign, $request->user(), true);
         }
-
-        $this->manualOrderService->syncFromRequest(
-            $campaign->fresh(),
-            $request->boolean('enable_manual_archive_position'),
-            $request->input('manual_order') !== null ? (int) $request->input('manual_order') : null,
-        );
 
         return redirect()
             ->route('admin.campaigns.edit', $campaign)
@@ -275,6 +266,47 @@ class CampaignController extends Controller
 
         return redirect()->route('admin.campaigns.index')
             ->with('success', 'Campaign deleted.');
+    }
+
+    public function reorder(): View
+    {
+        $orderedIds = $this->archiveOrdering->resolveFullArchiveOrderedIds();
+
+        $campaigns = Campaign::query()
+            ->approved()
+            ->with(['brands', 'agencies'])
+            ->whereIn('id', $orderedIds)
+            ->get()
+            ->sortBy(fn (Campaign $campaign) => array_search($campaign->id, $orderedIds, true))
+            ->values();
+
+        return view('admin.campaigns.reorder', [
+            'campaigns' => $campaigns,
+        ]);
+    }
+
+    public function updateReorder(CampaignArchiveReorderRequest $request): RedirectResponse
+    {
+        $order = array_map('intval', $request->input('order', []));
+        $pinned = array_map('intval', $request->input('pinned', []));
+
+        $this->archiveReorder->saveOrder($order, $pinned);
+
+        return redirect()
+            ->route('admin.campaigns.reorder')
+            ->with('success', 'Archive order saved. Manually ordered campaigns appear first on the public archive (Latest sort).');
+    }
+
+    public function resetReorder(): RedirectResponse
+    {
+        $cleared = $this->archiveReorder->resetAll();
+
+        return redirect()
+            ->route('admin.campaigns.reorder')
+            ->with('success', sprintf(
+                'Reset to automatic ordering. Cleared manual positions for %d campaign(s).',
+                $cleared,
+            ));
     }
 
     /**

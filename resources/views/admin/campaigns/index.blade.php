@@ -5,7 +5,10 @@
 @section('content')
 <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <h1 class="section-title">Campaign Moderation</h1>
-    <a href="{{ route('admin.campaigns.create') }}" class="btn-primary text-xs">Add Campaign</a>
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ route('admin.campaigns.reorder') }}" class="btn-outline text-xs">Reorder Archive</a>
+        <a href="{{ route('admin.campaigns.create') }}" class="btn-primary text-xs">Add Campaign</a>
+    </div>
 </div>
 
 <form method="GET" class="mb-6 flex flex-wrap gap-4">
@@ -19,7 +22,7 @@
     <x-admin.verification-filter />
     <label class="flex items-center gap-2 text-sm">
         <input type="checkbox" name="pinned" value="1" @checked(request()->boolean('pinned')) class="rounded border-archive-border">
-        Pinned positions only
+        Manually ordered only
     </label>
     <button type="submit" class="btn-primary">Filter</button>
 </form>
@@ -33,7 +36,7 @@
                 <th class="px-4 py-3 text-left">Status</th>
                 <th class="px-4 py-3 text-left">Featured</th>
                 <th class="px-4 py-3 text-left">Hero</th>
-                <th class="px-4 py-3 text-left">Archive</th>
+                <th class="px-4 py-3 text-left">Archive order</th>
                 <th class="px-4 py-3 text-left">Verified</th>
                 <th class="px-4 py-3 text-left">Actions</th>
             </tr>
@@ -60,7 +63,7 @@
                     <td class="px-4 py-3">
                         @if($campaign->manual_order)
                             <span class="border border-archive-black bg-archive-light px-2 py-0.5 text-xs uppercase tracking-wider">
-                                PINNED #{{ $campaign->manual_order }}
+                                Manual #{{ $campaign->manual_order }}
                             </span>
                         @else
                             —

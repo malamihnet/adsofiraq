@@ -79,17 +79,14 @@ class CampaignArchiveOrderingService
     public function resolveFullArchiveOrderedIds(): array
     {
         return Cache::remember(self::CACHE_KEY, now()->addHour(), function () {
-            $pinned = Campaign::query()
+            $pinnedIds = Campaign::query()
                 ->public()
                 ->whereNotNull('manual_order')
                 ->orderBy('manual_order')
                 ->orderByDesc('id')
-                ->get(['id', 'manual_order']);
-
-            $pinnedByPosition = [];
-            foreach ($pinned as $campaign) {
-                $pinnedByPosition[(int) $campaign->manual_order] = (int) $campaign->id;
-            }
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
 
             $automaticIds = Campaign::query()
                 ->public()
@@ -99,39 +96,39 @@ class CampaignArchiveOrderingService
                 ->map(fn ($id) => (int) $id)
                 ->all();
 
-            return $this->mergeOrderedIds($pinnedByPosition, $automaticIds);
+            return $this->mergeBlockOrder($pinnedIds, $automaticIds);
         });
     }
 
     /**
-     * Merge pinned positions with automatic campaigns filling gaps.
+     * Manually ordered campaigns first, then automatic campaigns by date.
      *
-     * @param  array<int, int>  $pinnedByPosition  position => campaign_id
+     * @param  list<int>  $pinnedIds
+     * @param  list<int>  $automaticIds
+     * @return list<int>
+     */
+    public function mergeBlockOrder(array $pinnedIds, array $automaticIds): array
+    {
+        $pinnedLookup = array_fill_keys($pinnedIds, true);
+        $automaticFiltered = array_values(array_filter(
+            $automaticIds,
+            static fn (int $id) => ! isset($pinnedLookup[$id]),
+        ));
+
+        return array_values(array_unique(array_merge($pinnedIds, $automaticFiltered)));
+    }
+
+    /**
+     * @deprecated Use mergeBlockOrder() for archive ordering.
+     *
+     * @param  array<int, int>  $pinnedByPosition
      * @param  list<int>  $automaticIds
      * @return list<int>
      */
     public function mergeOrderedIds(array $pinnedByPosition, array $automaticIds): array
     {
-        $result = [];
-        $autoIndex = 0;
-        $position = 1;
-        $maxPinnedPosition = $pinnedByPosition === [] ? 0 : max(array_keys($pinnedByPosition));
+        ksort($pinnedByPosition);
 
-        while ($autoIndex < count($automaticIds) || isset($pinnedByPosition[$position]) || $position <= $maxPinnedPosition) {
-            if (isset($pinnedByPosition[$position])) {
-                $result[] = $pinnedByPosition[$position];
-            } elseif ($autoIndex < count($automaticIds)) {
-                $result[] = $automaticIds[$autoIndex];
-                $autoIndex++;
-            }
-
-            $position++;
-
-            if ($position > count($automaticIds) + count($pinnedByPosition) + 100_000) {
-                break;
-            }
-        }
-
-        return array_values(array_unique($result));
+        return $this->mergeBlockOrder(array_values($pinnedByPosition), $automaticIds);
     }
 }
