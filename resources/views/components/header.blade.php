@@ -29,8 +29,8 @@
     $displayName = $authUser?->name ?: $authUser?->username;
 @endphp
 
-<header class="relative z-[100] border-b border-white/10 bg-black text-white" x-data="{ open: false, userOpen: false }">
-    <div class="mx-auto grid h-14 max-w-7xl grid-cols-[1fr_auto_1fr] items-center overflow-visible px-4 md:h-[72px] md:px-8">
+<header class="site-header border-b border-white/10 bg-black text-white" x-data="siteHeader()" x-init="init()">
+    <div class="site-header__bar mx-auto grid min-h-14 max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 md:min-h-[72px] md:px-8">
         {{-- Left: platform navigation --}}
         <div class="flex items-center justify-start">
             <nav aria-label="Primary" class="hidden items-center gap-5 md:flex">
@@ -64,18 +64,20 @@
         </a>
 
         {{-- Right: account actions + mobile menu --}}
-        <div class="flex items-center justify-end gap-3 overflow-visible md:gap-4">
-            <div class="hidden items-center gap-4 overflow-visible md:flex">
+        <div class="site-header__actions flex items-center justify-end gap-3 md:gap-4">
+            <div class="hidden items-center gap-4 md:flex">
             @guest
                 <a href="{{ route('login') }}" class="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white">Login</a>
                 <a href="{{ route('register') }}" class="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white">Register</a>
             @else
-                <div class="relative z-[100] overflow-visible" @keydown.escape.window="userOpen = false">
+                <div class="site-header__user-menu relative" @keydown.escape.window="userOpen = false">
                     <button
                         type="button"
+                        x-ref="userTrigger"
                         class="inline-flex max-w-[220px] items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1.5 transition hover:bg-white/10"
-                        @click="userOpen = !userOpen"
+                        @click="toggleUserMenu()"
                         :aria-expanded="userOpen"
+                        aria-haspopup="true"
                         aria-label="Account menu"
                     >
                         <x-user-avatar :user="$authUser" size="md" />
@@ -85,32 +87,43 @@
                         </svg>
                     </button>
 
-                    <div
-                        x-show="userOpen"
-                        x-cloak
-                        @click.away="userOpen = false"
-                        class="absolute right-0 z-[9999] mt-2 w-56 overflow-hidden border border-white/10 bg-black shadow-lg"
-                    >
-                        <a href="{{ route('profile.show.redirect') }}" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">My Profile</a>
-                        <a href="{{ route('profile.campaigns') }}" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">My Campaigns</a>
-                        <a href="{{ route('profile.edit') }}" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">Edit Profile</a>
+                    <template x-teleport="body">
+                        <div
+                            x-show="userOpen"
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 translate-y-1"
+                            @click.away="userOpen = false"
+                            :style="`top: ${menuTop}px; right: ${menuRight}px;`"
+                            class="fixed z-[99999] w-56 border border-white/10 bg-black shadow-xl"
+                            role="menu"
+                            aria-label="Account menu"
+                        >
+                            <a href="{{ route('profile.show.redirect') }}" role="menuitem" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">My Profile</a>
+                            <a href="{{ route('profile.campaigns') }}" role="menuitem" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">My Campaigns</a>
+                            <a href="{{ route('profile.edit') }}" role="menuitem" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">Edit Profile</a>
 
-                        <div class="border-t border-white/10"></div>
+                            <div class="border-t border-white/10"></div>
 
-                        @if($authUser->hasVerifiedEmail())
-                            <a href="{{ $bookmarksUrl }}" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] {{ request()->routeIs('bookmarks.*') ? 'text-white bg-white/10' : 'text-white/80 hover:bg-white/10 hover:text-white' }}">Bookmarks</a>
-                            <a href="{{ $followingUrl }}" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] {{ request()->routeIs('following.*') ? 'text-white bg-white/10' : 'text-white/80 hover:bg-white/10 hover:text-white' }}">Watching</a>
-                        @else
-                            <a href="{{ route('verification.notice') }}" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">Verify Email</a>
-                        @endif
+                            @if($authUser->hasVerifiedEmail())
+                                <a href="{{ $bookmarksUrl }}" role="menuitem" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] {{ request()->routeIs('bookmarks.*') ? 'text-white bg-white/10' : 'text-white/80 hover:bg-white/10 hover:text-white' }}">Bookmarks</a>
+                                <a href="{{ $followingUrl }}" role="menuitem" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] {{ request()->routeIs('following.*') ? 'text-white bg-white/10' : 'text-white/80 hover:bg-white/10 hover:text-white' }}">Watching</a>
+                            @else
+                                <a href="{{ route('verification.notice') }}" role="menuitem" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">Verify Email</a>
+                            @endif
 
-                        <div class="border-t border-white/10"></div>
+                            <div class="border-t border-white/10"></div>
 
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="block w-full px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">Logout</button>
-                        </form>
-                    </div>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" role="menuitem" class="block w-full px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">Logout</button>
+                            </form>
+                        </div>
+                    </template>
                 </div>
             @endguest
             </div>

@@ -45,7 +45,7 @@
         </div>
     @endif
 
-    <main>
+    <main class="relative z-0">
         @yield('content')
     </main>
 

@@ -9,6 +9,20 @@
 }
 
 @layer components {
+    /* Site header: stay above hero/main; never clip teleported dropdowns */
+    .site-header {
+        position: relative;
+        z-index: 9999;
+        overflow: visible;
+    }
+
+    .site-header__bar,
+    .site-header__bar > *,
+    .site-header__actions,
+    .site-header__user-menu {
+        overflow: visible;
+    }
+
     .btn {
         @apply inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium tracking-wide transition-colors duration-200;
     }
