@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Exceptions\CampaignImportException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ImportCampaignUrlRequest;
+use App\Services\CampaignAssetDedupService;
 use App\Services\Import\CampaignImporterService;
 use App\Services\Import\RepairImportedCampaignMedia;
 use App\Services\PublicStorageSyncService;
@@ -18,6 +19,7 @@ class ImportCampaignController extends Controller
         protected CampaignImporterService $importer,
         protected RepairImportedCampaignMedia $mediaRepair,
         protected PublicStorageSyncService $publicStorageSync,
+        protected CampaignAssetDedupService $assetDedup,
     ) {}
 
     public function create(): View
@@ -72,6 +74,30 @@ class ImportCampaignController extends Controller
         ));
     }
 
+    public function removeDuplicateStills(Request $request): RedirectResponse
+    {
+        if ($request->filled('campaign_id')) {
+            $campaign = \App\Models\Campaign::query()->with('assets')->findOrFail($request->integer('campaign_id'));
+            $result = $this->assetDedup->removeDuplicateStillsForCampaign($campaign);
+
+            return back()->with('success', sprintf(
+                'Removed %d duplicate still(s) for campaign #%d (%d file(s) deleted from storage).',
+                $result['removed'],
+                $campaign->id,
+                $result['files_deleted'],
+            ));
+        }
+
+        $stats = $this->assetDedup->removeDuplicateStillsAll($request->integer('limit') ?: null);
+
+        return back()->with('success', sprintf(
+            'Duplicate still cleanup finished. %d campaign(s) affected, %d duplicate(s) removed, %d file(s) deleted.',
+            $stats['campaigns'],
+            $stats['removed'],
+            $stats['files_deleted'],
+        ));
+    }
+
     public function syncPublicStorage(Request $request): RedirectResponse
     {
         $campaignId = $request->filled('campaign_id') ? $request->integer('campaign_id') : null;
@@ -84,6 +110,7 @@ class ImportCampaignController extends Controller
      * @param  array{
      *     stills_added: int,
      *     thumbnail_updated: bool,
+     *     duplicates_removed?: int,
      *     skipped: bool,
      *     message: ?string,
      *     sync: array{copied: int, skipped: int, failed: int, target: ?string},
@@ -92,9 +119,10 @@ class ImportCampaignController extends Controller
     protected function repairSuccessMessage(int $campaignId, array $result): string
     {
         $message = sprintf(
-            'Media repair finished and public storage synced for campaign #%d (%d stills added, thumbnail %s). %s',
+            'Media repair finished and public storage synced for campaign #%d (%d stills added, %d duplicates removed, thumbnail %s). %s',
             $campaignId,
             $result['stills_added'],
+            $result['duplicates_removed'] ?? 0,
             $result['thumbnail_updated'] ? 'updated' : 'unchanged',
             $this->publicStorageSync->formatStatsMessage($result['sync']),
         );

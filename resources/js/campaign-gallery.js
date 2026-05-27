@@ -1,14 +1,24 @@
 function dedupeStills(stills) {
-    const seen = new Set();
+    const seenUrls = new Set();
+    const seenHashes = new Set();
 
     return (Array.isArray(stills) ? stills : []).filter((still) => {
         const url = still?.url;
+        const hash = still?.hash;
 
-        if (! url || seen.has(url)) {
+        if (! url || seenUrls.has(url)) {
             return false;
         }
 
-        seen.add(url);
+        if (hash && seenHashes.has(hash)) {
+            return false;
+        }
+
+        seenUrls.add(url);
+
+        if (hash) {
+            seenHashes.add(hash);
+        }
 
         return true;
     });

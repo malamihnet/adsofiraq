@@ -85,6 +85,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::get('/import-campaign', [ImportCampaignController::class, 'create'])->name('import-campaign.create');
     Route::post('/import-campaign', [ImportCampaignController::class, 'store'])->name('import-campaign.store');
     Route::post('/import-campaign/repair-media', [ImportCampaignController::class, 'repairMedia'])->name('import-campaign.repair-media');
+    Route::post('/import-campaign/remove-duplicate-stills', [ImportCampaignController::class, 'removeDuplicateStills'])->name('import-campaign.remove-duplicate-stills');
     Route::post('/import-campaign/sync-public-storage', [ImportCampaignController::class, 'syncPublicStorage'])->name('import-campaign.sync-public-storage');
 
     Route::get('/check-new-campaigns', [CheckNewCampaignsController::class, 'index'])->name('check-new-campaigns.index');

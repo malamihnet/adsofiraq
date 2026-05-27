@@ -77,6 +77,27 @@
 </div>
 
 <div class="mt-6 max-w-2xl border border-archive-border bg-white p-6">
+    <h2 class="font-display text-lg">Remove Duplicate Stills</h2>
+    <p class="mt-2 text-sm text-archive-gray">
+        Remove duplicate imported stills (same source URL or identical image content). Keeps WebP when available,
+        then lowest sort order. Deletes duplicate database rows and storage files.
+    </p>
+
+    <form method="POST" action="{{ route('admin.import-campaign.remove-duplicate-stills') }}" class="mt-4 space-y-4">
+        @csrf
+        <div>
+            <label for="dedup_campaign_id" class="section-label mb-2 block">Single campaign ID (optional)</label>
+            <input type="number" name="campaign_id" id="dedup_campaign_id" min="1" class="input-field" placeholder="Leave empty to scan all campaigns">
+        </div>
+        <div>
+            <label for="dedup_limit" class="section-label mb-2 block">Limit (optional, all campaigns only)</label>
+            <input type="number" name="limit" id="dedup_limit" min="1" class="input-field" placeholder="No limit">
+        </div>
+        <button type="submit" class="btn-secondary">Remove Duplicate Stills</button>
+    </form>
+</div>
+
+<div class="mt-6 max-w-2xl border border-archive-border bg-white p-6">
     <h2 class="font-display text-lg">Sync Public Storage</h2>
     <p class="mt-2 text-sm text-archive-gray">
         Copy campaign files from <code class="text-xs">storage/app/public</code> to the web-facing

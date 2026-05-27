@@ -5,6 +5,7 @@ namespace App\Services\Import;
 use App\Models\Campaign;
 use App\Models\CampaignAsset;
 use App\Models\CampaignVideo;
+use App\Services\CampaignAssetDedupService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,7 @@ class CampaignImportMediaService
         protected CampaignImportMediaOptimizer $optimizer,
         protected CampaignImportVideoConverter $videoConverter,
         protected CampaignImportImageUrlResolver $urlResolver,
+        protected CampaignAssetDedupService $assetDedup,
     ) {}
 
     /**
@@ -30,38 +32,60 @@ class CampaignImportMediaService
         ]);
 
         $assets = [];
+        $this->assetDedup->backfillAssetMetadata($campaign->assets()->get());
         $sortOrder = (int) $campaign->assets()->max('sort_order');
-        $seen = [];
-        $stillIndex = 0;
+        $seenUrls = [];
 
         foreach ($imageUrls as $url) {
             $absolute = $this->resolveAbsoluteUrl($url, $campaign->source_url);
 
-            if ($absolute === null || isset($seen[$absolute])) {
+            if ($absolute === null || isset($seenUrls[$absolute])) {
                 continue;
             }
 
-            $seen[$absolute] = true;
-            $stillIndex++;
-            $filename = 'still-'.$stillIndex.'.webp';
-            $directory = $this->stillDirectory($campaign);
+            $seenUrls[$absolute] = true;
 
             Log::info('Campaign import: downloading still.', [
                 'campaign_id' => $campaign->id,
-                'index' => $stillIndex,
                 'url' => $absolute,
             ]);
 
-            $path = $this->downloadAndStoreImage($campaign, $absolute, $directory, $filename);
+            $body = $this->downloadImageBody($campaign, $absolute);
+
+            if ($body === null) {
+                continue;
+            }
+
+            $contentHash = $this->assetDedup->visualContentHash($body);
+
+            if ($contentHash === null || $this->assetDedup->importAlreadyExists($campaign, $absolute, $contentHash)) {
+                Log::info('Duplicate import asset skipped for campaign #'.$campaign->id, [
+                    'campaign_id' => $campaign->id,
+                    'source_url' => $absolute,
+                    'content_hash' => $contentHash,
+                ]);
+
+                continue;
+            }
+
+            $stillIndex = $this->nextStillIndex($campaign);
+            $filename = 'still-'.$stillIndex.'.webp';
+            $directory = $this->stillDirectory($campaign);
+            $path = $this->storeImageBody($campaign, $body, $absolute, $directory, $filename);
 
             if ($path === null) {
                 continue;
             }
 
+            $sourceKey = $this->assetDedup->sourceUrlKey($absolute);
+
             $assets[] = $campaign->assets()->create([
                 'file_path' => $path,
                 'file_type' => 'image',
                 'sort_order' => ++$sortOrder,
+                'source_url' => $absolute,
+                'source_url_key' => $sourceKey,
+                'content_hash' => $contentHash,
             ]);
 
             Log::info('Campaign import: still attached.', [
@@ -143,8 +167,15 @@ class CampaignImportMediaService
             'url' => $absolute,
         ]);
 
-        $path = $this->downloadAndStoreImage(
+        $body = $this->downloadImageBody($campaign, $absolute);
+
+        if ($body === null) {
+            return null;
+        }
+
+        $path = $this->storeImageBody(
             $campaign,
+            $body,
             $absolute,
             $this->thumbnailDirectory($campaign),
             'thumbnail.webp',
@@ -160,18 +191,13 @@ class CampaignImportMediaService
         return $path;
     }
 
-    protected function downloadAndStoreImage(
+    protected function storeImageBody(
         Campaign $campaign,
-        string $url,
+        string $body,
+        string $sourceUrl,
         string $directory,
         string $filename,
     ): ?string {
-        $body = $this->downloadImageBody($campaign, $url);
-
-        if ($body === null) {
-            return null;
-        }
-
         $relativeWebp = trim($directory.'/'.$filename, '/');
 
         $path = $this->optimizer->storeImageAsWebpAtPath($body, $relativeWebp);
@@ -186,11 +212,39 @@ class CampaignImportMediaService
 
         Log::warning('Campaign import: WebP failed, storing original format.', [
             'campaign_id' => $campaign->id,
-            'url' => $url,
+            'url' => $sourceUrl,
             'path' => $relativeFallback,
         ]);
 
         return $this->optimizer->storeRawImageAtPath($body, $relativeFallback);
+    }
+
+    protected function downloadAndStoreImage(
+        Campaign $campaign,
+        string $url,
+        string $directory,
+        string $filename,
+    ): ?string {
+        $body = $this->downloadImageBody($campaign, $url);
+
+        if ($body === null) {
+            return null;
+        }
+
+        return $this->storeImageBody($campaign, $body, $url, $directory, $filename);
+    }
+
+    protected function nextStillIndex(Campaign $campaign): int
+    {
+        $max = 0;
+
+        foreach ($campaign->assets()->pluck('file_path') as $path) {
+            if (preg_match('/still-(\d+)\./i', (string) $path, $matches)) {
+                $max = max($max, (int) $matches[1]);
+            }
+        }
+
+        return $max + 1;
     }
 
     protected function downloadImageBody(Campaign $campaign, string $url): ?string

@@ -9,23 +9,45 @@
         $placeholder = asset(config('upload.placeholder_fallback', 'images/placeholder.jpg'));
     }
 
-    $seen = [];
+    $seenPaths = [];
+    $seenUrls = [];
+    $seenHashes = [];
+    $seenSources = [];
     $payload = collect();
 
     foreach ($stills as $asset) {
         $url = $asset->resolvedUrl() ?? $asset->url;
-        $key = $asset->galleryPathKey() ?? $url;
+        $pathKey = $asset->galleryPathKey() ?? $url;
+        $hash = $asset->content_hash ?? $asset->effectiveContentHash();
+        $sourceKey = $asset->source_url_key;
 
-        if ($key === null || isset($seen[$key]) || isset($seen[$url])) {
+        if ($pathKey === null || isset($seenPaths[$pathKey]) || isset($seenUrls[$url])) {
             continue;
         }
 
-        $seen[$key] = true;
-        $seen[$url] = true;
+        if ($hash !== null && isset($seenHashes[$hash])) {
+            continue;
+        }
+
+        if ($sourceKey !== null && isset($seenSources[$sourceKey])) {
+            continue;
+        }
+
+        $seenPaths[$pathKey] = true;
+        $seenUrls[$url] = true;
+
+        if ($hash !== null) {
+            $seenHashes[$hash] = true;
+        }
+
+        if ($sourceKey !== null) {
+            $seenSources[$sourceKey] = true;
+        }
 
         $payload->push([
             'id' => $asset->id,
             'url' => $url,
+            'hash' => $hash,
             'alt' => $title.' — still '.($payload->count() + 1),
         ]);
     }

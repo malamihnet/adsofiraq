@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CampaignAssetDedupService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +14,9 @@ class CampaignAsset extends Model
         'file_path',
         'file_type',
         'sort_order',
+        'source_url',
+        'source_url_key',
+        'content_hash',
     ];
 
     public function campaign(): BelongsTo
@@ -61,6 +65,13 @@ class CampaignAsset extends Model
         return (bool) preg_match('/\.(jpe?g|png|webp|gif|avif)$/i', $path);
     }
 
+    public function isWebpFile(): bool
+    {
+        $path = strtolower($this->normalizedFilePath() ?? '');
+
+        return str_ends_with($path, '.webp');
+    }
+
     public function galleryPathKey(): ?string
     {
         $path = $this->normalizedFilePath();
@@ -76,7 +87,7 @@ class CampaignAsset extends Model
         return strtolower(ltrim($path, '/'));
     }
 
-    protected function normalizedFilePath(): ?string
+    public function normalizedFilePath(): ?string
     {
         if (empty($this->file_path)) {
             return null;
@@ -103,6 +114,11 @@ class CampaignAsset extends Model
         }
 
         return ltrim($path, '/');
+    }
+
+    public function effectiveContentHash(): ?string
+    {
+        return app(CampaignAssetDedupService::class)->resolveContentHash($this);
     }
 
     protected function placeholderUrl(): string

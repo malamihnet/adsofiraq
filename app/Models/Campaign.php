@@ -280,38 +280,13 @@ class Campaign extends Model
     }
 
     /**
-     * Image stills for the public gallery (deduplicated, sorted, valid URLs only).
+     * Image stills for the public gallery (deduplicated by path, source URL, and content hash).
      *
      * @return \Illuminate\Support\Collection<int, CampaignAsset>
      */
     public function galleryStills(): \Illuminate\Support\Collection
     {
-        if (! $this->relationLoaded('assets')) {
-            $this->load('assets');
-        }
-
-        $thumbnailKey = $this->galleryPathKey($this->thumbnail_path);
-        $seen = [];
-
-        return $this->assets
-            ->filter(fn (CampaignAsset $asset) => $asset->isDisplayableImage())
-            ->sortBy(fn (CampaignAsset $asset) => [$asset->sort_order, $asset->id])
-            ->filter(function (CampaignAsset $asset) use (&$seen, $thumbnailKey) {
-                $key = $asset->galleryPathKey();
-
-                if ($key === null || isset($seen[$key])) {
-                    return false;
-                }
-
-                if ($thumbnailKey !== null && $key === $thumbnailKey) {
-                    return false;
-                }
-
-                $seen[$key] = true;
-
-                return true;
-            })
-            ->values();
+        return app(\App\Services\CampaignAssetDedupService::class)->galleryStillsFor($this);
     }
 
     protected function galleryPathKey(?string $path): ?string

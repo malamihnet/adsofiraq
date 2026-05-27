@@ -3,6 +3,7 @@
 namespace App\Services\Import;
 
 use App\Models\Campaign;
+use App\Services\CampaignAssetDedupService;
 use App\Services\CampaignUploadService;
 use App\Services\PublicStorageSyncService;
 use App\Services\VideoThumbnailService;
@@ -19,12 +20,14 @@ class RepairImportedCampaignMedia
         protected CampaignUploadService $uploadService,
         protected VideoThumbnailService $videoThumbnailService,
         protected PublicStorageSyncService $publicStorageSync,
+        protected CampaignAssetDedupService $assetDedup,
     ) {}
 
     /**
      * @return array{
      *     stills_added: int,
      *     thumbnail_updated: bool,
+     *     duplicates_removed: int,
      *     skipped: bool,
      *     message: ?string,
      *     sync: array{copied: int, skipped: int, failed: int, target: ?string},
@@ -35,6 +38,7 @@ class RepairImportedCampaignMedia
         $result = [
             'stills_added' => 0,
             'thumbnail_updated' => false,
+            'duplicates_removed' => 0,
             'skipped' => false,
             'message' => null,
             'sync' => $this->publicStorageSync->emptyStats(),
@@ -118,6 +122,11 @@ class RepairImportedCampaignMedia
                 report($e);
             }
         }
+
+        $campaign = $campaign->fresh(['assets', 'videos']);
+
+        $dedup = $this->assetDedup->removeDuplicateStillsForCampaign($campaign);
+        $result['duplicates_removed'] = $dedup['removed'];
 
         $campaign = $campaign->fresh(['assets', 'videos']);
         $result['sync'] = $this->publicStorageSync->syncCampaign($campaign);
