@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CampaignController as AdminCampaignController;
 use App\Http\Controllers\Admin\CheckNewCampaignsController;
 use App\Http\Controllers\Admin\ImportAdsOfWorldController;
 use App\Http\Controllers\Admin\ImportCampaignController;
+use App\Http\Controllers\Admin\CampaignResetController;
 use App\Http\Controllers\Admin\MediaMaintenanceController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CampaignRevisionController as AdminCampaignRevisionController;
@@ -92,6 +93,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::get('/maintenance/clean-duplicate-media', [MediaMaintenanceController::class, 'index'])->name('maintenance.clean-duplicate-media');
     Route::post('/maintenance/clean-duplicate-media', [MediaMaintenanceController::class, 'cleanDuplicateMedia'])->name('maintenance.clean-duplicate-media.run');
     Route::post('/maintenance/cleanup-orphans', [MediaMaintenanceController::class, 'cleanupOrphans'])->name('maintenance.cleanup-orphans');
+
+    Route::get('/maintenance/reset-all-campaigns', [CampaignResetController::class, 'index'])->name('maintenance.reset-all-campaigns');
+    Route::post('/maintenance/reset-all-campaigns/dry-run', [CampaignResetController::class, 'dryRun'])->name('maintenance.reset-all-campaigns.dry-run');
+    Route::post('/maintenance/reset-all-campaigns/start', [CampaignResetController::class, 'start'])->name('maintenance.reset-all-campaigns.start');
+    Route::get('/maintenance/reset-all-campaigns/{session}/progress', [CampaignResetController::class, 'progress'])->name('maintenance.reset-all-campaigns.progress');
+    Route::get('/maintenance/reset-all-campaigns/{session}/status', [CampaignResetController::class, 'status'])->name('maintenance.reset-all-campaigns.status');
+    Route::post('/maintenance/reset-all-campaigns/{session}/tick', [CampaignResetController::class, 'tick'])->name('maintenance.reset-all-campaigns.tick');
+    Route::post('/maintenance/reset-all-campaigns/{session}/pause', [CampaignResetController::class, 'pause'])->name('maintenance.reset-all-campaigns.pause');
+    Route::post('/maintenance/reset-all-campaigns/{session}/resume', [CampaignResetController::class, 'resume'])->name('maintenance.reset-all-campaigns.resume');
 
     Route::get('/check-new-campaigns', [CheckNewCampaignsController::class, 'index'])->name('check-new-campaigns.index');
     Route::post('/check-new-campaigns', [CheckNewCampaignsController::class, 'start'])->name('check-new-campaigns.start');

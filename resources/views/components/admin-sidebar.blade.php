@@ -8,6 +8,7 @@
         <a href="{{ route('admin.campaigns.create') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Add Campaign</a>
         <a href="{{ route('admin.import-campaign.create') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Import Campaign</a>
         <a href="{{ route('admin.maintenance.clean-duplicate-media') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Clean Duplicate Media</a>
+        <a href="{{ route('admin.maintenance.reset-all-campaigns') }}" class="block py-2 pl-4 text-red-800 hover:underline">Reset All Campaigns</a>
         <a href="{{ route('admin.check-new-campaigns.index') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Check New Campaigns</a>
         <a href="{{ route('admin.revisions.index') }}" class="block py-2 hover:underline">Revisions</a>
         <a href="{{ route('admin.brands.index') }}" class="block py-2 hover:underline">Brands</a>

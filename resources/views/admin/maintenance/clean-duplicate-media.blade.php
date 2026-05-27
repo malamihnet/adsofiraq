@@ -59,6 +59,16 @@
     </form>
 </div>
 
+<div class="mt-6 max-w-2xl border-2 border-red-600 bg-red-50 p-6">
+    <h2 class="font-display text-lg text-red-900">Reset All Campaigns</h2>
+    <p class="mt-2 text-sm text-red-950">
+        Wipe every campaign and all campaign media to start a fresh Iraq re-import. Includes dry run, confirmation phrase, and chunked progress.
+    </p>
+    <a href="{{ route('admin.maintenance.reset-all-campaigns') }}" class="btn-secondary mt-4 inline-block border-red-700 text-red-900">
+        Open Reset Tool
+    </a>
+</div>
+
 <div class="mt-6 max-w-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950">
     <h2 class="font-display text-lg">CLI commands</h2>
     <ul class="mt-3 list-inside list-disc space-y-1 font-mono text-xs">
