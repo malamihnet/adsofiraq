@@ -73,7 +73,7 @@
                 class="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.01]"
                 :src="previewUrl()"
                 :alt="previewAlt()"
-                @error="onImageError($event)"
+                x-on:error="onImageError($event)"
             >
             <span class="pointer-events-none absolute bottom-3 right-3 border border-white/30 bg-black/70 px-2 py-1 text-[10px] uppercase tracking-widest text-white opacity-0 transition group-hover:opacity-100">
                 View gallery
@@ -95,7 +95,7 @@
                             alt=""
                             class="h-full w-full object-cover"
                             loading="lazy"
-                            @error="onImageError($event)"
+                            x-on:error="onImageError($event)"
                         >
                     </button>
                 @endforeach
@@ -143,7 +143,7 @@
                     :src="previewUrl()"
                     :alt="previewAlt()"
                     class="campaign-gallery-lightbox__image"
-                    @error="onImageError($event)"
+                    x-on:error="onImageError($event)"
                 >
             </div>
 
