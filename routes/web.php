@@ -84,6 +84,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
 
     Route::get('/import-campaign', [ImportCampaignController::class, 'create'])->name('import-campaign.create');
     Route::post('/import-campaign', [ImportCampaignController::class, 'store'])->name('import-campaign.store');
+    Route::post('/import-campaign/repair-media', [ImportCampaignController::class, 'repairMedia'])->name('import-campaign.repair-media');
 
     Route::get('/check-new-campaigns', [CheckNewCampaignsController::class, 'index'])->name('check-new-campaigns.index');
     Route::post('/check-new-campaigns', [CheckNewCampaignsController::class, 'start'])->name('check-new-campaigns.start');

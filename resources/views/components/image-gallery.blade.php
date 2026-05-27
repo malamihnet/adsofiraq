@@ -8,8 +8,8 @@
                    x-show="active === {{ $index }}"
                    class="block h-full w-full"
                    title="Open full size in new tab">
-                    <img src="{{ $asset->url }}" alt="Campaign still {{ $index + 1 }}"
-                         class="h-full w-full object-contain" {{ $index === 0 ? '' : 'x-cloak' }}>
+                    <x-campaign-image src="{{ $asset->url }}" alt="Campaign still {{ $index + 1 }}"
+                         class="h-full w-full object-contain" {{ $index === 0 ? '' : 'x-cloak' }} />
                 </a>
             @endforeach
         </div>
@@ -19,7 +19,7 @@
                     <button type="button" @click="active = {{ $index }}"
                             :class="active === {{ $index }} ? 'border-archive-black' : 'border-archive-border'"
                             class="h-16 w-24 flex-shrink-0 overflow-hidden border">
-                        <img src="{{ $asset->url }}" alt="" class="h-full w-full object-cover">
+                        <x-campaign-image src="{{ $asset->url }}" alt="" class="h-full w-full object-cover" />
                     </button>
                 @endforeach
             </div>

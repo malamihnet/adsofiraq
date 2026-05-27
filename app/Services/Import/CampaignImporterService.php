@@ -114,15 +114,30 @@ class CampaignImporterService
                 convertVideos: $convertVideos,
             );
 
-            $assets = $this->mediaService->importStills(
-                $campaign,
-                is_array($parsed['image_urls'] ?? null) ? $parsed['image_urls'] : [],
-            );
+            $imageUrls = is_array($parsed['image_urls'] ?? null) ? $parsed['image_urls'] : [];
 
-            $thumbnailPath = $this->mediaService->downloadThumbnail(
-                $campaign,
+            Log::info('Campaign import: media extraction summary.', [
+                'campaign_id' => $campaign->id,
+                'image_count' => count($imageUrls),
+                'source_url' => $sourceUrl,
+            ]);
+
+            $assets = $this->mediaService->importStills($campaign, $imageUrls);
+
+            $thumbnailPath = null;
+            $thumbnailCandidates = array_values(array_filter(array_unique([
                 $parsed['og_image'] ?? null,
-            );
+                $parsed['thumbnail_url'] ?? null,
+                $imageUrls[0] ?? null,
+            ])));
+
+            foreach ($thumbnailCandidates as $candidate) {
+                $thumbnailPath = $this->mediaService->downloadThumbnail($campaign, $candidate);
+
+                if ($thumbnailPath) {
+                    break;
+                }
+            }
 
             if ($thumbnailPath) {
                 $campaign->update(['thumbnail_path' => $thumbnailPath]);

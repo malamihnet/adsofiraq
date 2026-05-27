@@ -4,9 +4,9 @@
     <a href="{{ route('campaigns.show', $campaign) }}" class="block">
         <div class="aspect-[4/3] overflow-hidden border border-archive-border bg-archive-light">
             @if($campaign->thumbnail_url)
-                <img src="{{ $campaign->thumbnail_url }}" alt="{{ $campaign->title }}"
+                <x-campaign-image src="{{ $campaign->thumbnail_url }}" alt="{{ $campaign->title }}"
                      class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                     loading="lazy">
+                     loading="lazy" />
             @else
                 <div class="flex h-full items-center justify-center text-archive-gray">
                     <span class="text-xs uppercase tracking-widest">No image</span>

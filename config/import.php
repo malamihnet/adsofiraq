@@ -4,6 +4,10 @@ return [
 
     'timeout' => (int) env('IMPORT_HTTP_TIMEOUT', 30),
 
+    'download_retries' => (int) env('IMPORT_DOWNLOAD_RETRIES', 3),
+
+    'referer' => env('IMPORT_REFERER', 'https://www.adsoftheworld.com/'),
+
     'country_page_timeout' => (int) env('IMPORT_COUNTRY_PAGE_TIMEOUT', 15),
 
     'country_page_retries' => (int) env('IMPORT_COUNTRY_PAGE_RETRIES', 3),

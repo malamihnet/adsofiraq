@@ -49,4 +49,30 @@
 
     <button type="submit" class="btn-primary mt-6">Import Campaign</button>
 </form>
+
+<div class="mt-10 max-w-2xl border border-archive-border bg-white p-6">
+    <h2 class="font-display text-lg">Repair Missing Media</h2>
+    <p class="mt-2 text-sm text-archive-gray">
+        Re-fetch Ads of the World pages for imported campaigns and download missing thumbnails and stills into local storage.
+    </p>
+
+    @if(session('success'))
+        <div class="mt-4 border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('admin.import-campaign.repair-media') }}" class="mt-4 space-y-4">
+        @csrf
+        <div>
+            <label for="campaign_id" class="section-label mb-2 block">Single campaign ID (optional)</label>
+            <input type="number" name="campaign_id" id="campaign_id" min="1" class="input-field" placeholder="Leave empty to scan all imported campaigns">
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="replace" value="1" class="rounded border-archive-border">
+            Replace existing imported media files before re-downloading
+        </label>
+        <button type="submit" class="btn-secondary">Repair Missing Media</button>
+    </form>
+</div>
 @endsection

@@ -55,7 +55,7 @@
                 </div>
             @elseif($campaign->thumbnail_url && ! $campaign->hasVideos())
                 <div class="mt-8 aspect-[16/10] overflow-hidden border border-archive-border">
-                    <img src="{{ $campaign->thumbnail_url }}" alt="{{ $campaign->title }}" class="h-full w-full object-cover">
+                    <x-campaign-image src="{{ $campaign->thumbnail_url }}" alt="{{ $campaign->title }}" class="h-full w-full object-cover" />
                 </div>
             @endif
 

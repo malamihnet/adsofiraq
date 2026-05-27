@@ -9,6 +9,7 @@ class CampaignPageParser
 {
     public function __construct(
         protected CampaignCreditsExtractor $creditsExtractor,
+        protected CampaignImportImageUrlResolver $urlResolver,
     ) {}
 
     /**
@@ -18,6 +19,7 @@ class CampaignPageParser
      *     credits: ?string,
      *     canonical_url: ?string,
      *     og_image: ?string,
+     *     thumbnail_url: ?string,
      *     brands: list<string>,
      *     agencies: list<string>,
      *     countries: list<string>,
@@ -33,11 +35,11 @@ class CampaignPageParser
         $crawler = new Crawler($html, $sourceUrl);
         $host = parse_url($sourceUrl, PHP_URL_HOST) ?? '';
 
-        $meta = $this->parseMetaTags($crawler);
-        $jsonLd = $this->parseJsonLd($html);
+        $meta = $this->parseMetaTags($crawler, $sourceUrl);
+        $jsonLd = $this->parseJsonLd($html, $sourceUrl);
 
         $isAotw = str_contains(strtolower($host), 'adsoftheworld.com');
-        $aotw = $isAotw ? $this->parseAdsOfTheWorld($crawler) : [];
+        $aotw = $isAotw ? $this->parseAdsOfTheWorld($crawler, $sourceUrl) : [];
 
         $title = $this->firstNonEmpty([
             $aotw['title'] ?? null,
@@ -57,14 +59,9 @@ class CampaignPageParser
             throw \App\Exceptions\CampaignImportException::noMetadata();
         }
 
-        $videos = $this->extractVideos($crawler, $html, $jsonLd);
-        $imageUrls = array_values(array_unique(array_filter(array_merge(
-            $aotw['image_urls'] ?? [],
-            $meta['og:image'] ? [$meta['og:image']] : [],
-            $this->extractImageUrls($crawler, $isAotw),
-        ))));
-
-        $directVideos = $this->extractDirectVideoUrls($crawler, $html);
+        $videos = $this->extractVideos($crawler, $html, $jsonLd, $sourceUrl);
+        $imageUrls = $this->collectImageUrls($crawler, $html, $sourceUrl, $isAotw, $aotw, $meta, $jsonLd);
+        $directVideos = $this->extractDirectVideoUrls($crawler, $html, $sourceUrl);
 
         $credits = $this->creditsExtractor->extract($crawler, $html, $sourceUrl, $isAotw);
 
@@ -72,8 +69,9 @@ class CampaignPageParser
             'title' => $title ?? 'Imported Campaign',
             'description' => $description ?? '',
             'credits' => $credits,
-            'canonical_url' => $meta['canonical'] ?? $sourceUrl,
+            'canonical_url' => $this->urlResolver->resolve($meta['canonical'] ?? null, $sourceUrl) ?? $sourceUrl,
             'og_image' => $meta['og:image'] ?? null,
+            'thumbnail_url' => $jsonLd['thumbnailUrl'] ?? null,
             'brands' => array_values(array_unique(array_filter($aotw['brands'] ?? []))),
             'agencies' => array_values(array_unique(array_filter($aotw['agencies'] ?? []))),
             'countries' => array_values(array_unique(array_filter($aotw['countries'] ?? []))),
@@ -88,7 +86,7 @@ class CampaignPageParser
     /**
      * @return array<string, string|null>
      */
-    protected function parseMetaTags(Crawler $crawler): array
+    protected function parseMetaTags(Crawler $crawler, string $sourceUrl): array
     {
         $meta = [
             'og:title' => null,
@@ -126,13 +124,15 @@ class CampaignPageParser
             $meta['og:title'] = $this->cleanOgTitle($meta['og:title']);
         }
 
+        $meta['og:image'] = $this->urlResolver->resolve($meta['og:image'] ?? null, $sourceUrl);
+
         return $meta;
     }
 
     /**
      * @return array{name: ?string, description: ?string, embedUrl: ?string, thumbnailUrl: ?string}
      */
-    protected function parseJsonLd(string $html): array
+    protected function parseJsonLd(string $html, string $sourceUrl): array
     {
         $result = [
             'name' => null,
@@ -161,14 +161,17 @@ class CampaignPageParser
 
                 $type = $item['@type'] ?? '';
 
-                if (! in_array($type, ['VideoObject', 'Article', 'CreativeWork'], true)) {
+                if (! in_array($type, ['VideoObject', 'Article', 'CreativeWork', 'ImageObject'], true)) {
                     continue;
                 }
 
                 $result['name'] ??= $this->normalizeText($item['name'] ?? null);
                 $result['description'] ??= $this->normalizeText($item['description'] ?? null);
                 $result['embedUrl'] ??= $item['embedUrl'] ?? $item['contentUrl'] ?? null;
-                $result['thumbnailUrl'] ??= $item['thumbnailUrl'] ?? null;
+                $result['thumbnailUrl'] ??= $this->urlResolver->resolve(
+                    $item['thumbnailUrl'] ?? $item['image'] ?? $item['url'] ?? null,
+                    $sourceUrl,
+                );
             }
         }
 
@@ -178,7 +181,7 @@ class CampaignPageParser
     /**
      * @return array<string, mixed>
      */
-    protected function parseAdsOfTheWorld(Crawler $crawler): array
+    protected function parseAdsOfTheWorld(Crawler $crawler, string $sourceUrl): array
     {
         $data = [
             'title' => null,
@@ -248,21 +251,10 @@ class CampaignPageParser
                 $data['description'] = $description;
             }
 
-            $main->filter('source[srcset]')->each(function (Crawler $node) use (&$data) {
-                $srcset = trim($node->attr('srcset') ?? '');
-
-                if ($srcset !== '' && $this->isCampaignImageUrl($srcset)) {
-                    $data['image_urls'][] = $this->absoluteUrl($srcset);
-                }
-            });
-
-            $main->filter('img[src]')->each(function (Crawler $node) use (&$data) {
-                $src = trim($node->attr('src') ?? '');
-
-                if ($src !== '' && $this->isCampaignImageUrl($src)) {
-                    $data['image_urls'][] = $this->absoluteUrl($src);
-                }
-            });
+            $data['image_urls'] = array_merge(
+                $data['image_urls'],
+                $this->extractImagesFromScope($main, $sourceUrl, strictAotw: true),
+            );
         }
 
         $summary = $crawler->filter('#main p.text-sm')->first();
@@ -272,6 +264,130 @@ class CampaignPageParser
         }
 
         return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $aotw
+     * @param  array<string, string|null>  $meta
+     * @param  array{name: ?string, description: ?string, embedUrl: ?string, thumbnailUrl: ?string}  $jsonLd
+     * @return list<string>
+     */
+    protected function collectImageUrls(
+        Crawler $crawler,
+        string $html,
+        string $sourceUrl,
+        bool $isAotw,
+        array $aotw,
+        array $meta,
+        array $jsonLd,
+    ): array {
+        $urls = array_merge(
+            $aotw['image_urls'] ?? [],
+            $meta['og:image'] ? [$meta['og:image']] : [],
+            $jsonLd['thumbnailUrl'] ? [$jsonLd['thumbnailUrl']] : [],
+        );
+
+        $scope = $isAotw && $crawler->filter('#main')->count()
+            ? $crawler->filter('#main')
+            : $crawler;
+
+        $urls = array_merge($urls, $this->extractImagesFromScope($scope, $sourceUrl, $isAotw));
+
+        if (preg_match_all(
+            '/https?:\/\/[^\s"\'<>]+(?:image\.adsoftheworld\.com|storage\.googleapis\.com|adsoftheworld\.com\/rails\/active_storage)[^\s"\'<>]*/i',
+            $html,
+            $matches,
+        )) {
+            foreach ($matches[0] as $match) {
+                $resolved = $this->urlResolver->resolve($match, $sourceUrl);
+
+                if ($resolved) {
+                    $urls[] = $resolved;
+                }
+            }
+        }
+
+        $unique = [];
+
+        foreach ($urls as $url) {
+            if ($url && ! isset($unique[$url])) {
+                $unique[$url] = true;
+            }
+        }
+
+        return array_keys($unique);
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function extractImagesFromScope(Crawler $scope, string $sourceUrl, bool $strictAotw = false): array
+    {
+        $urls = [];
+
+        $add = function (?string $url) use (&$urls, $strictAotw) {
+            if ($url === null || $url === '') {
+                return;
+            }
+
+            if ($strictAotw && ! $this->isCampaignImageUrl($url)) {
+                return;
+            }
+
+            if (! $strictAotw && ! $this->looksLikeContentImage($url)) {
+                return;
+            }
+
+            $urls[] = $url;
+        };
+
+        $scope->filter('picture source[srcset], picture source[src], source[srcset], source[src]')->each(
+            function (Crawler $node) use ($add, $sourceUrl) {
+                foreach (['srcset', 'data-srcset', 'src', 'data-src'] as $attr) {
+                    $value = trim($node->attr($attr) ?? '');
+
+                    if ($value === '') {
+                        continue;
+                    }
+
+                    $resolved = str_contains($attr, 'srcset')
+                        ? $this->urlResolver->bestFromSrcset($value, $sourceUrl)
+                        : $this->urlResolver->resolve($value, $sourceUrl);
+
+                    $add($resolved);
+                }
+            },
+        );
+
+        $scope->filter('img')->each(function (Crawler $node) use ($add, $sourceUrl) {
+            foreach ($this->imageAttributeValues($node) as $value) {
+                $resolved = str_contains($value, ',')
+                    ? $this->urlResolver->bestFromSrcset($value, $sourceUrl)
+                    : $this->urlResolver->resolve($value, $sourceUrl);
+
+                $add($resolved);
+            }
+        });
+
+        return $urls;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function imageAttributeValues(Crawler $node): array
+    {
+        $values = [];
+
+        foreach (['src', 'data-src', 'data-lazy-src', 'data-original', 'data-lazy', 'data-image', 'srcset', 'data-srcset'] as $attr) {
+            $value = trim($node->attr($attr) ?? '');
+
+            if ($value !== '') {
+                $values[] = $value;
+            }
+        }
+
+        return $values;
     }
 
     /**
@@ -349,17 +465,17 @@ class CampaignPageParser
      * @param  array{name: ?string, description: ?string, embedUrl: ?string, thumbnailUrl: ?string}  $jsonLd
      * @return list<array{type: string, url: string}>
      */
-    protected function extractVideos(Crawler $crawler, string $html, array $jsonLd): array
+    protected function extractVideos(Crawler $crawler, string $html, array $jsonLd, string $sourceUrl): array
     {
         $videos = [];
         $seen = [];
 
-        $add = function (?string $url) use (&$videos, &$seen) {
+        $add = function (?string $url) use (&$videos, &$seen, $sourceUrl) {
             if ($url === null || $url === '') {
                 return;
             }
 
-            $url = $this->normalizeVideoUrl($url);
+            $url = $this->normalizeVideoUrl($url, $sourceUrl);
             $parsed = VideoUrlParser::parse($url);
 
             if ($parsed === null) {
@@ -399,7 +515,7 @@ class CampaignPageParser
     /**
      * @return list<string>
      */
-    protected function extractDirectVideoUrls(Crawler $crawler, string $html): array
+    protected function extractDirectVideoUrls(Crawler $crawler, string $html, string $sourceUrl): array
     {
         $urls = [];
 
@@ -411,89 +527,51 @@ class CampaignPageParser
             }
         }
 
-        $crawler->filter('video source[src], video[src]')->each(function (Crawler $node) use (&$urls) {
+        $crawler->filter('video source[src], video[src]')->each(function (Crawler $node) use (&$urls, $sourceUrl) {
             $src = trim($node->attr('src') ?? '');
 
             if ($src !== '' && preg_match('/\.(mp4|webm|mov)(\?|$)/i', $src)) {
-                $urls[] = $this->absoluteUrl($src);
+                $resolved = $this->urlResolver->resolve($src, $sourceUrl);
+
+                if ($resolved) {
+                    $urls[] = $resolved;
+                }
             }
         });
 
         return array_values(array_unique($urls));
     }
 
-    /**
-     * @return list<string>
-     */
-    /**
-     * @return list<string>
-     */
-    protected function extractImageUrls(Crawler $crawler, bool $restrictToMain): array
-    {
-        $urls = [];
-        $scope = $restrictToMain && $crawler->filter('#main')->count()
-            ? $crawler->filter('#main')
-            : $crawler;
-
-        $scope->filter('img[src]')->each(function (Crawler $node) use (&$urls) {
-            $src = trim($node->attr('src') ?? '');
-
-            if ($src !== '' && $this->looksLikeContentImage($src)) {
-                $urls[] = $this->absoluteUrl($src);
-            }
-        });
-
-        return $urls;
-    }
-
     protected function isCampaignImageUrl(string $url): bool
     {
         $lower = strtolower($url);
 
-        if (str_contains($lower, 'placeholder') || str_contains($lower, 'avatar') || str_contains($lower, 'logo')) {
+        if (str_contains($lower, 'placeholder') || str_contains($lower, 'avatar') || str_contains($lower, '/logo')) {
             return false;
         }
 
         return str_contains($lower, 'image.adsoftheworld.com')
             || str_contains($lower, 'storage.googleapis.com')
             || str_contains($lower, 'adsoftheworld.com/rails/active_storage')
-            || preg_match('/\.(jpe?g|png|webp|gif)(\?|$)/i', $lower);
+            || (bool) preg_match('/\.(jpe?g|png|webp|gif|avif)(\?|$)/i', $lower);
     }
 
     protected function looksLikeContentImage(string $url): bool
     {
         $lower = strtolower($url);
 
-        if (str_contains($lower, 'icon') || str_contains($lower, 'logo') || str_contains($lower, 'sprite')) {
+        if (str_contains($lower, 'icon') || str_contains($lower, '/logo') || str_contains($lower, 'sprite')) {
             return false;
         }
 
-        return (bool) preg_match('/\.(jpe?g|png|webp|gif)(\?|$)/i', $lower)
-            || str_contains($lower, 'image.adsoftheworld.com');
+        return (bool) preg_match('/\.(jpe?g|png|webp|gif|avif)(\?|$)/i', $lower)
+            || str_contains($lower, 'image.adsoftheworld.com')
+            || str_contains($lower, 'storage.googleapis.com');
     }
 
-    protected function normalizeVideoUrl(string $url): string
+    protected function normalizeVideoUrl(string $url, string $sourceUrl): string
     {
-        if (str_starts_with($url, '//')) {
-            return 'https:'.$url;
-        }
-
-        return $this->absoluteUrl($url);
-    }
-
-    protected function absoluteUrl(string $url): string
-    {
-        $url = trim($url);
-
-        if (str_starts_with($url, '//')) {
-            return 'https:'.$url;
-        }
-
-        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            return $url;
-        }
-
-        return $url;
+        return $this->urlResolver->resolve($url, $sourceUrl) ?? $url;
     }
 
     protected function cleanOgTitle(string $title): string
