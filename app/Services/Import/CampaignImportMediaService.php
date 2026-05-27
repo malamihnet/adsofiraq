@@ -58,18 +58,26 @@ class CampaignImportMediaService
 
             $contentHash = $this->mediaDedup->visualContentHash($body);
 
-            if ($contentHash === null || $this->mediaDedup->stillImportExists($campaign, $absolute, $contentHash)) {
+            if ($contentHash === null) {
+                continue;
+            }
+
+            $stillIndex = $this->nextStillIndex($campaign);
+            $extension = $this->extensionForImage($body, $absolute);
+            $directory = $this->stillDirectory($campaign);
+            $filename = 'still-'.$stillIndex.'.'.$extension;
+            $relativePath = trim($directory.'/'.$filename, '/');
+
+            if ($this->mediaDedup->stillImportExists($campaign, $absolute, $contentHash, $relativePath)) {
                 $this->mediaDedup->logDuplicateSkipped($campaign, 'still', [
                     'source_url' => $absolute,
                     'content_hash' => $contentHash,
+                    'file_path' => $relativePath,
                 ]);
 
                 continue;
             }
 
-            $stillIndex = $this->nextStillIndex($campaign);
-            $filename = 'still-'.$stillIndex.'.webp';
-            $directory = $this->stillDirectory($campaign);
             $path = $this->storeImageBody($campaign, $body, $absolute, $directory, $filename);
 
             if ($path === null) {
@@ -222,12 +230,13 @@ class CampaignImportMediaService
             return null;
         }
 
+        $extension = $this->extensionForImage($body, $absolute);
         $path = $this->storeImageBody(
             $campaign,
             $body,
             $absolute,
             $this->thumbnailDirectory($campaign),
-            'thumbnail.webp',
+            'thumbnail.'.$extension,
         );
 
         if ($path) {
@@ -247,40 +256,36 @@ class CampaignImportMediaService
         string $directory,
         string $filename,
     ): ?string {
-        $relativeWebp = trim($directory.'/'.$filename, '/');
+        $extension = $this->extensionForImage($body, $sourceUrl);
+        $filename = $this->filenameWithExtension($filename, $extension);
+        $relativePath = trim($directory.'/'.$filename, '/');
 
-        $path = $this->optimizer->storeImageAsWebpAtPath($body, $relativeWebp);
-
-        if ($path !== null) {
-            return $path;
-        }
-
-        $extension = $this->extensionFromMime($this->detectImageMime($body)) ?? 'jpg';
-        $fallbackName = preg_replace('/\.webp$/i', '.'.$extension, $filename) ?? ($filename.'.'.$extension);
-        $relativeFallback = trim($directory.'/'.$fallbackName, '/');
-
-        Log::warning('Campaign import: WebP failed, storing original format.', [
-            'campaign_id' => $campaign->id,
-            'url' => $sourceUrl,
-            'path' => $relativeFallback,
-        ]);
-
-        return $this->optimizer->storeRawImageAtPath($body, $relativeFallback);
+        return $this->optimizer->storeImageAtPath($body, $relativePath);
     }
 
-    protected function downloadAndStoreImage(
-        Campaign $campaign,
-        string $url,
-        string $directory,
-        string $filename,
-    ): ?string {
-        $body = $this->downloadImageBody($campaign, $url);
+    protected function filenameWithExtension(string $filename, string $extension): string
+    {
+        $base = pathinfo($filename, PATHINFO_FILENAME);
 
-        if ($body === null) {
-            return null;
+        return $base.'.'.ltrim($extension, '.');
+    }
+
+    protected function extensionForImage(string $body, string $sourceUrl): string
+    {
+        $mime = $this->detectImageMime($body);
+        $fromMime = $mime !== null ? $this->extensionFromMime($mime) : null;
+
+        if ($fromMime !== null) {
+            return $fromMime;
         }
 
-        return $this->storeImageBody($campaign, $body, $url, $directory, $filename);
+        if (preg_match('/\.(jpe?g|png|webp|gif)(\?|#|$)/i', $sourceUrl, $matches)) {
+            $ext = strtolower($matches[1]);
+
+            return $ext === 'jpeg' ? 'jpg' : $ext;
+        }
+
+        return 'jpg';
     }
 
     protected function nextStillIndex(Campaign $campaign): int

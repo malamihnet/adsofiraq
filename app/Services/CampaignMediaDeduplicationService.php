@@ -91,8 +91,23 @@ class CampaignMediaDeduplicationService
     // Import guards
     // -------------------------------------------------------------------------
 
-    public function stillImportExists(Campaign $campaign, string $sourceUrl, string $contentHash): bool
-    {
+    public function stillImportExists(
+        Campaign $campaign,
+        string $sourceUrl,
+        string $contentHash,
+        ?string $filePath = null,
+    ): bool {
+        if ($filePath !== null && $filePath !== '') {
+            $existsAtPath = $campaign->assets()
+                ->where('file_type', 'image')
+                ->where('file_path', $filePath)
+                ->exists();
+
+            if ($existsAtPath) {
+                return true;
+            }
+        }
+
         $sourceKey = $this->sourceUrlKey($sourceUrl, $campaign->source_url);
 
         return $campaign->assets()
@@ -794,8 +809,9 @@ class CampaignMediaDeduplicationService
 
     protected function compareStillPreference(CampaignAsset $a, CampaignAsset $b): int
     {
-        $webpA = $a->isWebpFile() ? 0 : 1;
-        $webpB = $b->isWebpFile() ? 0 : 1;
+        // Prefer original formats (jpg/png) over legacy converted WebP duplicates.
+        $webpA = $a->isWebpFile() ? 1 : 0;
+        $webpB = $b->isWebpFile() ? 1 : 0;
 
         if ($webpA !== $webpB) {
             return $webpA <=> $webpB;
