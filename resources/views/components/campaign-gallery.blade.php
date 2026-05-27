@@ -53,26 +53,29 @@
     }
 
     $first = $payload->first();
+    $galleryStills = $payload->values()->all();
+    $galleryPlaceholder = $placeholder;
 @endphp
 
 @if($payload->isNotEmpty())
     <div
         class="campaign-gallery space-y-4"
-        x-data="campaignGallery(@js($payload->values()->all()), @js($placeholder))"
+        x-data="campaignGallery({{ Js::from($galleryStills) }}, {{ Js::from($galleryPlaceholder) }})"
         x-init="init()"
     >
+        {{-- Main preview (server-rendered first still) --}}
         <button
             type="button"
             class="group relative block aspect-[16/10] w-full overflow-hidden border border-archive-border bg-archive-light text-left"
-            @click.prevent="openLightbox()"
+            x-on:click.prevent="openLightbox()"
             aria-label="Open image gallery"
         >
             <img
                 src="{{ $first['url'] }}"
                 alt="{{ $first['alt'] }}"
                 class="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.01]"
-                :src="previewUrl()"
-                :alt="previewAlt()"
+                x-bind:src="previewUrl()"
+                x-bind:alt="previewAlt()"
                 x-on:error="onImageError($event)"
             >
             <span class="pointer-events-none absolute bottom-3 right-3 border border-white/30 bg-black/70 px-2 py-1 text-[10px] uppercase tracking-widest text-white opacity-0 transition group-hover:opacity-100">
@@ -82,12 +85,12 @@
 
         @if($payload->count() > 1)
             <div class="flex gap-3 overflow-x-auto pb-1">
-                @foreach($payload as $index => $still)
+                @foreach($galleryStills as $index => $still)
                     <button
                         type="button"
                         class="h-16 w-24 flex-shrink-0 overflow-hidden border border-archive-border transition-colors hover:border-archive-black"
-                        :class="active === {{ $index }} ? '!border-archive-black ring-1 ring-archive-black' : ''"
-                        @click.prevent="select({{ $index }})"
+                        x-bind:class="active === {{ $index }} ? '!border-archive-black ring-1 ring-archive-black' : ''"
+                        x-on:click.prevent="select({{ $index }})"
                         aria-label="Show still {{ $index + 1 }}"
                     >
                         <img
@@ -105,6 +108,7 @@
             </p>
         @endif
 
+        {{-- Lightbox (Alpine only; no Blade @ directives in attributes) --}}
         <div
             x-show="lightboxOpen"
             x-cloak
@@ -113,16 +117,16 @@
             role="dialog"
             aria-modal="true"
             aria-label="Campaign image gallery"
-            @click.self="closeLightbox()"
-            @keydown.escape.window="closeLightbox()"
-            @keydown.arrow-right.window.prevent="lightboxOpen && next()"
-            @keydown.arrow-left.window.prevent="lightboxOpen && prev()"
+            x-on:click.self="closeLightbox()"
+            x-on:keydown.escape.window="closeLightbox()"
+            x-on:keydown.arrow-right.window.prevent="lightboxOpen && next()"
+            x-on:keydown.arrow-left.window.prevent="lightboxOpen && prev()"
             style="display: none;"
         >
             <button
                 type="button"
                 class="campaign-gallery-lightbox__close"
-                @click.prevent="closeLightbox()"
+                x-on:click.prevent="closeLightbox()"
                 aria-label="Close gallery"
             >
                 <span aria-hidden="true">&times;</span>
@@ -132,7 +136,7 @@
                 type="button"
                 x-show="stills.length > 1"
                 class="campaign-gallery-lightbox__nav campaign-gallery-lightbox__nav--prev"
-                @click.prevent="prev()"
+                x-on:click.prevent="prev()"
                 aria-label="Previous image"
             >
                 <span aria-hidden="true">&#8592;</span>
@@ -140,8 +144,8 @@
 
             <div class="campaign-gallery-lightbox__stage">
                 <img
-                    :src="previewUrl()"
-                    :alt="previewAlt()"
+                    x-bind:src="previewUrl()"
+                    x-bind:alt="previewAlt()"
                     class="campaign-gallery-lightbox__image"
                     x-on:error="onImageError($event)"
                 >
@@ -151,7 +155,7 @@
                 type="button"
                 x-show="stills.length > 1"
                 class="campaign-gallery-lightbox__nav campaign-gallery-lightbox__nav--next"
-                @click.prevent="next()"
+                x-on:click.prevent="next()"
                 aria-label="Next image"
             >
                 <span aria-hidden="true">&#8594;</span>
