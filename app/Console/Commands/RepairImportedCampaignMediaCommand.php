@@ -25,10 +25,11 @@ class RepairImportedCampaignMediaCommand extends Command
             $result = $repairService->repair($campaign, (bool) $this->option('replace'));
 
             $this->info(sprintf(
-                'Campaign #%d: stills added %d, thumbnail %s%s',
+                'Campaign #%d: stills added %d, thumbnail %s. Public sync: %d copied.%s',
                 $campaign->id,
                 $result['stills_added'],
                 $result['thumbnail_updated'] ? 'updated' : 'unchanged',
+                $result['sync']['copied'] ?? 0,
                 $result['message'] ? ' — '.$result['message'] : '',
             ));
 

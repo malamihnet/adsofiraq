@@ -75,4 +75,22 @@
         <button type="submit" class="btn-secondary">Repair Missing Media</button>
     </form>
 </div>
+
+<div class="mt-6 max-w-2xl border border-archive-border bg-white p-6">
+    <h2 class="font-display text-lg">Sync Public Storage</h2>
+    <p class="mt-2 text-sm text-archive-gray">
+        Copy campaign files from <code class="text-xs">storage/app/public</code> to the web-facing
+        <code class="text-xs">public_html/storage</code> folder (for hosts without a storage symlink).
+        Use this after repair if images still do not appear on the live site.
+    </p>
+
+    <form method="POST" action="{{ route('admin.import-campaign.sync-public-storage') }}" class="mt-4 space-y-4">
+        @csrf
+        <div>
+            <label for="sync_campaign_id" class="section-label mb-2 block">Single campaign ID (optional)</label>
+            <input type="number" name="campaign_id" id="sync_campaign_id" min="1" class="input-field" placeholder="Leave empty to sync all campaign media">
+        </div>
+        <button type="submit" class="btn-secondary">Sync Public Storage</button>
+    </form>
+</div>
 @endsection

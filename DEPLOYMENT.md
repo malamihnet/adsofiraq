@@ -105,6 +105,22 @@ public/storage → storage/app/public
 
 Verify uploads work by submitting a test campaign after deployment.
 
+### cPanel without `storage:link` (public_html layout)
+
+If Laravel lives outside `public_html` and `public_html/storage` is **not** symlinked to `storage/app/public`, set in `.env`:
+
+```env
+PUBLIC_STORAGE_SYNC_PATH=/home/adsofiraq/public_html/storage
+```
+
+After importing or repairing campaign media, run:
+
+```bash
+php artisan storage:sync-public
+```
+
+Or use **Admin → Import Campaign → Sync Public Storage**. Files are copied from `storage/app/public/campaigns/` to `public_html/storage/campaigns/` so URLs like `https://adsofiraq.com/storage/campaigns/{id}/still-1.webp` work.
+
 ## 7. PHP Configuration
 
 In cPanel → **MultiPHP INI Editor**, ensure (recommended for campaign video uploads):

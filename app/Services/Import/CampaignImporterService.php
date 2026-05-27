@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\User;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
+use App\Services\PublicStorageSyncService;
 use App\Services\VideoThumbnailService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ class CampaignImporterService
         protected CampaignUploadService $uploadService,
         protected VideoThumbnailService $videoThumbnailService,
         protected CampaignImportSlugService $slugService,
+        protected PublicStorageSyncService $publicStorageSync,
     ) {}
 
     public function import(string $url, User $admin): Campaign
@@ -155,9 +157,13 @@ class CampaignImporterService
                 }
             }
 
-            return $campaign->fresh([
+            $campaign = $campaign->fresh([
                 'brands', 'agencies', 'industries', 'mediumTypes', 'countries', 'videos', 'assets',
             ]);
+
+            $this->publicStorageSync->syncCampaign($campaign);
+
+            return $campaign;
         });
     }
 

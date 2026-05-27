@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ImportCampaignUrlRequest;
 use App\Services\Import\CampaignImporterService;
 use App\Services\Import\RepairImportedCampaignMedia;
+use App\Services\PublicStorageSyncService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -16,6 +17,7 @@ class ImportCampaignController extends Controller
     public function __construct(
         protected CampaignImporterService $importer,
         protected RepairImportedCampaignMedia $mediaRepair,
+        protected PublicStorageSyncService $publicStorageSync,
     ) {}
 
     public function create(): View
@@ -56,22 +58,52 @@ class ImportCampaignController extends Controller
             $campaign = \App\Models\Campaign::query()->findOrFail($request->integer('campaign_id'));
             $result = $this->mediaRepair->repair($campaign, $replace);
 
-            return back()->with('success', sprintf(
-                'Media repair finished for campaign #%d (%d stills added, thumbnail %s).',
-                $campaign->id,
-                $result['stills_added'],
-                $result['thumbnail_updated'] ? 'updated' : 'unchanged',
-            ));
+            return back()->with('success', $this->repairSuccessMessage($campaign->id, $result));
         }
 
         $stats = $this->mediaRepair->repairAll($replace, $request->integer('limit') ?: null);
 
         return back()->with('success', sprintf(
-            'Media repair finished. Repaired: %d, skipped: %d, failed: %d.',
+            'Media repair finished and public storage synced. Repaired: %d, skipped: %d, failed: %d (%d files copied to public storage).',
             $stats['repaired'],
             $stats['skipped'],
             $stats['failed'],
+            $stats['sync_copied'],
         ));
+    }
+
+    public function syncPublicStorage(Request $request): RedirectResponse
+    {
+        $campaignId = $request->filled('campaign_id') ? $request->integer('campaign_id') : null;
+        $stats = $this->publicStorageSync->syncAll($campaignId);
+
+        return back()->with('success', 'Media repair finished and public storage synced. '.$this->publicStorageSync->formatStatsMessage($stats));
+    }
+
+    /**
+     * @param  array{
+     *     stills_added: int,
+     *     thumbnail_updated: bool,
+     *     skipped: bool,
+     *     message: ?string,
+     *     sync: array{copied: int, skipped: int, failed: int, target: ?string},
+     * }  $result
+     */
+    protected function repairSuccessMessage(int $campaignId, array $result): string
+    {
+        $message = sprintf(
+            'Media repair finished and public storage synced for campaign #%d (%d stills added, thumbnail %s). %s',
+            $campaignId,
+            $result['stills_added'],
+            $result['thumbnail_updated'] ? 'updated' : 'unchanged',
+            $this->publicStorageSync->formatStatsMessage($result['sync']),
+        );
+
+        if (! empty($result['message'])) {
+            $message .= ' '.$result['message'];
+        }
+
+        return $message;
     }
 
     protected function handleImportException(CampaignImportException $e, string $url): RedirectResponse

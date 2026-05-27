@@ -4,6 +4,7 @@ namespace App\Services\Import;
 
 use App\Models\Campaign;
 use App\Services\CampaignUploadService;
+use App\Services\PublicStorageSyncService;
 use App\Services\VideoThumbnailService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -17,10 +18,17 @@ class RepairImportedCampaignMedia
         protected CampaignImportMediaService $mediaService,
         protected CampaignUploadService $uploadService,
         protected VideoThumbnailService $videoThumbnailService,
+        protected PublicStorageSyncService $publicStorageSync,
     ) {}
 
     /**
-     * @return array{stills_added: int, thumbnail_updated: bool, skipped: bool, message: ?string}
+     * @return array{
+     *     stills_added: int,
+     *     thumbnail_updated: bool,
+     *     skipped: bool,
+     *     message: ?string,
+     *     sync: array{copied: int, skipped: int, failed: int, target: ?string},
+     * }
      */
     public function repair(Campaign $campaign, bool $replaceExisting = false): array
     {
@@ -29,6 +37,7 @@ class RepairImportedCampaignMedia
             'thumbnail_updated' => false,
             'skipped' => false,
             'message' => null,
+            'sync' => $this->publicStorageSync->emptyStats(),
         ];
 
         if (empty($campaign->source_url)) {
@@ -110,10 +119,14 @@ class RepairImportedCampaignMedia
             }
         }
 
+        $campaign = $campaign->fresh(['assets', 'videos']);
+        $result['sync'] = $this->publicStorageSync->syncCampaign($campaign);
+
         Log::info('Campaign media repair: finished.', [
             'campaign_id' => $campaign->id,
             'stills_added' => $result['stills_added'],
             'thumbnail_updated' => $result['thumbnail_updated'],
+            'sync_copied' => $result['sync']['copied'],
         ]);
 
         return $result;
@@ -147,11 +160,11 @@ class RepairImportedCampaignMedia
     }
 
     /**
-     * @return array{repaired: int, skipped: int, failed: int}
+     * @return array{repaired: int, skipped: int, failed: int, sync_copied: int}
      */
     public function repairAll(bool $replaceExisting = false, ?int $limit = null): array
     {
-        $stats = ['repaired' => 0, 'skipped' => 0, 'failed' => 0];
+        $stats = ['repaired' => 0, 'skipped' => 0, 'failed' => 0, 'sync_copied' => 0];
 
         $query = Campaign::query()
             ->whereNotNull('source_url')
@@ -172,8 +185,9 @@ class RepairImportedCampaignMedia
                 }
 
                 try {
-                    $this->repair($campaign, $replaceExisting);
+                    $repairResult = $this->repair($campaign, $replaceExisting);
                     $stats['repaired']++;
+                    $stats['sync_copied'] += $repairResult['sync']['copied'] ?? 0;
                 } catch (\Throwable $e) {
                     $stats['failed']++;
                     report($e);
