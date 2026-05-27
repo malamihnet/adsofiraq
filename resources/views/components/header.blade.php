@@ -80,8 +80,6 @@
                     <span class="truncate text-[11px] font-medium tracking-wide text-white">{{ $displayName }}</span>
                 </a>
 
-                <a href="{{ route('profile.campaigns') }}" class="{{ $accountLink }} {{ request()->routeIs('profile.campaigns') ? '!text-white' : '' }}">My Campaigns</a>
-
                 @if($authUser->hasVerifiedEmail())
                     <a href="{{ $bookmarksUrl }}" class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] {{ request()->routeIs('bookmarks.*') ? 'text-white' : 'text-white/70 hover:text-white' }}" aria-label="Bookmarks">
                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -178,8 +176,6 @@
                 </div>
 
                 <div class="my-2 border-t border-white/10"></div>
-
-                <a href="{{ route('profile.campaigns') }}" @click="open = false" class="px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 hover:text-white">My Campaigns</a>
 
                 @if($authUser->hasVerifiedEmail())
                     <a href="{{ $bookmarksUrl }}" @click="open = false" class="inline-flex items-center gap-2 px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 hover:text-white">

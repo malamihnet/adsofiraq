@@ -11,7 +11,8 @@
         </div>
         <div class="flex flex-wrap gap-3">
             <a href="{{ route('campaigns.create') }}" class="btn-primary">Submit a Campaign</a>
-            <a href="{{ route('profile.show.redirect') }}" class="btn-outline">Back to Profile</a>
+            <a href="{{ route('profile.edit') }}" class="btn-outline text-xs">Edit profile</a>
+            <a href="{{ route('profile.show.redirect') }}" class="btn-outline text-xs">Back to Profile</a>
         </div>
     </div>
 

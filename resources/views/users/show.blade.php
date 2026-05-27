@@ -26,6 +26,7 @@
                 @auth
                     @if(auth()->id() === $user->id)
                         <a href="{{ route('profile.edit') }}" class="btn-primary text-xs">Edit profile</a>
+                        <a href="{{ route('profile.campaigns') }}" class="btn-outline text-xs">My Campaigns</a>
                     @else
                         <x-follow-button :user="$user" :is-following="$isFollowing" />
                     @endif

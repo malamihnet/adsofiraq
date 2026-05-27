@@ -20,6 +20,7 @@
 
         <div class="flex flex-wrap items-center gap-4 border-t border-archive-border pt-6">
             <button type="submit" class="btn-primary">Save changes</button>
+            <a href="{{ route('profile.campaigns') }}" class="btn-outline text-xs">My Campaigns</a>
             <a href="{{ route('users.show', $user) }}" class="text-sm underline">View public profile</a>
         </div>
     </form>
