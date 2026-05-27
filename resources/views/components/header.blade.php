@@ -29,8 +29,8 @@
     $displayName = $authUser?->name ?: $authUser?->username;
 @endphp
 
-<header class="border-b border-white/10 bg-black text-white" x-data="{ open: false, userOpen: false }">
-    <div class="mx-auto grid h-14 max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 md:h-[72px] md:px-8">
+<header class="relative z-[100] border-b border-white/10 bg-black text-white" x-data="{ open: false, userOpen: false }">
+    <div class="mx-auto grid h-14 max-w-7xl grid-cols-[1fr_auto_1fr] items-center overflow-visible px-4 md:h-[72px] md:px-8">
         {{-- Left: platform navigation --}}
         <div class="flex items-center justify-start">
             <nav aria-label="Primary" class="hidden items-center gap-5 md:flex">
@@ -64,13 +64,13 @@
         </a>
 
         {{-- Right: account actions + mobile menu --}}
-        <div class="flex items-center justify-end gap-3 md:gap-4">
-            <div class="hidden items-center gap-4 md:flex">
+        <div class="flex items-center justify-end gap-3 overflow-visible md:gap-4">
+            <div class="hidden items-center gap-4 overflow-visible md:flex">
             @guest
                 <a href="{{ route('login') }}" class="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white">Login</a>
                 <a href="{{ route('register') }}" class="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white">Register</a>
             @else
-                <div class="relative" @keydown.escape.window="userOpen = false">
+                <div class="relative z-[100] overflow-visible" @keydown.escape.window="userOpen = false">
                     <button
                         type="button"
                         class="inline-flex max-w-[220px] items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1.5 transition hover:bg-white/10"
@@ -89,7 +89,7 @@
                         x-show="userOpen"
                         x-cloak
                         @click.away="userOpen = false"
-                        class="absolute right-0 z-50 mt-2 w-56 overflow-hidden border border-white/10 bg-black shadow-lg"
+                        class="absolute right-0 z-[9999] mt-2 w-56 overflow-hidden border border-white/10 bg-black shadow-lg"
                     >
                         <a href="{{ route('profile.show.redirect') }}" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">My Profile</a>
                         <a href="{{ route('profile.campaigns') }}" class="block px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-white/80 hover:bg-white/10 hover:text-white">My Campaigns</a>

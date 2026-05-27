@@ -31,7 +31,7 @@
     @endphp
 
     <section
-        class="relative border-b border-archive-border bg-archive-black"
+        class="relative z-0 border-b border-archive-border bg-archive-black"
         x-data="homeHeroSlider({ slides: @js($slides) })"
         x-init="init()"
         @mouseenter="pause()"
