@@ -15,6 +15,9 @@ class CampaignVideo extends Model
         'file_path',
         'title',
         'sort_order',
+        'embed_key',
+        'source_url_key',
+        'content_hash',
     ];
 
     protected function casts(): array

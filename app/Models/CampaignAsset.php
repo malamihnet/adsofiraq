@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Services\CampaignAssetDedupService;
+use App\Services\CampaignMediaDeduplicationService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
@@ -118,7 +118,7 @@ class CampaignAsset extends Model
 
     public function effectiveContentHash(): ?string
     {
-        return app(CampaignAssetDedupService::class)->resolveContentHash($this);
+        return app(CampaignMediaDeduplicationService::class)->resolveStillContentHash($this);
     }
 
     protected function placeholderUrl(): string

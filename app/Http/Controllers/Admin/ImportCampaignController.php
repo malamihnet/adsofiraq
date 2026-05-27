@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Exceptions\CampaignImportException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ImportCampaignUrlRequest;
-use App\Services\CampaignAssetDedupService;
+use App\Services\CampaignMediaDeduplicationService;
 use App\Services\Import\CampaignImporterService;
 use App\Services\Import\RepairImportedCampaignMedia;
 use App\Services\PublicStorageSyncService;
@@ -19,7 +19,7 @@ class ImportCampaignController extends Controller
         protected CampaignImporterService $importer,
         protected RepairImportedCampaignMedia $mediaRepair,
         protected PublicStorageSyncService $publicStorageSync,
-        protected CampaignAssetDedupService $assetDedup,
+        protected CampaignMediaDeduplicationService $mediaDedup,
     ) {}
 
     public function create(): View
@@ -78,22 +78,34 @@ class ImportCampaignController extends Controller
     {
         if ($request->filled('campaign_id')) {
             $campaign = \App\Models\Campaign::query()->with('assets')->findOrFail($request->integer('campaign_id'));
-            $result = $this->assetDedup->removeDuplicateStillsForCampaign($campaign);
+            $result = $this->mediaDedup->cleanCampaign(
+                $campaign,
+                dryRun: false,
+                deleteFiles: true,
+            );
 
             return back()->with('success', sprintf(
-                'Removed %d duplicate still(s) for campaign #%d (%d file(s) deleted from storage).',
-                $result['removed'],
+                'Removed %d duplicate still(s), %d video(s), %d thumbnail-as-still for campaign #%d (%d file(s) deleted).',
+                $result['stills_removed'],
+                $result['videos_removed'],
+                $result['thumbnail_stills_removed'],
                 $campaign->id,
                 $result['files_deleted'],
             ));
         }
 
-        $stats = $this->assetDedup->removeDuplicateStillsAll($request->integer('limit') ?: null);
+        $stats = $this->mediaDedup->cleanAllCampaigns(
+            dryRun: false,
+            deleteFiles: true,
+            limit: $request->integer('limit') ?: null,
+        );
 
         return back()->with('success', sprintf(
-            'Duplicate still cleanup finished. %d campaign(s) affected, %d duplicate(s) removed, %d file(s) deleted.',
-            $stats['campaigns'],
-            $stats['removed'],
+            'Duplicate media cleanup finished. %d campaign(s) affected, %d still(s), %d video(s), %d thumbnail-as-still removed, %d file(s) deleted.',
+            $stats['campaigns_affected'],
+            $stats['stills_removed'],
+            $stats['videos_removed'],
+            $stats['thumbnail_stills_removed'],
             $stats['files_deleted'],
         ));
     }

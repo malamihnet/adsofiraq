@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CampaignController as AdminCampaignController;
 use App\Http\Controllers\Admin\CheckNewCampaignsController;
 use App\Http\Controllers\Admin\ImportAdsOfWorldController;
 use App\Http\Controllers\Admin\ImportCampaignController;
+use App\Http\Controllers\Admin\MediaMaintenanceController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CampaignRevisionController as AdminCampaignRevisionController;
 use App\Http\Controllers\Admin\TaxonomyController;
@@ -87,6 +88,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::post('/import-campaign/repair-media', [ImportCampaignController::class, 'repairMedia'])->name('import-campaign.repair-media');
     Route::post('/import-campaign/remove-duplicate-stills', [ImportCampaignController::class, 'removeDuplicateStills'])->name('import-campaign.remove-duplicate-stills');
     Route::post('/import-campaign/sync-public-storage', [ImportCampaignController::class, 'syncPublicStorage'])->name('import-campaign.sync-public-storage');
+
+    Route::get('/maintenance/clean-duplicate-media', [MediaMaintenanceController::class, 'index'])->name('maintenance.clean-duplicate-media');
+    Route::post('/maintenance/clean-duplicate-media', [MediaMaintenanceController::class, 'cleanDuplicateMedia'])->name('maintenance.clean-duplicate-media.run');
+    Route::post('/maintenance/cleanup-orphans', [MediaMaintenanceController::class, 'cleanupOrphans'])->name('maintenance.cleanup-orphans');
 
     Route::get('/check-new-campaigns', [CheckNewCampaignsController::class, 'index'])->name('check-new-campaigns.index');
     Route::post('/check-new-campaigns', [CheckNewCampaignsController::class, 'start'])->name('check-new-campaigns.start');

@@ -3,7 +3,7 @@
 namespace App\Services\Import;
 
 use App\Models\Campaign;
-use App\Services\CampaignAssetDedupService;
+use App\Services\CampaignMediaDeduplicationService;
 use App\Services\CampaignUploadService;
 use App\Services\PublicStorageSyncService;
 use App\Services\VideoThumbnailService;
@@ -125,8 +125,10 @@ class RepairImportedCampaignMedia
 
         $campaign = $campaign->fresh(['assets', 'videos']);
 
-        $dedup = $this->assetDedup->removeDuplicateStillsForCampaign($campaign);
-        $result['duplicates_removed'] = $dedup['removed'];
+        $dedup = $this->mediaDedup->cleanCampaign($campaign, dryRun: false, deleteFiles: true);
+        $result['duplicates_removed'] = $dedup['stills_removed']
+            + $dedup['videos_removed']
+            + $dedup['thumbnail_stills_removed'];
 
         $campaign = $campaign->fresh(['assets', 'videos']);
         $result['sync'] = $this->publicStorageSync->syncCampaign($campaign);

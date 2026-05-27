@@ -286,7 +286,7 @@ class Campaign extends Model
      */
     public function galleryStills(): \Illuminate\Support\Collection
     {
-        return app(\App\Services\CampaignAssetDedupService::class)->galleryStillsFor($this);
+        return app(\App\Services\CampaignMediaDeduplicationService::class)->galleryStillsFor($this);
     }
 
     protected function galleryPathKey(?string $path): ?string

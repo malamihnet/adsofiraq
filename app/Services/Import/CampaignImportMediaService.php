@@ -5,7 +5,7 @@ namespace App\Services\Import;
 use App\Models\Campaign;
 use App\Models\CampaignAsset;
 use App\Models\CampaignVideo;
-use App\Services\CampaignAssetDedupService;
+use App\Services\CampaignMediaDeduplicationService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +17,7 @@ class CampaignImportMediaService
         protected CampaignImportMediaOptimizer $optimizer,
         protected CampaignImportVideoConverter $videoConverter,
         protected CampaignImportImageUrlResolver $urlResolver,
-        protected CampaignAssetDedupService $assetDedup,
+        protected CampaignMediaDeduplicationService $mediaDedup,
     ) {}
 
     /**
@@ -32,7 +32,7 @@ class CampaignImportMediaService
         ]);
 
         $assets = [];
-        $this->assetDedup->backfillAssetMetadata($campaign->assets()->get());
+        $this->mediaDedup->backfillStillMetadata($campaign->assets()->get());
         $sortOrder = (int) $campaign->assets()->max('sort_order');
         $seenUrls = [];
 
@@ -56,11 +56,10 @@ class CampaignImportMediaService
                 continue;
             }
 
-            $contentHash = $this->assetDedup->visualContentHash($body);
+            $contentHash = $this->mediaDedup->visualContentHash($body);
 
-            if ($contentHash === null || $this->assetDedup->importAlreadyExists($campaign, $absolute, $contentHash)) {
-                Log::info('Duplicate import asset skipped for campaign #'.$campaign->id, [
-                    'campaign_id' => $campaign->id,
+            if ($contentHash === null || $this->mediaDedup->stillImportExists($campaign, $absolute, $contentHash)) {
+                $this->mediaDedup->logDuplicateSkipped($campaign, 'still', [
                     'source_url' => $absolute,
                     'content_hash' => $contentHash,
                 ]);
@@ -77,7 +76,7 @@ class CampaignImportMediaService
                 continue;
             }
 
-            $sourceKey = $this->assetDedup->sourceUrlKey($absolute);
+            $sourceKey = $this->mediaDedup->sourceUrlKey($absolute, $campaign->source_url);
 
             $assets[] = $campaign->assets()->create([
                 'file_path' => $path,
@@ -110,21 +109,41 @@ class CampaignImportMediaService
         bool $convertVideos = true,
     ): array {
         $created = [];
-        $sortOrder = 0;
-        $seen = [];
+        $sortOrder = (int) $campaign->videos()->max('sort_order');
+        $this->mediaDedup->backfillVideoMetadata($campaign->videos()->get());
+        $seenKeys = [];
 
         foreach ($videos as $video) {
+            $type = strtolower(trim($video['type'] ?? ''));
             $url = trim($video['url'] ?? '');
 
-            if ($url === '' || isset($seen[$url])) {
+            if ($url === '' || ! in_array($type, ['youtube', 'vimeo'], true)) {
                 continue;
             }
 
-            $seen[$url] = true;
+            $embedKey = $this->mediaDedup->videoEmbedKey($type, $url);
+
+            if ($embedKey === null || isset($seenKeys[$embedKey])) {
+                continue;
+            }
+
+            if ($this->mediaDedup->videoImportExists($campaign, $type, $url)) {
+                $this->mediaDedup->logDuplicateSkipped($campaign, 'video', [
+                    'type' => $type,
+                    'url' => $url,
+                    'embed_key' => $embedKey,
+                ]);
+
+                continue;
+            }
+
+            $seenKeys[$embedKey] = true;
 
             $created[] = $campaign->videos()->create([
-                'type' => $video['type'],
+                'type' => $type,
                 'url' => $url,
+                'embed_key' => $embedKey,
+                'source_url_key' => $this->mediaDedup->sourceUrlKey($url, $campaign->source_url),
                 'sort_order' => ++$sortOrder,
             ]);
         }
@@ -132,11 +151,15 @@ class CampaignImportMediaService
         foreach ($directVideoUrls as $url) {
             $url = $this->resolveAbsoluteUrl($url, $campaign->source_url);
 
-            if ($url === null || isset($seen[$url])) {
+            if ($url === null) {
                 continue;
             }
 
-            $seen[$url] = true;
+            $sourceKey = $this->mediaDedup->sourceUrlKey($url, $campaign->source_url);
+
+            if ($sourceKey !== null && isset($seenKeys['file:url:'.$sourceKey])) {
+                continue;
+            }
 
             $filePath = $this->downloadVideoFile($campaign, $url, $convertVideos);
 
@@ -144,9 +167,35 @@ class CampaignImportMediaService
                 continue;
             }
 
+            $fileHash = $this->mediaDedup->resolveVideoFileHash($filePath);
+
+            if ($fileHash !== null && $this->mediaDedup->videoImportExists($campaign, 'file', $url, $fileHash)) {
+                $this->mediaDedup->logDuplicateSkipped($campaign, 'video_file', [
+                    'url' => $url,
+                    'content_hash' => $fileHash,
+                ]);
+
+                if (Storage::disk('public')->exists($filePath)) {
+                    Storage::disk('public')->delete($filePath);
+                }
+
+                continue;
+            }
+
+            if ($sourceKey !== null) {
+                $seenKeys['file:url:'.$sourceKey] = true;
+            }
+
+            if ($fileHash !== null) {
+                $seenKeys['file:hash:'.$fileHash] = true;
+            }
+
             $created[] = $campaign->videos()->create([
                 'type' => 'file',
                 'file_path' => $filePath,
+                'url' => $url,
+                'content_hash' => $fileHash,
+                'source_url_key' => $sourceKey,
                 'sort_order' => ++$sortOrder,
             ]);
         }
