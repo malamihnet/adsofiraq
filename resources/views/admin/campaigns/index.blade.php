@@ -17,6 +17,10 @@
         <option value="rejected" @selected(request('status') === 'rejected')>Rejected</option>
     </select>
     <x-admin.verification-filter />
+    <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="pinned" value="1" @checked(request()->boolean('pinned')) class="rounded border-archive-border">
+        Pinned positions only
+    </label>
     <button type="submit" class="btn-primary">Filter</button>
 </form>
 
@@ -29,6 +33,7 @@
                 <th class="px-4 py-3 text-left">Status</th>
                 <th class="px-4 py-3 text-left">Featured</th>
                 <th class="px-4 py-3 text-left">Hero</th>
+                <th class="px-4 py-3 text-left">Archive</th>
                 <th class="px-4 py-3 text-left">Verified</th>
                 <th class="px-4 py-3 text-left">Actions</th>
             </tr>
@@ -48,6 +53,15 @@
                     <td class="px-4 py-3">
                         @if($campaign->is_hero)
                             <span class="border border-archive-black px-2 py-0.5 text-xs uppercase tracking-wider">Hero</span>
+                        @else
+                            —
+                        @endif
+                    </td>
+                    <td class="px-4 py-3">
+                        @if($campaign->manual_order)
+                            <span class="border border-archive-black bg-archive-light px-2 py-0.5 text-xs uppercase tracking-wider">
+                                PINNED #{{ $campaign->manual_order }}
+                            </span>
                         @else
                             —
                         @endif

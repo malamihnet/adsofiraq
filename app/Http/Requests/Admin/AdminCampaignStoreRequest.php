@@ -40,6 +40,8 @@ class AdminCampaignStoreRequest extends FormRequest
             'is_verified' => ['boolean'],
             'is_hero' => ['boolean'],
             'hero_order' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'enable_manual_archive_position' => ['boolean'],
+            'manual_order' => ['nullable', 'integer', 'min:1'],
             'status' => ['required', 'in:pending,approved,rejected'],
         ]);
     }
@@ -54,6 +56,20 @@ class AdminCampaignStoreRequest extends FormRequest
                     'is_hero',
                     'Only approved campaigns can be featured in the homepage slider.'
                 );
+            }
+
+            if ($this->boolean('enable_manual_archive_position')) {
+                if ($this->input('status') !== 'approved') {
+                    $validator->errors()->add(
+                        'manual_order',
+                        'Only approved campaigns can use a custom archive position.'
+                    );
+                } elseif (! $this->filled('manual_order')) {
+                    $validator->errors()->add(
+                        'manual_order',
+                        'Enter a custom archive position or disable custom positioning.'
+                    );
+                }
             }
 
             $this->validateCampaignTaxonomyItems($validator);

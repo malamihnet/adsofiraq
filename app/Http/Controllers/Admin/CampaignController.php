@@ -13,6 +13,7 @@ use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
 use App\Models\User;
+use App\Services\CampaignManualOrderService;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
 use App\Services\CampaignVideoService;
@@ -30,6 +31,7 @@ class CampaignController extends Controller
         protected CampaignVideoService $videoService,
         protected PlatformVerificationService $verificationService,
         protected CampaignTaxonomySyncService $taxonomySyncService,
+        protected CampaignManualOrderService $manualOrderService,
     ) {}
 
     public function index(Request $request): View
@@ -46,6 +48,10 @@ class CampaignController extends Controller
                 $q->where('title', 'like', "%{$search}%")
                     ->orWhereHas('user', fn ($u) => $u->where('username', 'like', "%{$search}%"));
             });
+        }
+
+        if ($request->boolean('pinned')) {
+            $query->pinned()->orderBy('manual_order');
         }
 
         $query->platformVerificationFilter($request->input('verified'));
@@ -110,6 +116,12 @@ class CampaignController extends Controller
             $this->verificationService->update($campaign, $request->user(), true);
         }
 
+        $this->manualOrderService->syncFromRequest(
+            $campaign->fresh(),
+            $request->boolean('enable_manual_archive_position'),
+            $request->input('manual_order') !== null ? (int) $request->input('manual_order') : null,
+        );
+
         return redirect()->route('admin.campaigns.show', $campaign)
             ->with('success', 'Campaign created successfully.');
     }
@@ -170,6 +182,12 @@ class CampaignController extends Controller
         if ($request->boolean('is_verified')) {
             $this->verificationService->update($campaign, $request->user(), true);
         }
+
+        $this->manualOrderService->syncFromRequest(
+            $campaign->fresh(),
+            $request->boolean('enable_manual_archive_position'),
+            $request->input('manual_order') !== null ? (int) $request->input('manual_order') : null,
+        );
 
         return redirect()
             ->route('admin.campaigns.edit', $campaign)

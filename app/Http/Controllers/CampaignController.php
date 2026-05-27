@@ -11,6 +11,7 @@ use App\Models\CampaignRevision;
 use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
+use App\Services\CampaignArchiveOrderingService;
 use App\Services\CampaignRevisionUploadService;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
@@ -29,6 +30,7 @@ class CampaignController extends Controller
         protected CampaignVideoService $videoService,
         protected CampaignTaxonomySyncService $taxonomySyncService,
         protected CampaignRevisionUploadService $revisionUploadService,
+        protected CampaignArchiveOrderingService $archiveOrdering,
     ) {}
 
     public function index(Request $request): View
@@ -70,13 +72,25 @@ class CampaignController extends Controller
             $query->whereYear('published_at', $request->year);
         }
 
-        match ($request->get('sort', 'latest')) {
-            'views' => $query->orderByDesc('views_count'),
-            'bookmarks' => $query->orderByDesc('bookmarks_count'),
-            default => $query->latestOnPlatform(),
-        };
+        $sort = $request->get('sort', 'latest');
+        $useManualOrdering = $sort === 'latest';
 
-        $campaigns = $query->paginate(24)->withQueryString();
+        if ($sort === 'views') {
+            $query->orderByDesc('views_count');
+            $useManualOrdering = false;
+        } elseif ($sort === 'bookmarks') {
+            $query->orderByDesc('bookmarks_count');
+            $useManualOrdering = false;
+        }
+
+        $eagerLoads = ['brands', 'agencies', 'industries', 'mediumTypes', 'countries'];
+
+        $campaigns = $this->archiveOrdering->paginate(
+            $query,
+            perPage: 24,
+            useManualOrdering: $useManualOrdering,
+            eagerLoads: $eagerLoads,
+        );
 
         return view('campaigns.index', [
             'campaigns' => $campaigns,

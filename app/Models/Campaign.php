@@ -34,6 +34,7 @@ class Campaign extends Model
         'is_featured',
         'is_hero',
         'hero_order',
+        'manual_order',
         'is_student',
         'is_nsfw',
         'views_count',
@@ -53,6 +54,7 @@ class Campaign extends Model
             'is_featured' => 'boolean',
             'is_hero' => 'boolean',
             'hero_order' => 'integer',
+            'manual_order' => 'integer',
             'is_student' => 'boolean',
             'is_nsfw' => 'boolean',
         ];
@@ -80,8 +82,23 @@ class Campaign extends Model
                     $campaign->approved_at = null;
                     $campaign->is_hero = false;
                     $campaign->hero_order = null;
+                    $campaign->manual_order = null;
                 }
             }
+
+            if ($campaign->status !== 'approved') {
+                $campaign->manual_order = null;
+            }
+        });
+
+        static::saved(function (Campaign $campaign) {
+            if ($campaign->wasChanged(['manual_order', 'status', 'approved_at'])) {
+                app(\App\Services\CampaignArchiveOrderingService::class)->clearCache();
+            }
+        });
+
+        static::deleted(function () {
+            app(\App\Services\CampaignArchiveOrderingService::class)->clearCache();
         });
     }
 
@@ -130,6 +147,28 @@ class Campaign extends Model
     public function scopeLatestOnPlatform(Builder $query): Builder
     {
         return $query
+            ->orderByDesc('approved_at')
+            ->orderByDesc('created_at');
+    }
+
+    public function scopePinned(Builder $query): Builder
+    {
+        return $query->whereNotNull('manual_order');
+    }
+
+    public function scopeAutomaticArchive(Builder $query): Builder
+    {
+        return $query->whereNull('manual_order');
+    }
+
+    /**
+     * SQL ordering hint only. Full archive slot merge uses CampaignArchiveOrderingService.
+     */
+    public function scopeOrderedForArchive(Builder $query): Builder
+    {
+        return $query
+            ->orderByRaw('CASE WHEN manual_order IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('manual_order')
             ->orderByDesc('approved_at')
             ->orderByDesc('created_at');
     }
