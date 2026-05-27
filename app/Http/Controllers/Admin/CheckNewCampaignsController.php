@@ -9,6 +9,7 @@ use App\Services\Import\NewIraqCampaignsChecker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class CheckNewCampaignsController extends Controller
@@ -96,48 +97,94 @@ class CheckNewCampaignsController extends Controller
             return response()->json(['ok' => true, 'progress' => $this->statusArray($batch), 'results' => []]);
         }
 
+        $lastAction = null;
+        $lastError = null;
+
         try {
-            // If nothing is pending, crawl the next page to find new campaigns (fast) and enqueue them.
             $hasPending = $batch->queueItems()->where('status', 'pending')->exists();
             $crawlInfo = null;
 
             if (! $hasPending) {
+                $lastAction = 'crawling_page';
                 $crawlInfo = $this->checker->crawlNextPageAndEnqueue($batch, enqueueLimit: 10);
+                $lastAction = (string) ($crawlInfo['action'] ?? 'crawling_page');
             }
 
-            // If we now have pending items, process exactly one campaign.
             $batch = $batch->fresh();
             $result = null;
 
             if ($batch->queueItems()->where('status', 'pending')->exists()) {
+                $lastAction = 'importing_url';
                 $result = $this->processor->processNext($batch, $request->user());
+                $batch = $batch->fresh();
+
+                if (($result['status'] ?? null) === 'failed') {
+                    $lastAction = 'failed';
+                    $lastError = $result['message'] ?? null;
+                } elseif (($result['status'] ?? null) === 'skipped') {
+                    $lastAction = 'existing_url';
+                }
             } else {
-                // No work left: either we reached the end or hit the stop-after-existing threshold.
-                $progress = $this->processor->batchProgress($batch);
                 $stopped = (bool) ($crawlInfo['stopped'] ?? false);
                 $reachedEnd = (int) ($batch->crawl_next_page ?? 1) > (int) ($batch->crawl_max_page ?? 1);
+
+                if ($stopped) {
+                    $lastAction = 'completed_stop_existing';
+                } elseif ($reachedEnd) {
+                    $lastAction = 'completed';
+                }
 
                 if ($stopped || $reachedEnd) {
                     $batch->update([
                         'status' => 'completed',
                         'completed_at' => now(),
                     ]);
+                    $batch = $batch->fresh();
                 }
             }
+
+            $progress = $this->statusArray($batch);
+
+            Log::info('Check new campaigns process', [
+                'batch_id' => $batch->id,
+                'status' => $batch->status,
+                'current_page' => (int) ($batch->crawl_next_page ?? 1) - 1,
+                'max_page' => (int) ($batch->crawl_max_page ?? 1),
+                'urls_found' => $crawlInfo['urls_found'] ?? null,
+                'pending' => $progress['pending'] ?? 0,
+                'existing_streak' => $progress['consecutive_existing'] ?? 0,
+                'action' => $lastAction,
+            ]);
 
             return response()->json([
                 'ok' => true,
                 'crawl' => $crawlInfo,
-                'progress' => $this->statusArray($batch->fresh()),
+                'progress' => $progress,
                 'results' => $result ? [$result] : [],
+                'debug' => [
+                    'last_action' => $lastAction,
+                    'last_error' => $lastError,
+                    'http_status' => 200,
+                ],
             ]);
         } catch (\Throwable $e) {
             report($e);
+            $lastError = $e->getMessage();
+
+            Log::warning('Check new campaigns process failed', [
+                'batch_id' => $batch->id,
+                'error' => $lastError,
+            ]);
 
             return response()->json([
                 'ok' => false,
-                'error' => $e->getMessage(),
+                'error' => $lastError,
                 'progress' => $this->statusArray($batch->fresh()),
+                'debug' => [
+                    'last_action' => 'failed',
+                    'last_error' => $lastError,
+                    'http_status' => 500,
+                ],
             ], 500);
         }
     }
@@ -181,8 +228,25 @@ class CheckNewCampaignsController extends Controller
         $progress['stop_after_existing'] = (int) ($batch->stop_after_existing ?? config('import.new_import_stop_after_existing', 20));
         $progress['consecutive_existing'] = (int) ($batch->consecutive_existing ?? 0);
 
-        // UI labels for this feature
         $progress['queue_order_label'] = 'Newest pages first';
+
+        $pending = (int) ($progress['pending'] ?? 0);
+        $processing = (int) ($progress['processing'] ?? 0);
+        $needsCrawl = $progress['crawl_next_page'] <= $progress['crawl_max_page'];
+        $isActive = in_array($batch->status, ['queued', 'processing'], true);
+
+        if (! $progress['completed'] && (int) ($progress['total'] ?? 0) === 0) {
+            $progress['percent'] = 0;
+            $progress['phase'] = 'preparing';
+        } else {
+            $progress['phase'] = $progress['completed'] ? 'completed' : 'processing';
+        }
+
+        $progress['can_auto_process'] = ! $progress['completed']
+            && ! $progress['paused']
+            && ($pending > 0 || $processing > 0 || ($needsCrawl && $isActive));
+
+        $progress['can_process'] = $progress['can_auto_process'];
 
         return $progress;
     }

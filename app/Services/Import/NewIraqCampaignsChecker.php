@@ -12,6 +12,7 @@ class NewIraqCampaignsChecker
     public function __construct(
         protected CampaignPageFetcher $fetcher,
         protected CampaignUrlNormalizer $urlNormalizer,
+        protected CampaignListingParser $listingParser,
     ) {}
 
     public function iraqCountryUrl(): string
@@ -26,7 +27,7 @@ class NewIraqCampaignsChecker
     {
         $baseUrl = $this->iraqCountryUrl();
         $firstHtml = $this->fetchCountryPage($baseUrl);
-        $maxPage = $this->detectMaxPage($firstHtml);
+        $maxPage = $this->listingParser->detectMaxPage($firstHtml);
 
         $batch->update([
             'country_url' => $baseUrl,
@@ -58,7 +59,7 @@ class NewIraqCampaignsChecker
 
         $pageUrl = $nextPage === 1 ? $this->iraqCountryUrl() : $this->iraqCountryUrl().'?page='.$nextPage;
         $html = $this->fetchCountryPage($pageUrl);
-        $paths = $this->extractCampaignPaths($html);
+        $paths = $this->listingParser->extractCampaignPaths($html);
 
         $discovered = 0;
         $enqueued = 0;
@@ -115,23 +116,32 @@ class NewIraqCampaignsChecker
             'consecutive_existing' => $consecutiveExisting,
         ]);
 
+        $action = $stopped ? 'completed_stop_existing' : ($enqueued > 0 ? 'urls_found' : ($discovered > 0 ? 'existing_url' : 'crawling_page'));
+
         Log::info('AOTW Iraq incremental crawl: page scanned.', [
             'batch_id' => $batch->id,
             'page' => $nextPage,
+            'page_url' => $pageUrl,
             'max_page' => $maxPage,
+            'urls_found' => count($paths),
             'discovered' => $discovered,
             'enqueued' => $enqueued,
             'existing' => $existing,
+            'pending' => $batch->queueItems()->where('status', 'pending')->count(),
             'consecutive_existing' => $consecutiveExisting,
             'stopped' => $stopped,
+            'action' => $action,
         ]);
 
         return [
             'page' => $nextPage,
+            'page_url' => $pageUrl,
+            'urls_found' => count($paths),
             'discovered' => $discovered,
             'enqueued' => $enqueued,
             'existing' => $existing,
             'stopped' => $stopped,
+            'action' => $action,
         ];
     }
 
@@ -144,49 +154,5 @@ class NewIraqCampaignsChecker
         );
     }
 
-    protected function detectMaxPage(string $html): int
-    {
-        $max = 1;
-
-        if (preg_match_all('#/countries/[^"\']+\?page=(\d+)#', $html, $matches)) {
-            foreach ($matches[1] as $page) {
-                $max = max($max, (int) $page);
-            }
-        }
-
-        if (preg_match('#href=["\']([^"\']+\?page=(\d+))["\'][^>]*>Last#i', $html, $match)) {
-            $max = max($max, (int) $match[2]);
-        }
-
-        $max = min($max, (int) config('import.max_country_pages', 500));
-
-        return max(1, $max);
-    }
-
-    /**
-     * @return list<string>
-     */
-    protected function extractCampaignPaths(string $html): array
-    {
-        $paths = [];
-
-        if (! preg_match_all('#href=["\'](/campaigns/[^"\']+)#i', $html, $matches)) {
-            return [];
-        }
-
-        foreach ($matches[1] as $path) {
-            $path = strtok($path, '?') ?: $path;
-
-            if ($path === '/campaigns/new' || str_starts_with($path, '/campaigns/new/')) {
-                continue;
-            }
-
-            if (preg_match('#^/campaigns/[a-z0-9\-]+#i', $path)) {
-                $paths[] = $path;
-            }
-        }
-
-        return array_values(array_unique($paths));
-    }
 }
 

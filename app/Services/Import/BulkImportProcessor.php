@@ -189,7 +189,7 @@ class BulkImportProcessor
             'pending' => $pending,
             'processing' => $processing,
             'processed' => $processed,
-            'percent' => $total > 0 ? (int) round(($processed / $total) * 100) : 100,
+            'percent' => $completed ? 100 : ($total > 0 ? (int) round(($processed / $total) * 100) : 0),
             'completed' => $completed,
             'paused' => $paused,
             'can_process' => $canProcess,
