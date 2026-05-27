@@ -217,6 +217,22 @@ class CheckNewCampaignsController extends Controller
         return response()->json(['ok' => true, 'progress' => $this->statusArray($batch->fresh())]);
     }
 
+    public function retryFailed(ImportBatch $batch): JsonResponse
+    {
+        if ($batch->purpose !== 'check_new_iraq') {
+            return response()->json(['ok' => false, 'error' => 'Invalid batch purpose.'], 400);
+        }
+
+        $this->resetStuckItems($batch);
+        $count = $this->processor->retryFailed($batch->fresh());
+
+        return response()->json([
+            'ok' => true,
+            'retried' => $count,
+            'progress' => $this->statusArray($batch->fresh()),
+        ]);
+    }
+
     protected function statusArray(ImportBatch $batch): array
     {
         $progress = $this->processor->batchProgress($batch);

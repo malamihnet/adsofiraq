@@ -92,6 +92,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::post('/check-new-campaigns/{batch}/process', [CheckNewCampaignsController::class, 'process'])->name('check-new-campaigns.process');
     Route::post('/check-new-campaigns/{batch}/pause', [CheckNewCampaignsController::class, 'pause'])->name('check-new-campaigns.pause');
     Route::post('/check-new-campaigns/{batch}/resume', [CheckNewCampaignsController::class, 'resume'])->name('check-new-campaigns.resume');
+    Route::post('/check-new-campaigns/{batch}/retry-failed', [CheckNewCampaignsController::class, 'retryFailed'])->name('check-new-campaigns.retry-failed');
 
     /*
      | Bulk import routes intentionally disabled

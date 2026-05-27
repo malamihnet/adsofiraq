@@ -16,6 +16,7 @@
     data-process-url="{{ route('admin.check-new-campaigns.process', $batch) }}"
     data-pause-url="{{ route('admin.check-new-campaigns.pause', $batch) }}"
     data-resume-url="{{ route('admin.check-new-campaigns.resume', $batch) }}"
+    data-retry-url="{{ route('admin.check-new-campaigns.retry-failed', $batch) }}"
     data-delay-min="{{ min(config('import.bulk_process_delay_ms', 3000), config('import.bulk_process_delay_max_ms', 5000)) }}"
     data-delay-max="{{ max(config('import.bulk_process_delay_ms', 3000), config('import.bulk_process_delay_max_ms', 5000)) }}"
     data-auto-start="{{ (!$progress['completed'] && !$progress['paused']) ? '1' : '0' }}"
@@ -106,6 +107,7 @@
         <button type="button" id="btn-process-next" class="btn-primary text-xs" @if($progress['completed']) disabled @endif>Process next step</button>
         <button type="button" id="btn-pause" class="btn-outline text-xs" @if($progress['completed'] || $progress['paused']) disabled @endif>Pause</button>
         <button type="button" id="btn-resume" class="btn-primary text-xs {{ $progress['paused'] ? '' : 'hidden' }}" @if($progress['completed']) disabled @endif>Resume</button>
+        <button type="button" id="btn-retry-failed" class="btn-outline text-xs" @if(($progress['failed'] ?? 0) < 1 || ($progress['completed'] ?? false)) disabled @endif>Retry failed</button>
     </div>
 
     <div class="mt-6 border border-archive-border bg-archive-light p-4 text-xs">
@@ -146,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
         process: root.dataset.processUrl,
         pause: root.dataset.pauseUrl,
         resume: root.dataset.resumeUrl,
+        retry: root.dataset.retryUrl,
     };
 
     const delayMin = parseInt(root.dataset.delayMin, 10) || 3000;
@@ -170,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function () {
         status: document.getElementById('meta-status'),
         btnPause: document.getElementById('btn-pause'),
         btnResume: document.getElementById('btn-resume'),
+        btnRetry: document.getElementById('btn-retry-failed'),
         btnProcessNext: document.getElementById('btn-process-next'),
         done: document.getElementById('done-actions'),
         debugHttp: document.getElementById('debug-http'),
@@ -283,6 +287,7 @@ document.addEventListener('DOMContentLoaded', function () {
             els.btnResume.disabled = completed;
         }
         if (els.btnProcessNext) els.btnProcessNext.disabled = completed;
+        if (els.btnRetry) els.btnRetry.disabled = completed || (p.failed || 0) < 1;
     }
 
     function schedule(ms) {
@@ -405,6 +410,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (data?.progress) update(data.progress);
                     log('Resumed.');
                     start();
+                })
+                .catch(function (e) { showError(e.message || String(e)); });
+        });
+    }
+
+    if (els.btnRetry) {
+        els.btnRetry.addEventListener('click', function () {
+            fetchJson(urls.retry, 'POST')
+                .then(function ({ data, httpStatus }) {
+                    updateDebug(data?.debug, httpStatus);
+                    if (data?.progress) update(data.progress);
+                    log('Retrying ' + (data?.retried || 0) + ' failed item(s).');
+                    if (!completed && !paused) start();
                 })
                 .catch(function (e) { showError(e.message || String(e)); });
         });

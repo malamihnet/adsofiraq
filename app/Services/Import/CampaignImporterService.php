@@ -8,7 +8,10 @@ use App\Models\User;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
 use App\Services\VideoThumbnailService;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CampaignImporterService
 {
@@ -20,6 +23,7 @@ class CampaignImporterService
         protected CampaignTaxonomySyncService $taxonomySync,
         protected CampaignUploadService $uploadService,
         protected VideoThumbnailService $videoThumbnailService,
+        protected CampaignImportSlugService $slugService,
     ) {}
 
     public function import(string $url, User $admin): Campaign
@@ -81,9 +85,13 @@ class CampaignImporterService
                     'Please verify usage rights before publishing imported media.',
                 ]));
 
-            $campaign = Campaign::create([
+            $title = $parsed['title'] ?? 'Imported Campaign';
+            $slug = $this->slugService->resolveForImport($title, $sourceUrl);
+
+            $campaign = $this->createImportedCampaign([
                 'user_id' => $admin->id,
-                'title' => $parsed['title'] ?? 'Imported Campaign',
+                'title' => $title,
+                'slug' => $slug,
                 'description' => $parsed['description'] ?? '',
                 'credits' => CampaignCreditsExtractor::sanitizeCredits($parsed['credits'] ?? null),
                 'status' => $options['status'] ?? 'pending',
@@ -93,7 +101,7 @@ class CampaignImporterService
                 'source_url' => $sourceUrl,
                 'source_batch_id' => $options['source_batch_id'] ?? null,
                 'admin_notes' => $adminNotes,
-            ]);
+            ], $title, $sourceUrl);
 
             $this->syncTaxonomies($campaign, $parsed);
 
@@ -143,9 +151,22 @@ class CampaignImporterService
         $normalized = $this->urlNormalizer->normalize($url);
 
         return Campaign::query()
-            ->where('source_url', $normalized)
-            ->orWhere('source_url', $url)
+            ->where(function ($query) use ($normalized, $url) {
+                $query->where('source_url', $normalized)
+                    ->orWhere('source_url', $url);
+            })
             ->first();
+    }
+
+    public function findBySlug(string $slug): ?Campaign
+    {
+        $slug = Str::slug($slug);
+
+        if ($slug === '') {
+            return null;
+        }
+
+        return Campaign::withTrashed()->where('slug', $slug)->first();
     }
 
     protected function guardDuplicate(string $normalizedUrl): void
@@ -153,6 +174,40 @@ class CampaignImporterService
         if ($this->findDuplicate($normalizedUrl)) {
             throw CampaignImportException::alreadyImported();
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function createImportedCampaign(array $attributes, string $title, string $sourceUrl): Campaign
+    {
+        try {
+            return Campaign::create($attributes);
+        } catch (QueryException $e) {
+            if (! $this->isSlugUniqueViolation($e)) {
+                throw $e;
+            }
+
+            $attributes['slug'] = $this->slugService->resolveForImport(
+                $title.'-'.now()->timestamp,
+                $sourceUrl
+            );
+
+            Log::warning('Campaign import: slug unique constraint hit, retrying with new slug.', [
+                'source_url' => $sourceUrl,
+                'slug' => $attributes['slug'],
+            ]);
+
+            return Campaign::create($attributes);
+        }
+    }
+
+    protected function isSlugUniqueViolation(QueryException $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        return str_contains($message, 'campaigns_slug_unique')
+            || (str_contains($message, 'duplicate entry') && str_contains($message, 'slug'));
     }
 
     /**
