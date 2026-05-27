@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Campaign;
 use Illuminate\Support\Facades\Log;
+use Psr\Log\LoggerInterface;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
@@ -205,7 +206,7 @@ class PublicStorageSyncService
             }
         }
 
-        Log::info('Public storage sync: campaign complete.', [
+        $this->logInfo('Public storage sync: campaign complete.', [
             'campaign_id' => $campaign->id,
             'copied' => $stats['copied'],
             'skipped' => $stats['skipped'],
@@ -236,7 +237,7 @@ class PublicStorageSyncService
             $stats = $this->mergeStats($stats, $this->syncDirectory($legacyDir));
         }
 
-        Log::info('Public storage sync: full sync complete.', $stats);
+        $this->logInfo('Public storage sync: full sync complete.', $stats);
 
         return $stats;
     }
@@ -276,7 +277,7 @@ class PublicStorageSyncService
         $targetDir = dirname($targetFile);
 
         if (! is_dir($targetDir) && ! @mkdir($targetDir, 0755, true) && ! is_dir($targetDir)) {
-            Log::warning('Public storage sync: could not create directory.', [
+            $this->logWarning('Public storage sync: could not create directory.', [
                 'directory' => $targetDir,
                 'relative' => $relativePath,
             ]);
@@ -285,7 +286,7 @@ class PublicStorageSyncService
         }
 
         if (! @copy($sourceFile, $targetFile)) {
-            Log::warning('Public storage sync: copy failed.', [
+            $this->logWarning('Public storage sync: copy failed.', [
                 'from' => $sourceFile,
                 'to' => $targetFile,
                 'relative' => $relativePath,
@@ -296,13 +297,44 @@ class PublicStorageSyncService
 
         @chmod($targetFile, 0644);
 
-        Log::info('Public storage sync: copied file.', [
+        $this->logInfo('Public storage sync: copied file.', [
             'relative' => $relativePath,
             'public_path' => 'storage/'.$relativePath,
             'target' => $targetFile,
         ]);
 
         return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    protected function logInfo(string $message, array $context = []): void
+    {
+        $this->logger()?->info($message, $context);
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    protected function logWarning(string $message, array $context = []): void
+    {
+        $this->logger()?->warning($message, $context);
+    }
+
+    protected function logger(): ?LoggerInterface
+    {
+        if (! function_exists('app')) {
+            return null;
+        }
+
+        try {
+            $logger = app('log');
+
+            return $logger instanceof LoggerInterface ? $logger : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     protected function normalizeRelativePath(string $path): ?string
