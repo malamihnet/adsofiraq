@@ -1143,33 +1143,9 @@ class CampaignPageParser
         return array_values(array_unique($urls));
     }
 
-    protected function isGalleryStillUrl(string $url): bool
+    protected function isGalleryStillUrl(string $url, bool $inVerifiedMediaBlock = false): bool
     {
-        $lower = strtolower($url);
-
-        if (str_contains($lower, 'placeholder')
-            || str_contains($lower, 'avatar')
-            || str_contains($lower, '/logo')
-            || str_contains($lower, '/static/')
-            || str_contains($lower, 'favicon')
-            || str_contains($lower, 'video.adsoftheworld.com')
-        ) {
-            return false;
-        }
-
-        if (str_contains($lower, 'image.adsoftheworld.com')) {
-            return ! str_contains($lower, 'image.adsoftheworld.com/static/');
-        }
-
-        if (str_contains($lower, 'adsoftheworld.com/rails/active_storage')) {
-            return true;
-        }
-
-        if (str_contains($lower, 'storage.googleapis.com')) {
-            return true;
-        }
-
-        return (bool) preg_match('/\.(jpe?g|png|webp|gif|avif)(\?|#|$)/i', $lower);
+        return AotwHostedMediaUrl::isGalleryStillUrl($url, $inVerifiedMediaBlock);
     }
 
     protected function normalizeVideoUrl(string $url, string $sourceUrl): string

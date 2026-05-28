@@ -86,6 +86,7 @@ class CampaignVideo extends Model
 
         return match ($this->type) {
             'file' => 'Uploaded video',
+            'direct' => 'Campaign video',
             'youtube' => 'YouTube video',
             'vimeo' => 'Vimeo video',
             default => 'Video',
@@ -135,6 +136,7 @@ class CampaignVideo extends Model
     public function isPlayable(): bool
     {
         return ($this->type === 'file' && $this->file_url !== null)
+            || ($this->type === 'direct' && ! empty($this->url))
             || ($this->embed_url !== null);
     }
 

@@ -213,6 +213,23 @@ class CampaignImportMediaService
             $filePath = $this->downloadVideoFile($campaign, $url, $convertVideos);
 
             if ($filePath === null) {
+                if (AotwHostedMediaUrl::isDirectVideoUrl($url)) {
+                    if ($this->mediaDedup->videoImportExists($campaign, 'direct', $url)) {
+                        $skipped[] = ['url' => $url, 'reason' => 'duplicate'];
+
+                        continue;
+                    }
+
+                    $created[] = $campaign->videos()->create([
+                        'type' => 'direct',
+                        'url' => $url,
+                        'source_url_key' => $sourceKey,
+                        'sort_order' => ++$sortOrder,
+                    ]);
+
+                    continue;
+                }
+
                 $skipped[] = ['url' => $url, 'reason' => 'download_failed'];
 
                 continue;

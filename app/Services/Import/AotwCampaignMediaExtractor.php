@@ -323,7 +323,7 @@ class AotwCampaignMediaExtractor
 
             $resolved = $this->urlResolver->resolve($url, $sourceUrl);
 
-            if ($resolved === null || ! $this->isGalleryStillUrl($resolved)) {
+            if ($resolved === null || ! AotwHostedMediaUrl::isGalleryStillUrl($resolved, inVerifiedMediaBlock: true)) {
                 $recordSkip($url, 'outside campaign media area');
 
                 return;
@@ -480,6 +480,16 @@ class AotwCampaignMediaExtractor
 
             $resolved = $this->urlResolver->resolve(trim($rawUrl), $sourceUrl) ?? trim($rawUrl);
 
+            if (AotwHostedMediaUrl::isDirectVideoUrl($resolved)) {
+                if (! isset($seenDirect[$resolved])) {
+                    $seenDirect[$resolved] = true;
+                    $directVideoUrls[] = $resolved;
+                    $extracted[] = $resolved;
+                }
+
+                return;
+            }
+
             if (preg_match('/\.(mp4|webm|mov)(\?|#|$)/i', $resolved)) {
                 if (! isset($seenDirect[$resolved])) {
                     $seenDirect[$resolved] = true;
@@ -575,7 +585,7 @@ class AotwCampaignMediaExtractor
 
             $resolved = $this->urlResolver->resolve($url, $sourceUrl);
 
-            if ($resolved === null || ! $this->isGalleryStillUrl($resolved)) {
+            if ($resolved === null || ! AotwHostedMediaUrl::isGalleryStillUrl($resolved, inVerifiedMediaBlock: true)) {
                 $recordSkip($url, 'outside campaign media area');
 
                 return;
@@ -756,32 +766,8 @@ class AotwCampaignMediaExtractor
         return $this->urlResolver->preferOriginalFormat($candidates);
     }
 
-    protected function isGalleryStillUrl(string $url): bool
+    protected function isGalleryStillUrl(string $url, bool $inVerifiedMediaBlock = false): bool
     {
-        $lower = strtolower($url);
-
-        if (str_contains($lower, 'placeholder')
-            || str_contains($lower, 'avatar')
-            || str_contains($lower, '/logo')
-            || str_contains($lower, '/static/')
-            || str_contains($lower, 'favicon')
-            || str_contains($lower, 'video.adsoftheworld.com')
-        ) {
-            return false;
-        }
-
-        if (str_contains($lower, 'image.adsoftheworld.com')) {
-            return ! str_contains($lower, 'image.adsoftheworld.com/static/');
-        }
-
-        if (str_contains($lower, 'adsoftheworld.com/rails/active_storage')) {
-            return true;
-        }
-
-        if (str_contains($lower, 'storage.googleapis.com')) {
-            return true;
-        }
-
-        return (bool) preg_match('/\.(jpe?g|png|webp|gif|avif)(\?|#|$)/i', $lower);
+        return AotwHostedMediaUrl::isGalleryStillUrl($url, $inVerifiedMediaBlock);
     }
 }

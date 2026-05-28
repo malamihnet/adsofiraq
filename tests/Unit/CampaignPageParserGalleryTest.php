@@ -193,6 +193,28 @@ class CampaignPageParserGalleryTest extends TestCase
         $this->assertCount(2, $parsed['image_urls']);
     }
 
+    public function test_4g_campaign_extracts_s3_still_and_direct_video(): void
+    {
+        $html = file_get_contents(base_path('tests/fixtures/aotw-4g-still-and-direct-video.html'));
+        $this->assertNotFalse($html);
+
+        $url = 'https://www.adsoftheworld.com/campaigns/4g-is-waiting-for-you';
+        $parsed = $this->parser()->parse($html, $url);
+
+        $this->assertCount(1, $parsed['image_urls']);
+        $this->assertContains('https://aor-images-prod.s3.amazonaws.com/iclrvsbxw6secztgtrbqro38s8pp', $parsed['image_urls']);
+        $this->assertNotContains('https://image.adsoftheworld.com/2hvcu24o2sl1xybqwfz5k1x5yck8', $parsed['image_urls']);
+        $this->assertNotContains('https://image.adsoftheworld.com/related-thumb', $parsed['image_urls']);
+        $this->assertCount(1, $parsed['direct_video_urls']);
+        $this->assertContains('https://video.adsoftheworld.com/1saexufqes8yx9awmmugfrhg0ph3', $parsed['direct_video_urls']);
+
+        $preview = $this->parser()->parsePreview($html, $url);
+
+        $this->assertCount(1, $preview['still_urls']);
+        $this->assertCount(1, $preview['video_urls']);
+        $this->assertGreaterThanOrEqual(2, $preview['raw_media_block_count']);
+    }
+
     public function test_multiple_videos_in_order(): void
     {
         $html = <<<'HTML'

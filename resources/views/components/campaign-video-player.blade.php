@@ -15,6 +15,15 @@
         >
             <source src="{{ $video->file_url }}" @if($video->mime_type) type="{{ $video->mime_type }}" @endif>
         </video>
+    @elseif($video->type === 'direct' && $video->url)
+        <video
+            class="js-plyr-player w-full"
+            playsinline
+            preload="metadata"
+            data-poster="{{ $posterUrl }}"
+        >
+            <source src="{{ $video->url }}">
+        </video>
     @elseif($video->type === 'youtube' && $embedId)
         <div
             class="js-plyr-player plyr__video-embed"
