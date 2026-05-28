@@ -29,6 +29,6 @@
 />
 
 <p class="mt-8">
-    <a href="{{ route($type === 'agencies' ? 'agencies.show' : 'brands.show', $item) }}" class="underline text-sm">View public page</a>
+    <a href="{{ route($type === 'agencies' ? 'agency.show' : 'brand.show', $item) }}" class="underline text-sm">View public page</a>
 </p>
 @endsection

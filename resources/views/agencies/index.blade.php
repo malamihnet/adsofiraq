@@ -7,7 +7,7 @@
     <h1 class="section-title mb-12">Agencies</h1>
     <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         @foreach($agencies as $agency)
-            <a href="{{ route('agencies.show', $agency) }}" class="border border-archive-border p-6 hover:border-archive-black">
+            <a href="{{ route('agency.show', $agency) }}" class="border border-archive-border p-6 hover:border-archive-black">
                 <p class="font-display text-lg">{{ $agency->name }}</p>
                 <p class="mt-2 text-xs text-archive-gray">{{ $agency->campaigns_count }} campaigns</p>
             </a>

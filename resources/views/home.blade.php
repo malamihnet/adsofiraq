@@ -71,7 +71,7 @@
         <h2 class="section-title mb-12">Featured Agencies</h2>
         <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             @foreach($featuredAgencies as $agency)
-                <a href="{{ route('agencies.show', $agency) }}"
+                <a href="{{ route('agency.show', $agency) }}"
                    class="border border-archive-border px-6 py-6 transition-colors hover:border-archive-black">
                     <p class="font-display text-xl">{{ $agency->name }}</p>
                     <p class="mt-2 text-xs text-archive-gray">{{ $agency->campaigns_count }} campaigns</p>

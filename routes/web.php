@@ -51,17 +51,20 @@ Route::get('/campaigns/{campaign:slug}', [CampaignController::class, 'show'])->n
 
 Route::get('/agency/{agency:slug}', [AgencyController::class, 'show'])->name('agency.show');
 Route::get('/agencies', [AgencyController::class, 'index'])->name('agencies.index');
-Route::get('/agencies/{agency:slug}', fn (\App\Models\Agency $agency) => redirect()->route('agency.show', $agency, 301));
+Route::get('/agencies/{agency:slug}', fn (\App\Models\Agency $agency) => redirect()->route('agency.show', $agency, 301))
+    ->name('agencies.show');
 
 Route::get('/brand/{brand:slug}', [BrandController::class, 'show'])->name('brand.show');
 Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
-Route::get('/brands/{brand:slug}', fn (\App\Models\Brand $brand) => redirect()->route('brand.show', $brand, 301));
+Route::get('/brands/{brand:slug}', fn (\App\Models\Brand $brand) => redirect()->route('brand.show', $brand, 301))
+    ->name('brands.show');
 
 Route::get('/person/{person:slug}', [PersonController::class, 'show'])->name('person.show');
 Route::get('/people', [PersonController::class, 'index'])->name('people.index');
 Route::get('/people/apply', [PersonApplicationController::class, 'create'])->name('people.apply');
 Route::post('/people/apply', [PersonApplicationController::class, 'store'])->name('people.apply.store');
-Route::get('/people/{person:slug}', fn (\App\Models\Person $person) => redirect()->route('person.show', $person, 301));
+Route::get('/people/{person:slug}', fn (\App\Models\Person $person) => redirect()->route('person.show', $person, 301))
+    ->name('people.show');
 
 Route::get('/rankings', [RankingsController::class, 'index'])->name('rankings.index');
 Route::get('/top-agencies-iraq', [RankingsController::class, 'topAgencies'])->name('rankings.top-agencies');

@@ -8,7 +8,7 @@
     <div class="flex gap-3">
         <a href="{{ route('admin.people.edit', $person) }}" class="btn-outline text-xs">Edit</a>
         @if($person->status === 'approved')
-            <a href="{{ route('people.show', $person) }}" class="btn-outline text-xs" target="_blank" rel="noopener">Public profile</a>
+            <a href="{{ route('person.show', $person) }}" class="btn-outline text-xs" target="_blank" rel="noopener">Public profile</a>
         @endif
     </div>
 </div>

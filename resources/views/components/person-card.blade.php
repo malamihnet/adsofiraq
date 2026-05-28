@@ -1,6 +1,6 @@
 @props(['person'])
 
-<a href="{{ route('people.show', $person) }}" class="group block border border-archive-border bg-white transition-colors hover:border-archive-black">
+<a href="{{ route('person.show', $person) }}" class="group block border border-archive-border bg-white transition-colors hover:border-archive-black">
     <div class="aspect-[4/5] overflow-hidden bg-archive-light">
         <img
             src="{{ $person->photo_url }}"
