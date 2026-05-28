@@ -107,6 +107,18 @@ class AotwCampaignMediaExtractor
             );
         }
 
+        if ($imageUrls === []) {
+            $this->extractGalleryStillsFallback(
+                $main,
+                $sourceUrl,
+                $heroImageUrl,
+                $imageUrls,
+                $seenStill,
+                $recordSkip,
+                $mediaBlocks,
+            );
+        }
+
         $debug = [
             'hero_image_found' => $heroImageUrl !== null,
             'hero_image_url' => $heroImageUrl,
@@ -179,19 +191,8 @@ class AotwCampaignMediaExtractor
             }
         }
 
-        $main->filter('div.bg-white.my-3')->each(function (Crawler $block) use ($add) {
+        $this->eachMediaContainerDiv($main, function (Crawler $block) use ($add) {
             $add($block);
-        });
-
-        usort($blocks, function (Crawler $a, Crawler $b) {
-            $na = $a->getNode(0);
-            $nb = $b->getNode(0);
-
-            if (! $na || ! $nb) {
-                return 0;
-            }
-
-            return ($na->compareDocumentPosition($nb) & \DOMNode::DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
         });
 
         return $blocks;
@@ -199,9 +200,14 @@ class AotwCampaignMediaExtractor
 
     protected function isPostCampaignBoundary(\DOMElement $element): bool
     {
+        $id = $element->getAttribute('id') ?? '';
         $class = $element->getAttribute('class') ?? '';
 
-        if (str_contains($class, 'grid') && str_contains($class, 'gap-6')) {
+        if ($id === 'related' || str_starts_with($id, 'related_')) {
+            return true;
+        }
+
+        if (str_contains($class, 'grid-cols') && str_contains($class, 'grid')) {
             return true;
         }
 
@@ -218,13 +224,49 @@ class AotwCampaignMediaExtractor
             return false;
         }
 
-        $class = $element->getAttribute('class') ?? '';
+        $id = $element->getAttribute('id') ?? '';
 
-        if (! str_contains($class, 'bg-white') || ! str_contains($class, 'my-3')) {
+        if (str_starts_with($id, 'campaign_header')) {
             return false;
         }
 
-        return ! str_starts_with($element->getAttribute('id') ?? '', 'campaign_header');
+        $class = $element->getAttribute('class') ?? '';
+
+        return $this->classTokensContain($class, 'bg-white')
+            && $this->classTokensContain($class, 'my-3');
+    }
+
+    /**
+     * @param  callable(Crawler): void  $callback
+     */
+    protected function eachMediaContainerDiv(Crawler $scope, callable $callback): void
+    {
+        $scope->filter('div')->each(function (Crawler $div) use ($callback) {
+            if ($this->hasClasses($div, ['bg-white', 'my-3'])) {
+                $callback($div);
+            }
+        });
+    }
+
+    /**
+     * @param  list<string>  $required
+     */
+    protected function hasClasses(Crawler $node, array $required): bool
+    {
+        return $this->classTokensContain($node->attr('class') ?? '', ...$required);
+    }
+
+    protected function classTokensContain(string $classAttr, string ...$required): bool
+    {
+        $tokens = preg_split('/\s+/', trim($classAttr), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($required as $token) {
+            if (! in_array($token, $tokens, true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected function isCampaignGalleryMediaBlock(Crawler $block, Crawler $main): bool
@@ -235,38 +277,142 @@ class AotwCampaignMediaExtractor
             return false;
         }
 
-        if ($block->ancestors()->filter('[id^="campaign_header"]')->count() > 0) {
+        if (DomAncestorHelper::isInsideCampaignHeader($node)) {
             return false;
         }
 
-        if ($this->blockIsInRelatedCampaignsRegion($block)) {
+        if (DomAncestorHelper::blockIsInRelatedCampaignsRegion($block)) {
             return false;
         }
 
-        if ($block->ancestors()->filter('footer')->count() > 0) {
+        if (DomAncestorHelper::isInsideFooter($node)) {
             return false;
         }
 
         return $this->blockContainsUploadedCampaignMedia($block);
     }
 
-    protected function blockIsInRelatedCampaignsRegion(Crawler $block): bool
+    /**
+     * @param  list<string>  $imageUrls
+     * @param  array<string, true>  $seenStill
+     * @param  callable(?string, string): void  $recordSkip
+     * @param  list<array<string, mixed>>  $mediaBlocks
+     */
+    protected function extractGalleryStillsFallback(
+        Crawler $main,
+        string $sourceUrl,
+        ?string $heroImageUrl,
+        array &$imageUrls,
+        array &$seenStill,
+        callable $recordSkip,
+        array &$mediaBlocks,
+    ): void {
+        $index = count($mediaBlocks);
+        $blockEntry = [
+            'index' => $index,
+            'type' => 'image',
+            'urls' => [],
+            'skipped' => [],
+            'source' => 'fallback_scan',
+        ];
+
+        $add = function (?string $url) use ($sourceUrl, $heroImageUrl, &$imageUrls, &$seenStill, $recordSkip, &$blockEntry) {
+            if ($url === null || $url === '') {
+                return;
+            }
+
+            $resolved = $this->urlResolver->resolve($url, $sourceUrl);
+
+            if ($resolved === null || ! $this->isGalleryStillUrl($resolved)) {
+                $recordSkip($url, 'outside campaign media area');
+
+                return;
+            }
+
+            if ($heroImageUrl !== null && $resolved === $heroImageUrl) {
+                $recordSkip($resolved, 'thumbnail/hero');
+
+                return;
+            }
+
+            if (isset($seenStill[$resolved])) {
+                $recordSkip($resolved, 'duplicate');
+
+                return;
+            }
+
+            $seenStill[$resolved] = true;
+            $imageUrls[] = $resolved;
+            $blockEntry['urls'][] = $resolved;
+        };
+
+        $main->filter('img')->each(function (Crawler $img) use ($add, $main, $sourceUrl, $recordSkip) {
+            if ($this->nodeIsInsideRelatedCampaignLink($img)) {
+                $recordSkip($this->extractPrimaryImageUrlFromImg($img, $sourceUrl), 'related campaign');
+
+                return;
+            }
+
+            if (! $this->imgLooksLikeUploadedStill($img)) {
+                return;
+            }
+
+            if (! $this->imgIsInCampaignContentRegion($img, $main)) {
+                $recordSkip($this->extractPrimaryImageUrlFromImg($img, $sourceUrl), 'outside campaign media area');
+
+                return;
+            }
+
+            $add($this->extractPrimaryImageUrlFromImg($img, $sourceUrl));
+        });
+
+        if ($blockEntry['urls'] !== []) {
+            $mediaBlocks[] = $blockEntry;
+        }
+    }
+
+    protected function imgIsInCampaignContentRegion(Crawler $img, Crawler $main): bool
     {
-        $ancestors = $block->ancestors();
+        $imgNode = $img->getNode(0);
 
-        if ($ancestors->filter('div.grid.gap-6')->count() > 0) {
+        if (! $imgNode) {
+            return false;
+        }
+
+        $boundary = $this->findFirstContentBoundary($main);
+
+        if ($boundary === null) {
             return true;
         }
 
-        if ($ancestors->filter('[onclick*="location.href"][onclick*="/campaigns/"]')->count() > 0) {
-            return true;
+        $position = $boundary->compareDocumentPosition($imgNode);
+
+        return (bool) ($position & \DOMNode::DOCUMENT_POSITION_FOLLOWING);
+    }
+
+    protected function findFirstContentBoundary(Crawler $main): ?\DOMElement
+    {
+        $mainNode = $main->getNode(0);
+
+        if (! ($mainNode instanceof \DOMElement)) {
+            return null;
         }
 
-        if ($ancestors->filter('.shadow-lg[onclick*="/campaigns/"]')->count() > 0) {
-            return true;
+        foreach ($mainNode->childNodes as $child) {
+            if ($child instanceof \DOMElement && $this->isPostCampaignBoundary($child)) {
+                return $child;
+            }
         }
 
-        return false;
+        $related = $main->filter('#related')->first();
+
+        if ($related->count()) {
+            $node = $related->getNode(0);
+
+            return $node instanceof \DOMElement ? $node : null;
+        }
+
+        return null;
     }
 
     protected function blockContainsUploadedCampaignMedia(Crawler $block): bool
@@ -542,12 +688,16 @@ class AotwCampaignMediaExtractor
 
     protected function nodeIsInsidePicture(Crawler $node): bool
     {
-        return $node->ancestors()->filter('picture')->count() > 0;
+        $domNode = $node->getNode(0);
+
+        return $domNode !== null && DomAncestorHelper::isInsidePicture($domNode);
     }
 
     protected function nodeIsInsideRelatedCampaignLink(Crawler $node): bool
     {
-        return $node->ancestors()->filter('a[href*="/campaigns/"]')->count() > 0;
+        $domNode = $node->getNode(0);
+
+        return $domNode !== null && DomAncestorHelper::isInsideCampaignLink($domNode);
     }
 
     protected function imgLooksLikeUploadedStill(Crawler $img): bool

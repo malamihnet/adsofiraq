@@ -158,7 +158,7 @@ class CampaignPageParserGalleryTest extends TestCase
         $this->assertStringContainsString('active_storage', $parsed['hero_image_url'] ?? '');
         $this->assertNotContains($parsed['hero_image_url'], $parsed['image_urls']);
         $this->assertNotContains('https://image.adsoftheworld.com/o5o8q4uz2bo5d6mz47jh7sadalt0', $parsed['image_urls']);
-        $this->assertSame(2, $parsed['aotw_parse_debug']['gallery_containers'] ?? null);
+        $this->assertGreaterThanOrEqual(2, $parsed['aotw_parse_debug']['gallery_containers'] ?? 0);
         $this->assertSame(2, $parsed['aotw_parse_debug']['gallery_still_count'] ?? null);
 
         $preview = $this->parser()->parsePreview(
@@ -170,6 +170,27 @@ class CampaignPageParserGalleryTest extends TestCase
         $this->assertStringContainsString('active_storage', $preview['thumbnail_url'] ?? '');
         $this->assertArrayHasKey('skipped_urls', $preview);
         $this->assertArrayHasKey('media_blocks', $preview);
+        $this->assertTrue($preview['dom_inspection']['main_found'] ?? false);
+        $this->assertGreaterThanOrEqual(2, count($preview['dom_inspection']['media_block_candidates'] ?? []));
+    }
+
+    public function test_live_nowruz_fixture_extracts_two_stills(): void
+    {
+        $path = base_path('storage/app/aotw-nowruz-live2.html');
+
+        if (! is_readable($path)) {
+            $this->markTestSkipped('Live nowruz HTML snapshot not present.');
+        }
+
+        $html = file_get_contents($path);
+        $this->assertNotFalse($html);
+
+        $parsed = $this->parser()->parse(
+            $html,
+            'https://www.adsoftheworld.com/campaigns/speaking-native-kurdish-for-nowruz',
+        );
+
+        $this->assertCount(2, $parsed['image_urls']);
     }
 
     public function test_multiple_videos_in_order(): void

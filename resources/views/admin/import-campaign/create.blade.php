@@ -105,6 +105,29 @@
                     <p class="text-archive-gray">None extracted.</p>
                 @endforelse
             </div>
+            @if(!empty($debugPreview['dom_inspection']))
+                <div>
+                    <p class="section-label mb-1">DOM inspection</p>
+                    <p class="text-xs text-archive-gray">
+                        #main found: {{ ($debugPreview['dom_inspection']['main_found'] ?? false) ? 'yes' : 'no' }}
+                        @if(!empty($debugPreview['dom_inspection']['main_selector']))
+                            ({{ $debugPreview['dom_inspection']['main_selector'] }})
+                        @endif
+                        · Media block candidates: {{ count($debugPreview['dom_inspection']['media_block_candidates'] ?? []) }}
+                    </p>
+                    @if(!empty($debugPreview['dom_inspection']['media_block_candidates']))
+                        <pre class="mt-2 overflow-x-auto rounded border border-archive-border bg-archive-cream p-3 text-xs">{{ json_encode($debugPreview['dom_inspection']['media_block_candidates'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                    @endif
+                    @if(!empty($debugPreview['dom_inspection']['images_in_main']))
+                        <p class="mt-3 text-xs font-semibold">Images inside #main (first {{ count($debugPreview['dom_inspection']['images_in_main']) }})</p>
+                        <pre class="mt-1 overflow-x-auto rounded border border-archive-border bg-archive-cream p-3 text-xs">{{ json_encode($debugPreview['dom_inspection']['images_in_main'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                    @endif
+                    @if(!empty($debugPreview['dom_inspection']['container_classes']))
+                        <p class="mt-3 text-xs font-semibold">Container classes under #main (first 20)</p>
+                        <pre class="mt-1 overflow-x-auto rounded border border-archive-border bg-archive-cream p-3 text-xs">{{ json_encode($debugPreview['dom_inspection']['container_classes'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                    @endif
+                </div>
+            @endif
             <div>
                 <p class="section-label mb-1">Raw media blocks ({{ $debugPreview['raw_media_block_count'] ?? 0 }})</p>
                 @forelse($debugPreview['media_blocks'] ?? [] as $block)

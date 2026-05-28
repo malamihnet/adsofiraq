@@ -145,6 +145,10 @@ class CampaignPageParser
         }
 
         $debug = $parsed['aotw_parse_debug'] ?? [];
+        $domInspection = (new AotwDomStructureDebugger)->inspect(
+            new Crawler($html, $sourceUrl),
+            $sourceUrl,
+        );
 
         return [
             'thumbnail_url' => $parsed['hero_image_url'] ?? $parsed['og_image'] ?? null,
@@ -153,8 +157,22 @@ class CampaignPageParser
             'skipped_urls' => $debug['skipped_urls'] ?? [],
             'media_blocks' => $debug['media_blocks'] ?? [],
             'raw_media_block_count' => $debug['gallery_containers'] ?? count($debug['media_blocks'] ?? []),
+            'dom_inspection' => $domInspection,
             'debug' => $debug,
         ];
+    }
+
+    protected function resolveAotwMainCrawler(Crawler $crawler): Crawler
+    {
+        foreach (['#main', '[id="main"]', 'main'] as $selector) {
+            $main = $crawler->filter($selector);
+
+            if ($main->count() > 0) {
+                return $main->first();
+            }
+        }
+
+        return new Crawler;
     }
 
     /**
@@ -272,7 +290,7 @@ class CampaignPageParser
             'image_urls' => [],
         ];
 
-        $main = $crawler->filter('#main');
+        $main = $this->resolveAotwMainCrawler($crawler);
 
         if (! $main->count()) {
             return $data;
@@ -494,15 +512,15 @@ class CampaignPageParser
             return false;
         }
 
-        if ($block->ancestors()->filter('[id^="campaign_header"]')->count() > 0) {
+        if (DomAncestorHelper::isInsideCampaignHeader($node)) {
             return false;
         }
 
-        if ($this->blockIsInRelatedCampaignsRegion($block)) {
+        if (DomAncestorHelper::blockIsInRelatedCampaignsRegion($block)) {
             return false;
         }
 
-        if ($block->ancestors()->filter('footer')->count() > 0) {
+        if (DomAncestorHelper::isInsideFooter($node)) {
             return false;
         }
 
@@ -528,25 +546,6 @@ class CampaignPageParser
         });
 
         return $hasStill;
-    }
-
-    protected function blockIsInRelatedCampaignsRegion(Crawler $block): bool
-    {
-        $ancestors = $block->ancestors();
-
-        if ($ancestors->filter('div.grid.gap-6')->count() > 0) {
-            return true;
-        }
-
-        if ($ancestors->filter('[onclick*="location.href"][onclick*="/campaigns/"]')->count() > 0) {
-            return true;
-        }
-
-        if ($ancestors->filter('.shadow-lg[onclick*="/campaigns/"]')->count() > 0) {
-            return true;
-        }
-
-        return false;
     }
 
     /**
@@ -764,12 +763,16 @@ class CampaignPageParser
 
     protected function nodeIsInsidePicture(Crawler $node): bool
     {
-        return $node->ancestors()->filter('picture')->count() > 0;
+        $domNode = $node->getNode(0);
+
+        return $domNode !== null && DomAncestorHelper::isInsidePicture($domNode);
     }
 
     protected function nodeIsInsideRelatedCampaignLink(Crawler $node): bool
     {
-        return $node->ancestors()->filter('a[href*="/campaigns/"]')->count() > 0;
+        $domNode = $node->getNode(0);
+
+        return $domNode !== null && DomAncestorHelper::isInsideCampaignLink($domNode);
     }
 
     protected function imgLooksLikeUploadedStill(Crawler $img): bool
