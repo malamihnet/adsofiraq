@@ -26,9 +26,11 @@
         ['route' => ['brands.*', 'brand.*'], 'href' => route('brands.index'), 'label' => 'Brands'],
         ['route' => ['people.*', 'person.*'], 'href' => route('people.index'), 'label' => 'People'],
         ['route' => 'rankings.*', 'href' => route('rankings.index'), 'label' => 'Rankings'],
-        ['route' => 'made-by-iraq.*', 'href' => route('made-by-iraq.index'), 'label' => 'Made By Iraq'],
-        ['route' => 'campaigns.create', 'href' => $submitUrl, 'label' => 'Submit', 'icon' => 'upload'],
     ];
+
+    $submitLinkClass = request()->routeIs('campaigns.create')
+        ? 'text-white'
+        : 'text-white/70 hover:text-white';
 
     $uploadIcon = <<<'SVG'
 <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -52,14 +54,9 @@ SVG;
                         href="{{ $link['href'] }}"
                         @class([
                             'text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-150',
-                            isset($link['icon']) ? 'inline-flex items-center gap-1.5' : '',
                             $navLink($link['route'], $link['href'], $link['label']),
                         ])
-                        @if(($link['icon'] ?? null) === 'upload') aria-label="Submit campaign" @endif
                     >
-                        @if(($link['icon'] ?? null) === 'upload')
-                            {!! $uploadIcon !!}
-                        @endif
                         <span>{{ $link['label'] }}</span>
                     </a>
                 @endforeach
@@ -84,6 +81,14 @@ SVG;
         {{-- Right: account actions + mobile menu --}}
         <div class="site-header__actions flex flex-wrap items-center justify-end gap-3 md:gap-4">
             <div class="hidden items-center gap-4 md:flex">
+                <a
+                    href="{{ $submitUrl }}"
+                    class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-150 {{ $submitLinkClass }}"
+                    aria-label="Submit campaign"
+                >
+                    {!! $uploadIcon !!}
+                    <span>Submit</span>
+                </a>
             @guest
                 <a href="{{ route('login') }}" class="{{ $accountLink }}">Login</a>
                 <a href="{{ route('register') }}" class="{{ $accountLink }}">Register</a>
@@ -168,17 +173,24 @@ SVG;
                     @click="open = false"
                     @class([
                         'px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors',
-                        isset($link['icon']) ? 'inline-flex items-center gap-2' : '',
                         request()->routeIs($link['route']) ? 'text-white' : 'text-white/70 hover:text-white',
                     ])
-                    @if(($link['icon'] ?? null) === 'upload') aria-label="Submit campaign" @endif
                 >
-                    @if(($link['icon'] ?? null) === 'upload')
-                        {!! $uploadIcon !!}
-                    @endif
                     <span>{{ $link['label'] }}</span>
                 </a>
             @endforeach
+
+            <div class="my-2 border-t border-white/10"></div>
+
+            <a
+                href="{{ $submitUrl }}"
+                @click="open = false"
+                class="inline-flex items-center gap-2 px-2 py-2 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors {{ $submitLinkClass }}"
+                aria-label="Submit campaign"
+            >
+                {!! $uploadIcon !!}
+                <span>Submit</span>
+            </a>
 
             <div class="my-2 border-t border-white/10"></div>
 

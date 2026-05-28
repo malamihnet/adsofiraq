@@ -35,6 +35,7 @@
                         <li><a href="{{ route('pages.help') }}" class="transition-colors hover:text-white">Help Center</a></li>
                         <li><a href="{{ route('pages.contact') }}" class="transition-colors hover:text-white">Contact</a></li>
                         <li><a href="{{ route('pages.about') }}" class="transition-colors hover:text-white">About Ads of Iraq</a></li>
+                        <li><a href="{{ route('made-by-iraq.index') }}" class="transition-colors hover:text-white">Made By Iraq</a></li>
                         <li><a href="{{ route('pages.submit-advertise') }}" class="transition-colors hover:text-white">Submit &amp; Advertise</a></li>
                         <li><a href="{{ route('pages.terms-policies') }}" class="transition-colors hover:text-white">Terms &amp; Policies</a></li>
                         <li><a href="{{ route('pages.editorial-standards') }}" class="transition-colors hover:text-white">Editorial Standards</a></li>
