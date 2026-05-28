@@ -35,6 +35,14 @@
         @apply btn border border-archive-black text-archive-black hover:bg-archive-black hover:text-white;
     }
 
+    .campaign-gallery__preview {
+        @apply flex w-full max-h-[85vh] items-center justify-center border border-archive-border bg-white;
+    }
+
+    .campaign-gallery__preview-image {
+        @apply block h-auto w-auto max-h-[85vh] max-w-full object-contain;
+    }
+
     .campaign-gallery-lightbox {
         @apply fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 p-4 md:p-8;
     }
@@ -44,7 +52,7 @@
     }
 
     .campaign-gallery-lightbox__image {
-        @apply max-h-[90vh] max-w-[95vw] object-contain;
+        @apply block h-auto w-auto max-h-[90vh] max-w-[95vw] object-contain;
     }
 
     .campaign-gallery-lightbox__close {

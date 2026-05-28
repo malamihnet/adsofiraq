@@ -54,10 +54,6 @@
                 <div class="mt-8">
                     <x-campaign-gallery :stills="$galleryStills" :title="$campaign->title" />
                 </div>
-            @elseif($campaign->thumbnail_url && ! $campaign->hasVideos())
-                <div class="mt-8 aspect-[16/10] overflow-hidden border border-archive-border">
-                    <x-campaign-image src="{{ $campaign->thumbnail_url }}" alt="{{ $campaign->title }}" class="h-full w-full object-cover" />
-                </div>
             @endif
 
             <div class="mt-12 max-w-none">

@@ -63,17 +63,17 @@
         x-data="campaignGallery({{ Js::from($galleryStills) }}, {{ Js::from($galleryPlaceholder) }})"
         x-init="init()"
     >
-        {{-- Main preview (server-rendered first still) --}}
+        {{-- Main preview: full still at original aspect ratio (thumbnails in strip may crop) --}}
         <button
             type="button"
-            class="group relative block w-full overflow-hidden border border-archive-border bg-archive-light text-left"
+            class="campaign-gallery__preview group relative text-left"
             x-on:click.prevent="openLightbox()"
             aria-label="Open image gallery"
         >
             <img
                 src="{{ $first['url'] }}"
                 alt="{{ $first['alt'] }}"
-                class="mx-auto block h-auto w-full max-h-[85vh] object-contain transition-transform duration-300 group-hover:scale-[1.01]"
+                class="campaign-gallery__preview-image"
                 x-bind:src="previewUrl()"
                 x-bind:alt="previewAlt()"
                 x-on:error="onImageError($event)"
