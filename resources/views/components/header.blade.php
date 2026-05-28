@@ -11,17 +11,22 @@
         ? route('following.index')
         : (auth()->check() ? route('verification.notice') : route('login'));
 
-    $navLink = fn (string $routePattern, string $href, string $label) => request()->routeIs($routePattern)
-        ? 'text-white'
-        : 'text-white/70 hover:text-white';
+    $navLink = function (string|array $routePattern, string $href, string $label): string {
+        $patterns = is_array($routePattern) ? $routePattern : [$routePattern];
+        $active = collect($patterns)->contains(fn (string $pattern) => request()->routeIs($pattern));
+
+        return $active ? 'text-white' : 'text-white/70 hover:text-white';
+    };
 
     $accountLink = 'text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 transition-colors hover:text-white';
 
     $leftLinks = [
         ['route' => 'campaigns.*', 'href' => route('campaigns.index'), 'label' => 'Campaigns'],
-        ['route' => 'agencies.*', 'href' => route('agencies.index'), 'label' => 'Agencies'],
-        ['route' => 'brands.*', 'href' => route('brands.index'), 'label' => 'Brands'],
-        ['route' => 'people.*', 'href' => route('people.index'), 'label' => 'People'],
+        ['route' => ['agencies.*', 'agency.*'], 'href' => route('agencies.index'), 'label' => 'Agencies'],
+        ['route' => ['brands.*', 'brand.*'], 'href' => route('brands.index'), 'label' => 'Brands'],
+        ['route' => ['people.*', 'person.*'], 'href' => route('people.index'), 'label' => 'People'],
+        ['route' => 'rankings.*', 'href' => route('rankings.index'), 'label' => 'Rankings'],
+        ['route' => 'made-by-iraq.*', 'href' => route('made-by-iraq.index'), 'label' => 'Made By Iraq'],
         ['route' => 'campaigns.create', 'href' => $submitUrl, 'label' => 'Submit', 'icon' => 'upload'],
     ];
 

@@ -40,7 +40,12 @@ class AdminCampaignStoreRequest extends FormRequest
             'is_verified' => ['boolean'],
             'is_hero' => ['boolean'],
             'hero_order' => ['nullable', 'integer', 'min:1', 'max:99'],
-            'status' => ['required', 'in:pending,approved,rejected'],
+            'is_draft' => ['boolean'],
+            'needs_changes' => ['boolean'],
+            'is_made_by_iraq' => ['boolean'],
+            'editorial_label' => ['nullable', 'string', 'max:64'],
+            'ai_summary' => ['nullable', 'string', 'max:2000'],
+            'status' => ['required', 'in:draft,pending,approved,rejected,needs_changes'],
         ]);
     }
 

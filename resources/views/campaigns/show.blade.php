@@ -7,6 +7,11 @@
 @endif
 @section('og_type', 'article')
 
+@push('meta')
+    <link rel="canonical" href="{{ $canonicalUrl }}">
+    <x-structured-data :graphs="$schema" />
+@endpush
+
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-12 md:px-8">
     @if(auth()->check() && auth()->user()->can('update', $campaign))
@@ -27,18 +32,23 @@
             <h1 class="font-display text-3xl leading-tight md:text-5xl inline-flex items-center gap-3 flex-wrap">
                 {{ $campaign->title }}
                 <x-verified-badge :verified="$campaign->is_verified" />
+                <x-editorial-label :label="$campaign->editorial_label_display" />
             </h1>
+
+            @if($campaign->ai_summary)
+                <p class="mt-4 max-w-2xl text-sm leading-relaxed text-archive-gray">{{ $campaign->ai_summary }}</p>
+            @endif
 
             <div class="mt-4 flex flex-wrap gap-x-3 gap-y-2 text-sm text-archive-gray">
                 @foreach($campaign->brands as $brand)
-                    <a href="{{ route('brands.show', $brand) }}" class="inline-flex items-center gap-1.5 hover:text-archive-black">
+                    <a href="{{ route('brand.show', $brand) }}" class="inline-flex items-center gap-1.5 hover:text-archive-black">
                         {{ $brand->name }}
                         <x-verified-badge :verified="$brand->is_verified" />
                     </a>
                 @endforeach
                 @foreach($campaign->agencies as $agency)
                     @if($campaign->brands->isNotEmpty())<span>&middot;</span>@endif
-                    <a href="{{ route('agencies.show', $agency) }}" class="inline-flex items-center gap-1.5 hover:text-archive-black">
+                    <a href="{{ route('agency.show', $agency) }}" class="inline-flex items-center gap-1.5 hover:text-archive-black">
                         {{ $agency->name }}
                         <x-verified-badge :verified="$agency->is_verified" />
                     </a>
@@ -86,7 +96,7 @@
                             <dd class="mt-1 space-y-1">
                                 @foreach($campaign->brands as $brand)
                                     <div>
-                                        <a href="{{ route('brands.show', $brand) }}" class="inline-flex items-center gap-1 underline">
+                                        <a href="{{ route('brand.show', $brand) }}" class="inline-flex items-center gap-1 underline">
                                             {{ $brand->name }}
                                             <x-verified-badge :verified="$brand->is_verified" />
                                         </a>
@@ -101,7 +111,7 @@
                             <dd class="mt-1 space-y-1">
                                 @foreach($campaign->agencies as $agency)
                                     <div>
-                                        <a href="{{ route('agencies.show', $agency) }}" class="inline-flex items-center gap-1 underline">
+                                        <a href="{{ route('agency.show', $agency) }}" class="inline-flex items-center gap-1 underline">
                                             {{ $agency->name }}
                                             <x-verified-badge :verified="$agency->is_verified" />
                                         </a>
@@ -136,11 +146,6 @@
         </aside>
     </div>
 
-    @if($relatedCampaigns->count())
-        <section class="mt-24 border-t border-archive-border pt-16">
-            <h2 class="section-title mb-12">Related Campaigns</h2>
-            <x-campaign-grid :campaigns="$relatedCampaigns" />
-        </section>
-    @endif
+    <x-campaign-related-sections :groups="$relatedGroups" />
 </div>
 @endsection

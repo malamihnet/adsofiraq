@@ -12,8 +12,12 @@ use App\Http\Controllers\Admin\CampaignRevisionController as AdminCampaignRevisi
 use App\Http\Controllers\Admin\TaxonomyController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AgencyController;
+use App\Http\Controllers\AwardsController;
 use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\MadeByIraqController;
+use App\Http\Controllers\RankingsController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\WatchingController;
@@ -45,16 +49,33 @@ Route::middleware(['auth', 'verified', 'noindex'])->group(function () {
 
 Route::get('/campaigns/{campaign:slug}', [CampaignController::class, 'show'])->name('campaigns.show');
 
+Route::get('/agency/{agency:slug}', [AgencyController::class, 'show'])->name('agency.show');
 Route::get('/agencies', [AgencyController::class, 'index'])->name('agencies.index');
-Route::get('/agencies/{agency:slug}', [AgencyController::class, 'show'])->name('agencies.show');
+Route::get('/agencies/{agency:slug}', fn (\App\Models\Agency $agency) => redirect()->route('agency.show', $agency, 301));
 
+Route::get('/brand/{brand:slug}', [BrandController::class, 'show'])->name('brand.show');
 Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
-Route::get('/brands/{brand:slug}', [BrandController::class, 'show'])->name('brands.show');
+Route::get('/brands/{brand:slug}', fn (\App\Models\Brand $brand) => redirect()->route('brand.show', $brand, 301));
 
+Route::get('/person/{person:slug}', [PersonController::class, 'show'])->name('person.show');
 Route::get('/people', [PersonController::class, 'index'])->name('people.index');
 Route::get('/people/apply', [PersonApplicationController::class, 'create'])->name('people.apply');
 Route::post('/people/apply', [PersonApplicationController::class, 'store'])->name('people.apply.store');
-Route::get('/people/{person:slug}', [PersonController::class, 'show'])->name('people.show');
+Route::get('/people/{person:slug}', fn (\App\Models\Person $person) => redirect()->route('person.show', $person, 301));
+
+Route::get('/rankings', [RankingsController::class, 'index'])->name('rankings.index');
+Route::get('/top-agencies-iraq', [RankingsController::class, 'topAgencies'])->name('rankings.top-agencies');
+Route::get('/top-production-houses', [RankingsController::class, 'topProductionHouses'])->name('rankings.top-production-houses');
+Route::get('/most-viewed-campaigns', [RankingsController::class, 'mostViewed'])->name('rankings.most-viewed');
+Route::get('/trending', [RankingsController::class, 'trending'])->name('rankings.trending');
+Route::get('/most-appreciated', [RankingsController::class, 'mostAppreciated'])->name('rankings.most-appreciated');
+
+Route::get('/made-by-iraq', [MadeByIraqController::class, 'index'])->name('made-by-iraq.index');
+
+Route::get('/awards', [AwardsController::class, 'index'])->name('awards.index');
+Route::get('/awards/{award:slug}', [AwardsController::class, 'show'])->name('awards.show');
+
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 Route::get('/users/{user:username}', [UserProfileController::class, 'show'])->name('users.show');
 

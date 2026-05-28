@@ -24,6 +24,13 @@ class Person extends Model
         'bio',
         'website_url',
         'official_profile_url',
+        'instagram_url',
+        'linkedin_url',
+        'twitter_url',
+        'production_house',
+        'meta_title',
+        'meta_description',
+        'ranking_score',
         'work_1',
         'work_2',
         'work_3',
@@ -38,7 +45,13 @@ class Person extends Model
     {
         return [
             'approved_at' => 'datetime',
+            'ranking_score' => 'float',
         ];
+    }
+
+    public function getSeoTitleAttribute(): string
+    {
+        return $this->meta_title ?: ($this->name.' — Ads of Iraq');
     }
 
     protected static function booted(): void

@@ -111,7 +111,9 @@
             <div>
                 <label class="section-label mb-2 block">Status *</label>
                 <select name="status" id="admin-campaign-status" class="input-field" required>
-                    <option value="pending" @selected(old('status', $campaign?->status ?? 'approved') === 'pending')>Pending</option>
+                    <option value="draft" @selected(old('status', $campaign?->status) === 'draft')>Draft</option>
+                    <option value="pending" @selected(old('status', $campaign?->status ?? 'approved') === 'pending')>Under review</option>
+                    <option value="needs_changes" @selected(old('status', $campaign?->status) === 'needs_changes')>Needs changes</option>
                     <option value="approved" @selected(old('status', $campaign?->status ?? 'approved') === 'approved')>Approved</option>
                     <option value="rejected" @selected(old('status', $campaign?->status) === 'rejected')>Rejected</option>
                 </select>
@@ -124,9 +126,32 @@
                     Featured campaign
                 </label>
                 <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="is_made_by_iraq" value="1" @checked(old('is_made_by_iraq', $campaign?->is_made_by_iraq)) class="rounded border-archive-border">
+                    Made By Iraq
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="is_draft" value="1" @checked(old('is_draft', $campaign?->is_draft)) class="rounded border-archive-border">
+                    Draft (hidden)
+                </label>
+                <label class="flex items-center gap-2 text-sm">
                     <input type="checkbox" name="is_verified" value="1" @checked(old('is_verified', $campaign?->is_verified)) class="rounded border-archive-border">
                     Verified by Ads of Iraq
                 </label>
+            </div>
+
+            <div>
+                <label class="section-label mb-2 block">Editorial label</label>
+                <select name="editorial_label" class="input-field">
+                    <option value="">— None —</option>
+                    @foreach(config('authority.editorial_labels', []) as $key => $label)
+                        <option value="{{ $key }}" @selected(old('editorial_label', $campaign?->editorial_label) === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="section-label mb-2 block">AI summary (SEO)</label>
+                <textarea name="ai_summary" rows="3" class="input-field">{{ old('ai_summary', $campaign?->ai_summary) }}</textarea>
             </div>
 
             <div>

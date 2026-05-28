@@ -1,7 +1,13 @@
 @extends('layouts.app')
 
-@section('title', $person->name . ' — Ads of Iraq')
+@section('title', $person->seo_title)
 @section('meta_description', $person->seo_description)
+@section('og_image', $person->photo_url)
+
+@push('meta')
+    <link rel="canonical" href="{{ $canonicalUrl }}">
+    <x-structured-data :graphs="$schema" />
+@endpush
 
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-12 md:px-8">
@@ -18,15 +24,28 @@
             </h1>
             <p class="mt-2 text-sm uppercase tracking-widest text-archive-gray">{{ $person->position }}</p>
 
+            @if($person->production_house)
+                <p class="mt-4 text-sm">Production house: <span class="font-medium">{{ $person->production_house }}</span></p>
+            @endif
+
             @if($person->bio)
                 <p class="mt-8 max-w-2xl leading-relaxed">{{ $person->bio }}</p>
             @endif
 
-            @if($person->profile_link)
-                <a href="{{ $person->profile_link }}" target="_blank" rel="noopener noreferrer" class="mt-6 inline-block text-sm underline">
-                    Official profile
-                </a>
-            @endif
+            <div class="mt-6 flex flex-wrap gap-4 text-sm">
+                @if($person->profile_link)
+                    <a href="{{ $person->profile_link }}" target="_blank" rel="noopener noreferrer" class="underline">Official profile</a>
+                @endif
+                @if($person->website_url)
+                    <a href="{{ $person->website_url }}" target="_blank" rel="noopener" class="underline">Website</a>
+                @endif
+                @if($person->instagram_url)
+                    <a href="{{ $person->instagram_url }}" target="_blank" rel="noopener" class="underline">Instagram</a>
+                @endif
+                @if($person->linkedin_url)
+                    <a href="{{ $person->linkedin_url }}" target="_blank" rel="noopener" class="underline">LinkedIn</a>
+                @endif
+            </div>
 
             @if($person->featured_works)
                 <div class="mt-10">

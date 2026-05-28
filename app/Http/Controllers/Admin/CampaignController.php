@@ -18,7 +18,10 @@ use App\Services\CampaignArchiveOrderingService;
 use App\Services\CampaignArchiveReorderService;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
+use App\Mail\CampaignWorkflowMail;
 use App\Services\CampaignVideoService;
+use App\Services\RankingScoreService;
+use Illuminate\Support\Facades\Mail;
 use App\Services\PlatformVerificationService;
 use App\Services\TaxonomyService;
 use Illuminate\Http\RedirectResponse;
@@ -88,6 +91,11 @@ class CampaignController extends Controller
             'hero_order' => $isHero ? $request->input('hero_order') : null,
             'submission_notes' => $request->submission_notes,
             'admin_notes' => $request->admin_notes,
+            'is_draft' => $request->boolean('is_draft'),
+            'needs_changes' => $request->boolean('needs_changes') || $status === 'needs_changes',
+            'is_made_by_iraq' => $request->boolean('is_made_by_iraq'),
+            'editorial_label' => $request->input('editorial_label') ?: null,
+            'ai_summary' => $request->input('ai_summary'),
         ]);
 
         $this->taxonomySyncService->syncAll(
@@ -119,6 +127,8 @@ class CampaignController extends Controller
             $this->verificationService->update($campaign, $request->user(), true);
         }
 
+        app(RankingScoreService::class)->refreshCampaign($campaign->fresh());
+
         return redirect()->route('admin.campaigns.show', $campaign)
             ->with('success', 'Campaign created successfully.');
     }
@@ -149,6 +159,11 @@ class CampaignController extends Controller
             'hero_order' => $isHero ? $request->input('hero_order') : null,
             'submission_notes' => $request->submission_notes,
             'admin_notes' => $request->admin_notes,
+            'is_draft' => $request->boolean('is_draft'),
+            'needs_changes' => $request->boolean('needs_changes') || $status === 'needs_changes',
+            'is_made_by_iraq' => $request->boolean('is_made_by_iraq'),
+            'editorial_label' => $request->input('editorial_label') ?: null,
+            'ai_summary' => $request->input('ai_summary'),
         ]);
 
         $this->taxonomySyncService->syncAll(
@@ -161,6 +176,8 @@ class CampaignController extends Controller
         );
 
         $this->videoService->syncFromRequest($campaign, $request);
+
+        app(RankingScoreService::class)->refreshCampaign($campaign->fresh());
 
         $manualThumbnail = $request->hasFile('thumbnail');
 
@@ -198,8 +215,16 @@ class CampaignController extends Controller
 
         $campaign->update([
             'status' => 'approved',
+            'is_draft' => false,
+            'needs_changes' => false,
             'published_at' => $campaign->published_at ?? now(),
         ]);
+
+        app(RankingScoreService::class)->refreshCampaign($campaign->fresh());
+
+        if ($campaign->user?->email) {
+            Mail::to($campaign->user)->send(new CampaignWorkflowMail($campaign, 'approved'));
+        }
 
         return back()->with('success', 'Campaign approved.');
     }
@@ -212,6 +237,10 @@ class CampaignController extends Controller
             'status' => 'rejected',
         ]);
 
+        if ($campaign->user?->email) {
+            Mail::to($campaign->user)->send(new CampaignWorkflowMail($campaign, 'rejected', $campaign->admin_notes));
+        }
+
         return back()->with('success', 'Campaign rejected.');
     }
 
@@ -219,7 +248,14 @@ class CampaignController extends Controller
     {
         $this->authorize('moderate', $campaign);
 
+        $wasFeatured = $campaign->is_featured;
         $campaign->update(['is_featured' => ! $campaign->is_featured]);
+
+        if ($campaign->is_featured && ! $wasFeatured && $campaign->user?->email) {
+            Mail::to($campaign->user)->send(new CampaignWorkflowMail($campaign->fresh(), 'featured'));
+        }
+
+        app(RankingScoreService::class)->refreshCampaign($campaign->fresh());
 
         $message = $campaign->is_featured ? 'Campaign marked as featured.' : 'Campaign removed from featured.';
 

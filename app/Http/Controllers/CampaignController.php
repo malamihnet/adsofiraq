@@ -13,6 +13,8 @@ use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
 use App\Services\CampaignArchiveOrderingService;
+use App\Services\CampaignInternalLinksService;
+use App\Services\StructuredDataService;
 use App\Services\CampaignRevisionUploadService;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
@@ -34,6 +36,8 @@ class CampaignController extends Controller
         protected CampaignTaxonomySyncService $taxonomySyncService,
         protected CampaignRevisionUploadService $revisionUploadService,
         protected CampaignArchiveOrderingService $archiveOrdering,
+        protected CampaignInternalLinksService $internalLinks,
+        protected StructuredDataService $structuredData,
     ) {}
 
     public function index(Request $request): View
@@ -131,19 +135,33 @@ class CampaignController extends Controller
 
         $campaign->load(['brands', 'agencies', 'industries', 'mediumTypes', 'countries', 'assets', 'videos']);
 
-        $relatedCampaigns = Campaign::public()
-            ->where('id', '!=', $campaign->id)
-            ->when($campaign->brands->isNotEmpty(), fn ($q) => $q->whereHas('brands', fn ($b) => $b->whereIn('brands.id', $campaign->brands->pluck('id'))))
-            ->when($campaign->brands->isEmpty() && $campaign->industries->isNotEmpty(), fn ($q) => $q->whereHas('industries', fn ($i) => $i->whereIn('industries.id', $campaign->industries->pluck('id'))))
-            ->with(['brands', 'agencies'])
-            ->take(4)
-            ->get();
+        $relatedGroups = $this->internalLinks->groupedRelated($campaign);
+
+        $canonicalUrl = route('campaigns.show', $campaign);
+        $schema = array_merge(
+            [
+                $this->structuredData->breadcrumb([
+                    ['name' => 'Home', 'url' => url('/')],
+                    ['name' => 'Campaigns', 'url' => route('campaigns.index')],
+                    ['name' => $campaign->title, 'url' => $canonicalUrl],
+                ]),
+                $this->structuredData->creativeWork($campaign, $canonicalUrl),
+            ],
+            $this->structuredData->campaignMedia($campaign),
+        );
 
         $user = auth()->user();
         $isBookmarked = $user ? $campaign->isBookmarkedBy($user) : false;
         $isWatched = $user ? $campaign->isWatchedBy($user) : false;
 
-        return view('campaigns.show', compact('campaign', 'relatedCampaigns', 'isBookmarked', 'isWatched'));
+        return view('campaigns.show', compact(
+            'campaign',
+            'relatedGroups',
+            'isBookmarked',
+            'isWatched',
+            'canonicalUrl',
+            'schema',
+        ));
     }
 
     public function pendingReview(Campaign $campaign): View|RedirectResponse

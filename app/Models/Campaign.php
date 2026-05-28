@@ -37,6 +37,12 @@ class Campaign extends Model
         'manual_order',
         'is_student',
         'is_nsfw',
+        'is_draft',
+        'needs_changes',
+        'editorial_label',
+        'ai_summary',
+        'is_made_by_iraq',
+        'ranking_score',
         'views_count',
         'bookmarks_count',
         'watchers_count',
@@ -57,6 +63,10 @@ class Campaign extends Model
             'manual_order' => 'integer',
             'is_student' => 'boolean',
             'is_nsfw' => 'boolean',
+            'is_draft' => 'boolean',
+            'needs_changes' => 'boolean',
+            'is_made_by_iraq' => 'boolean',
+            'ranking_score' => 'float',
         ];
     }
 
@@ -175,7 +185,40 @@ class Campaign extends Model
 
     public function scopePublic(Builder $query): Builder
     {
-        return $query->approved();
+        return $query->approved()->where('is_draft', false);
+    }
+
+    public function scopeMadeByIraq(Builder $query): Builder
+    {
+        return $query->where('is_made_by_iraq', true);
+    }
+
+    public function getEditorialLabelDisplayAttribute(): ?string
+    {
+        if (! $this->editorial_label) {
+            return null;
+        }
+
+        return config('authority.editorial_labels.'.$this->editorial_label, $this->editorial_label);
+    }
+
+    public function getWorkflowStatusLabelAttribute(): string
+    {
+        if ($this->is_draft) {
+            return 'Draft';
+        }
+
+        if ($this->needs_changes || $this->status === 'needs_changes') {
+            return 'Needs Changes';
+        }
+
+        return match ($this->status) {
+            'pending' => 'Under Review',
+            'approved' => $this->is_featured ? 'Featured' : 'Approved',
+            'rejected' => 'Rejected',
+            'draft' => 'Draft',
+            default => ucfirst(str_replace('_', ' ', $this->status)),
+        };
     }
 
     public function user(): BelongsTo
@@ -200,6 +243,11 @@ class Campaign extends Model
         }
 
         return false;
+    }
+
+    public function awardWins(): HasMany
+    {
+        return $this->hasMany(AwardWinner::class);
     }
 
     public function revisions(): HasMany
