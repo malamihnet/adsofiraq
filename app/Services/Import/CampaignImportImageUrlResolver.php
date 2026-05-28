@@ -79,7 +79,42 @@ class CampaignImportImageUrlResolver
 
         ksort($candidates);
 
-        return $this->resolve((string) array_pop($candidates), $pageUrl);
+        $resolved = [];
+
+        foreach ($candidates as $candidate) {
+            $url = $this->resolve((string) $candidate, $pageUrl);
+
+            if ($url !== null) {
+                $resolved[] = $url;
+            }
+        }
+
+        return $this->preferOriginalFormat($resolved);
+    }
+
+    /**
+     * Prefer jpg/png over webp when multiple formats exist for the same asset.
+     *
+     * @param  list<string>  $urls
+     */
+    public function preferOriginalFormat(array $urls): ?string
+    {
+        $preferred = [];
+        $fallback = [];
+
+        foreach ($urls as $url) {
+            if (preg_match('/\.webp(\?|#|$)/i', $url)) {
+                $fallback[] = $url;
+            } else {
+                $preferred[] = $url;
+            }
+        }
+
+        if ($preferred !== []) {
+            return $preferred[array_key_last($preferred)];
+        }
+
+        return $fallback !== [] ? $fallback[array_key_last($fallback)] : null;
     }
 
     protected function baseFromPageUrl(?string $pageUrl): string

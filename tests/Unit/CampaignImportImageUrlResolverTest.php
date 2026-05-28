@@ -36,4 +36,16 @@ class CampaignImportImageUrlResolverTest extends TestCase
             $resolved,
         );
     }
+
+    public function test_prefers_jpg_over_webp_for_same_picture(): void
+    {
+        $resolver = new CampaignImportImageUrlResolver;
+
+        $resolved = $resolver->preferOriginalFormat([
+            'https://image.adsoftheworld.com/abc123',
+            'https://image.adsoftheworld.com/xyz789.jpg',
+        ]);
+
+        $this->assertSame('https://image.adsoftheworld.com/xyz789.jpg', $resolved);
+    }
 }

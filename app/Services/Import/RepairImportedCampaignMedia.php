@@ -97,7 +97,6 @@ class RepairImportedCampaignMedia
             $thumbnailCandidates = array_values(array_filter(array_unique([
                 $parsed['og_image'] ?? null,
                 $parsed['thumbnail_url'] ?? null,
-                $imageUrls[0] ?? null,
             ])));
 
             foreach ($thumbnailCandidates as $candidate) {

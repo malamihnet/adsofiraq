@@ -92,6 +92,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
 
     Route::get('/maintenance/clean-duplicate-media', [MediaMaintenanceController::class, 'index'])->name('maintenance.clean-duplicate-media');
     Route::post('/maintenance/clean-duplicate-media', [MediaMaintenanceController::class, 'cleanDuplicateMedia'])->name('maintenance.clean-duplicate-media.run');
+    Route::post('/maintenance/clean-non-gallery-stills', [MediaMaintenanceController::class, 'cleanNonGalleryStills'])->name('maintenance.clean-non-gallery-stills');
     Route::post('/maintenance/cleanup-orphans', [MediaMaintenanceController::class, 'cleanupOrphans'])->name('maintenance.cleanup-orphans');
 
     Route::get('/maintenance/reset-all-campaigns', [CampaignResetController::class, 'index'])->name('maintenance.reset-all-campaigns');

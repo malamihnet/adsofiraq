@@ -298,6 +298,95 @@ class CampaignMediaDeduplicationService
     // -------------------------------------------------------------------------
 
     /**
+     * Remove imported stills that are not real AOTW gallery uploads (og/meta/posters/legacy broad scrape).
+     *
+     * @param  list<string>  $galleryUrls
+     * @param  list<string>  $excludedUrls
+     * @return array{removed: int, files_deleted: int}
+     */
+    public function removeNonGalleryStills(
+        Campaign $campaign,
+        array $galleryUrls,
+        array $excludedUrls,
+        bool $dryRun = false,
+        bool $deleteFiles = true,
+    ): array {
+        $allowedKeys = [];
+
+        foreach ($galleryUrls as $url) {
+            $key = $this->sourceUrlKey($url, $campaign->source_url);
+
+            if ($key !== null) {
+                $allowedKeys[$key] = true;
+            }
+        }
+
+        $allowedUrls = [];
+
+        foreach ($galleryUrls as $url) {
+            $normalized = $this->normalizeSourceUrl($url);
+
+            if ($normalized !== null) {
+                $allowedUrls[$normalized] = true;
+            }
+        }
+
+        $excludedKeys = [];
+
+        foreach ($excludedUrls as $url) {
+            $key = $this->sourceUrlKey($url, $campaign->source_url);
+
+            if ($key !== null) {
+                $excludedKeys[$key] = true;
+            }
+        }
+
+        $thumbnailKey = $this->galleryPathKey($campaign->thumbnail_path);
+
+        $removed = 0;
+        $filesDeleted = 0;
+        $galleryEmpty = $galleryUrls === [];
+
+        foreach ($campaign->assets->where('file_type', 'image') as $asset) {
+            $sourceKey = $asset->source_url_key
+                ?? $this->sourceUrlKey($asset->source_url, $campaign->source_url);
+            $normalizedSource = $this->normalizeSourceUrl($asset->source_url);
+            $pathKey = $asset->galleryPathKey();
+
+            $isAllowed = ! $galleryEmpty && (
+                ($sourceKey !== null && isset($allowedKeys[$sourceKey]))
+                || ($normalizedSource !== null && isset($allowedUrls[$normalizedSource]))
+            );
+
+            $isExcluded = ($sourceKey !== null && isset($excludedKeys[$sourceKey]))
+                || ($thumbnailKey !== null && $pathKey === $thumbnailKey);
+
+            if ($isAllowed && ! $isExcluded) {
+                continue;
+            }
+
+            if ($dryRun) {
+                $removed++;
+
+                continue;
+            }
+
+            if ($deleteFiles) {
+                $filesDeleted += $this->deleteAssetFile($asset) ? 1 : 0;
+            }
+
+            $asset->delete();
+            $removed++;
+        }
+
+        if (! $dryRun && $removed > 0) {
+            $this->rebuildAssetSortOrder($campaign->fresh()->assets);
+        }
+
+        return ['removed' => $removed, 'files_deleted' => $filesDeleted];
+    }
+
+    /**
      * @return array{
      *     dry_run: bool,
      *     campaign_id: int,
