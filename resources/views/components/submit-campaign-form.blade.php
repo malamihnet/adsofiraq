@@ -1,4 +1,4 @@
-@props(['campaign' => null, 'industries', 'mediumTypes', 'countries', 'brands', 'agencies', 'selectedTaxonomies' => []])
+@props(['campaign' => null, 'industries', 'mediumTypes', 'countries', 'brands', 'agencies', 'productionHouses' => null, 'selectedTaxonomies' => []])
 
 <form method="POST" action="{{ $campaign ? route('campaigns.update', $campaign) : route('campaigns.store') }}"
       enctype="multipart/form-data" class="space-y-8">
@@ -48,6 +48,7 @@
         <div class="md:col-span-2">
             <x-campaign-taxonomy-fields
                 :agencies="$agencies"
+                :production-houses="$productionHouses ?? $agencies"
                 :brands="$brands"
                 :industries="$industries"
                 :medium-types="$mediumTypes"

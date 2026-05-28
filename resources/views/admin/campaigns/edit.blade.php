@@ -23,6 +23,7 @@
     :countries="$countries"
     :brands="$brands"
     :agencies="$agencies"
+    :production-houses="$productionHouses ?? $agencies"
     :users="$users"
     :selected-taxonomies="$selectedTaxonomies"
     :default-user-id="$campaign->user_id"

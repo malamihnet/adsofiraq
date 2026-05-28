@@ -43,7 +43,7 @@ class CampaignController extends Controller
     public function index(Request $request): View
     {
         $query = Campaign::public()
-            ->with(['brands', 'agencies', 'industries', 'mediumTypes', 'countries']);
+            ->with(['brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -51,7 +51,8 @@ class CampaignController extends Controller
                 $q->where('title', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%")
                     ->orWhereHas('brands', fn ($b) => $b->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('agencies', fn ($a) => $a->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('agencies', fn ($a) => $a->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('productionHouses', fn ($a) => $a->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -93,7 +94,7 @@ class CampaignController extends Controller
             $useManualOrdering = false;
         }
 
-        $eagerLoads = ['brands', 'agencies', 'industries', 'mediumTypes', 'countries'];
+        $eagerLoads = ['brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries'];
 
         $perPage = $this->resolveArchivePerPage($request);
 
@@ -133,7 +134,7 @@ class CampaignController extends Controller
             $campaign->increment('views_count');
         }
 
-        $campaign->load(['brands', 'agencies', 'industries', 'mediumTypes', 'countries', 'assets', 'videos']);
+        $campaign->load(['brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries', 'assets', 'videos']);
 
         $relatedGroups = $this->internalLinks->groupedRelated($campaign);
 
@@ -219,6 +220,7 @@ class CampaignController extends Controller
             $this->taxonomySyncService->syncAll(
                 $campaign,
                 agencies: $request->input('agencies', []),
+                productionHouses: $request->input('production_houses', []),
                 brands: $request->input('brands', []),
                 industries: $request->input('industries', []),
                 mediumTypes: $request->input('medium_types', []),
@@ -267,7 +269,7 @@ class CampaignController extends Controller
         $this->authorize('update', $campaign);
 
         return view('campaigns.edit', array_merge(
-            ['campaign' => $campaign->load(['assets', 'videos', 'agencies', 'brands', 'industries', 'mediumTypes', 'countries', 'pendingRevision'])],
+            ['campaign' => $campaign->load(['assets', 'videos', 'agencies', 'productionHouses', 'brands', 'industries', 'mediumTypes', 'countries', 'pendingRevision'])],
             $this->formData($campaign)
         ));
     }
@@ -303,6 +305,7 @@ class CampaignController extends Controller
                 'submission_notes' => $request->submission_notes,
                 'taxonomies' => [
                     'agencies' => $request->input('agencies', []),
+                    'production_houses' => $request->input('production_houses', []),
                     'brands' => $request->input('brands', []),
                     'industries' => $request->input('industries', []),
                     'medium_types' => $request->input('medium_types', []),
@@ -367,6 +370,7 @@ class CampaignController extends Controller
         $this->taxonomySyncService->syncAll(
             $campaign,
             agencies: $request->input('agencies', []),
+            productionHouses: $request->input('production_houses', []),
             brands: $request->input('brands', []),
             industries: $request->input('industries', []),
             mediumTypes: $request->input('medium_types', []),
@@ -401,6 +405,7 @@ class CampaignController extends Controller
             'countries' => Country::orderBy('name')->get(),
             'brands' => Brand::orderBy('name')->get(),
             'agencies' => Agency::orderBy('name')->get(),
+            'productionHouses' => Agency::where('is_production_house', true)->orderBy('name')->get(),
             'selectedTaxonomies' => $selected,
         ];
     }
@@ -415,13 +420,14 @@ class CampaignController extends Controller
         }
 
         if ($campaign) {
-            $campaign->loadMissing(['agencies', 'brands', 'industries', 'mediumTypes', 'countries']);
+            $campaign->loadMissing(['agencies', 'productionHouses', 'brands', 'industries', 'mediumTypes', 'countries']);
 
             return $this->taxonomySyncService->selectedForForm($campaign);
         }
 
         return [
             'agencies' => [],
+            'production_houses' => [],
             'brands' => [],
             'industries' => [],
             'medium_types' => [],
@@ -431,7 +437,7 @@ class CampaignController extends Controller
 
     protected function hasOldTaxonomyInput(): bool
     {
-        foreach (['agencies', 'brands', 'industries', 'medium_types', 'countries'] as $field) {
+        foreach (['agencies', 'production_houses', 'brands', 'industries', 'medium_types', 'countries'] as $field) {
             if (old($field) !== null) {
                 return true;
             }

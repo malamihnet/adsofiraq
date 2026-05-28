@@ -24,6 +24,9 @@
             <tr>
                 <th class="px-4 py-3 text-left">Name</th>
                 <th class="px-4 py-3 text-left">Slug</th>
+                @if($type === 'agencies')
+                    <th class="px-4 py-3 text-left">Production House</th>
+                @endif
                 @if($verifiable ?? false)
                     <th class="px-4 py-3 text-left">Verified</th>
                 @endif
@@ -38,6 +41,9 @@
                             <a href="{{ route('admin.' . $type . '.show', $item->id) }}" class="inline-flex items-center gap-2 underline">
                                 {{ $item->name }}
                                 <x-verified-badge :verified="$item->is_verified" />
+                                @if($item->is_production_house)
+                                    <x-production-house-badge />
+                                @endif
                             </a>
                         @else
                             <form method="POST" action="{{ route('admin.' . $type . '.update', $item->id) }}" class="flex gap-2">
@@ -48,6 +54,15 @@
                         @endif
                     </td>
                     <td class="px-4 py-3 text-archive-gray">{{ $item->slug }}</td>
+                    @if($type === 'agencies')
+                        <td class="px-4 py-3">
+                            @if($item->is_production_house)
+                                <span class="text-xs uppercase tracking-wider text-archive-gray">Yes</span>
+                            @else
+                                —
+                            @endif
+                        </td>
+                    @endif
                     @if($verifiable ?? false)
                         <td class="px-4 py-3">
                             @if($item->is_verified)

@@ -65,10 +65,15 @@ class AgencyController extends Controller
             ->get();
 
         $canonicalUrl = route('agency.show', $agency);
+        $parentLabel = $agency->is_production_house ? 'Production Houses' : 'Agencies';
+        $parentUrl = $agency->is_production_house
+            ? route('rankings.top-production-houses')
+            : route('agencies.index');
+
         $schema = [
             $this->structuredData->breadcrumb([
                 ['name' => 'Home', 'url' => url('/')],
-                ['name' => 'Agencies', 'url' => route('agencies.index')],
+                ['name' => $parentLabel, 'url' => $parentUrl],
                 ['name' => $agency->name, 'url' => $canonicalUrl],
             ]),
             $this->structuredData->organizationAgency($agency, $canonicalUrl),

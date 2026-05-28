@@ -26,6 +26,7 @@ trait ValidatesCampaignTaxonomies
     {
         $tables = [
             'agencies' => 'agencies',
+            'production_houses' => 'agencies',
             'brands' => 'brands',
             'industries' => 'industries',
             'medium_types' => 'medium_types',
@@ -34,6 +35,7 @@ trait ValidatesCampaignTaxonomies
 
         $labels = [
             'agencies' => 'agencies or schools',
+            'production_houses' => 'production houses',
             'brands' => 'brands',
             'industries' => 'industries',
             'medium_types' => 'medium types',

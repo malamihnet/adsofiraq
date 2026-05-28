@@ -22,6 +22,35 @@ class TaxonomyService
         return $this->findOrCreateByName(Agency::class, $name);
     }
 
+    public function findOrCreateProductionHouse(?string $name): ?Agency
+    {
+        if (empty(trim($name ?? ''))) {
+            return null;
+        }
+
+        $name = trim($name);
+        $slug = Str::slug($name);
+
+        $agency = Agency::query()
+            ->where('slug', $slug)
+            ->orWhere('name', $name)
+            ->first();
+
+        if ($agency) {
+            if (! $agency->is_production_house) {
+                $agency->update(['is_production_house' => true]);
+            }
+
+            return $agency;
+        }
+
+        return Agency::create([
+            'name' => $name,
+            'slug' => $slug,
+            'is_production_house' => true,
+        ]);
+    }
+
     public function findOrCreateIndustry(?string $name): ?Industry
     {
         return $this->findOrCreateByName(Industry::class, $name);

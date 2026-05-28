@@ -1,6 +1,7 @@
 @props([
     'name',
     'verified' => false,
+    'isProductionHouse' => false,
     'subtitle' => null,
     'bio' => null,
     'logoUrl' => null,
@@ -30,6 +31,9 @@
                 <h1 class="font-display text-3xl md:text-4xl inline-flex items-center gap-3 flex-wrap">
                     {{ $name }}
                     <x-verified-badge :verified="$verified" />
+                    @if($isProductionHouse)
+                        <x-production-house-badge />
+                    @endif
                 </h1>
                 @if($subtitle)
                     <p class="mt-2 text-sm uppercase tracking-widest text-archive-gray">{{ $subtitle }}</p>

@@ -151,14 +151,26 @@ class TaxonomyController extends Controller
         $model = $this->getModel($type);
         $item = $model::findOrFail($id);
 
-        $validated = $request->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
-        ]);
+        ];
 
-        $item->update([
+        if ($type === 'agencies') {
+            $rules['is_production_house'] = ['sometimes', 'boolean'];
+        }
+
+        $validated = $request->validate($rules);
+
+        $payload = [
             'name' => $validated['name'],
             'slug' => Str::slug($validated['name']),
-        ]);
+        ];
+
+        if ($type === 'agencies') {
+            $payload['is_production_house'] = $request->boolean('is_production_house');
+        }
+
+        $item->update($payload);
 
         return back()->with('success', 'Item updated.');
     }

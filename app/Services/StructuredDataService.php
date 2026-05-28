@@ -32,10 +32,16 @@ class StructuredDataService
         $data = [
             '@context' => 'https://schema.org',
             '@type' => 'Organization',
-            'name' => $agency->name,
+            'name' => $agency->is_production_house
+                ? $agency->name.' Production House'
+                : $agency->name,
             'url' => $url,
             'description' => $agency->seo_description,
         ];
+
+        if ($agency->is_production_house) {
+            $data['additionalType'] = 'https://schema.org/ProductionCompany';
+        }
 
         if ($agency->logo_url) {
             $data['logo'] = $agency->logo_url;
@@ -117,10 +123,16 @@ class StructuredDataService
                 ->all(),
         ];
 
-        if ($campaign->agencies->isNotEmpty()) {
+        if ($campaign->relationLoaded('agencies') && $campaign->agencies->isNotEmpty()) {
             $data['creator'] = [
                 '@type' => 'Organization',
                 'name' => $campaign->agencies->first()->name,
+            ];
+        } elseif ($campaign->relationLoaded('productionHouses') && $campaign->productionHouses->isNotEmpty()) {
+            $data['creator'] = [
+                '@type' => 'Organization',
+                'name' => $campaign->productionHouses->first()->name,
+                'additionalType' => 'https://schema.org/ProductionCompany',
             ];
         }
 

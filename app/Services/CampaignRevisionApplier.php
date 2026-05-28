@@ -45,6 +45,7 @@ class CampaignRevisionApplier
         $this->taxonomySyncService->syncAll(
             $campaign,
             agencies: (array) ($tax['agencies'] ?? []),
+            productionHouses: (array) ($tax['production_houses'] ?? []),
             brands: (array) ($tax['brands'] ?? []),
             industries: (array) ($tax['industries'] ?? []),
             mediumTypes: (array) ($tax['medium_types'] ?? []),

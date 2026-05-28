@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AgencyCampaignRole;
 use App\Models\Agency;
 use App\Models\Brand;
 use App\Models\Campaign;
@@ -9,6 +10,7 @@ use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class CampaignTaxonomySyncService
 {
@@ -20,7 +22,7 @@ class CampaignTaxonomySyncService
      * @param  array<int, string|int>  $values  Numeric IDs or "new:Name" strings
      * @return array<int, int>
      */
-    public function resolveIds(string $type, array $values): array
+    public function resolveIds(string $type, array $values, bool $asProductionHouse = false): array
     {
         $ids = [];
 
@@ -38,14 +40,20 @@ class CampaignTaxonomySyncService
                     continue;
                 }
 
-                $model = $this->createByType($type, $name);
+                $model = $this->createByType($type, $name, $asProductionHouse);
                 $ids[] = $model->id;
 
                 continue;
             }
 
             if (is_numeric($value)) {
-                $ids[] = (int) $value;
+                $id = (int) $value;
+
+                if ($asProductionHouse) {
+                    Agency::whereKey($id)->update(['is_production_house' => true]);
+                }
+
+                $ids[] = $id;
             }
         }
 
@@ -54,6 +62,7 @@ class CampaignTaxonomySyncService
 
     /**
      * @param  array<int, string|int>  $agencies
+     * @param  array<int, string|int>  $productionHouses
      * @param  array<int, string|int>  $brands
      * @param  array<int, string|int>  $industries
      * @param  array<int, string|int>  $mediumTypes
@@ -62,12 +71,24 @@ class CampaignTaxonomySyncService
     public function syncAll(
         Campaign $campaign,
         array $agencies = [],
+        array $productionHouses = [],
         array $brands = [],
         array $industries = [],
         array $mediumTypes = [],
         array $countries = [],
     ): void {
-        $campaign->agencies()->sync($this->resolveIds('agencies', $agencies));
+        $this->syncAgencyRole(
+            $campaign,
+            AgencyCampaignRole::Agency,
+            $this->resolveIds('agencies', $agencies),
+        );
+
+        $this->syncAgencyRole(
+            $campaign,
+            AgencyCampaignRole::ProductionHouse,
+            $this->resolveIds('agencies', $productionHouses, asProductionHouse: true),
+        );
+
         $campaign->brands()->sync($this->resolveIds('brands', $brands));
         $campaign->industries()->sync($this->resolveIds('industries', $industries));
         $campaign->mediumTypes()->sync($this->resolveIds('medium_types', $mediumTypes));
@@ -75,12 +96,46 @@ class CampaignTaxonomySyncService
     }
 
     /**
-     * @return array{id: int, name: string}[]
+     * @param  list<int>  $agencyIds
+     */
+    protected function syncAgencyRole(Campaign $campaign, AgencyCampaignRole $role, array $agencyIds): void
+    {
+        $now = now();
+
+        DB::table('agency_campaign')
+            ->where('campaign_id', $campaign->id)
+            ->where('role', $role->value)
+            ->when(
+                $agencyIds !== [],
+                fn ($query) => $query->whereNotIn('agency_id', $agencyIds),
+            )
+            ->delete();
+
+        foreach ($agencyIds as $agencyId) {
+            DB::table('agency_campaign')->updateOrInsert(
+                [
+                    'campaign_id' => $campaign->id,
+                    'agency_id' => $agencyId,
+                    'role' => $role->value,
+                ],
+                [
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ],
+            );
+        }
+    }
+
+    /**
+     * @return array<string, array<int, array{id: int, name: string}>>
      */
     public function selectedForForm(Campaign $campaign): array
     {
+        $campaign->loadMissing(['agencies', 'productionHouses', 'brands', 'industries', 'mediumTypes', 'countries']);
+
         return [
             'agencies' => $campaign->agencies->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->values()->all(),
+            'production_houses' => $campaign->productionHouses->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->values()->all(),
             'brands' => $campaign->brands->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->values()->all(),
             'industries' => $campaign->industries->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->values()->all(),
             'medium_types' => $campaign->mediumTypes->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->values()->all(),
@@ -89,12 +144,13 @@ class CampaignTaxonomySyncService
     }
 
     /**
-     * @return array<int, array{id: int, name: string}>
+     * @return array<string, array<int, array{id: int|null, name: string}>>
      */
     public function oldInputSelections(): array
     {
         $types = [
             'agencies' => Agency::class,
+            'production_houses' => Agency::class,
             'brands' => Brand::class,
             'industries' => Industry::class,
             'medium_types' => MediumType::class,
@@ -127,10 +183,12 @@ class CampaignTaxonomySyncService
         return $result;
     }
 
-    protected function createByType(string $type, string $name): Model
+    protected function createByType(string $type, string $name, bool $asProductionHouse = false): Model
     {
         return match ($type) {
-            'agencies' => $this->taxonomyService->findOrCreateAgency($name),
+            'agencies' => $asProductionHouse
+                ? $this->taxonomyService->findOrCreateProductionHouse($name)
+                : $this->taxonomyService->findOrCreateAgency($name),
             'brands' => $this->taxonomyService->findOrCreateBrand($name),
             'industries' => $this->taxonomyService->findOrCreateIndustry($name),
             'medium_types' => $this->taxonomyService->findOrCreateMediumType($name),

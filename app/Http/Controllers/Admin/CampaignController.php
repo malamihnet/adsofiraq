@@ -101,6 +101,7 @@ class CampaignController extends Controller
         $this->taxonomySyncService->syncAll(
             $campaign,
             agencies: $request->input('agencies', []),
+            productionHouses: $request->input('production_houses', []),
             brands: $request->input('brands', []),
             industries: $request->input('industries', []),
             mediumTypes: $request->input('medium_types', []),
@@ -135,7 +136,7 @@ class CampaignController extends Controller
 
     public function edit(Campaign $campaign): View
     {
-        $campaign->load(['assets', 'videos', 'brands', 'agencies', 'industries', 'mediumTypes', 'countries']);
+        $campaign->load(['assets', 'videos', 'brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries']);
 
         return view('admin.campaigns.edit', $this->formData($campaign));
     }
@@ -169,6 +170,7 @@ class CampaignController extends Controller
         $this->taxonomySyncService->syncAll(
             $campaign,
             agencies: $request->input('agencies', []),
+            productionHouses: $request->input('production_houses', []),
             brands: $request->input('brands', []),
             industries: $request->input('industries', []),
             mediumTypes: $request->input('medium_types', []),
@@ -360,6 +362,7 @@ class CampaignController extends Controller
             'countries' => Country::orderBy('name')->get(),
             'brands' => Brand::orderBy('name')->get(),
             'agencies' => Agency::orderBy('name')->get(),
+            'productionHouses' => Agency::where('is_production_house', true)->orderBy('name')->get(),
             'users' => User::orderBy('name')->get(['id', 'name', 'username', 'email']),
             'selectedTaxonomies' => $campaign
                 ? $this->taxonomySyncService->selectedForForm($campaign)

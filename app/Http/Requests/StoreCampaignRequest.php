@@ -25,7 +25,7 @@ class StoreCampaignRequest extends FormRequest
             $this->merge(['published_at' => null]);
         }
 
-        foreach (['agencies', 'brands', 'industries', 'medium_types', 'countries'] as $field) {
+        foreach (['agencies', 'production_houses', 'brands', 'industries', 'medium_types', 'countries'] as $field) {
             $values = $this->input($field);
 
             if (! is_array($values)) {

@@ -1,5 +1,6 @@
 @props([
     'agencies',
+    'productionHouses' => null,
     'brands',
     'industries',
     'mediumTypes',
@@ -14,6 +15,14 @@
         :options="$agencies"
         :selected="$selected['agencies'] ?? []"
         :max="config('campaign_taxonomy.limits.agencies')"
+    />
+
+    <x-taxonomy-multiselect
+        name="production_houses"
+        label="Production House"
+        :options="$productionHouses ?? $agencies"
+        :selected="$selected['production_houses'] ?? []"
+        :max="config('campaign_taxonomy.limits.production_houses')"
     />
 
     <x-taxonomy-multiselect

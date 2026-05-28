@@ -13,6 +13,7 @@
         :countries="$countries"
         :brands="$brands"
         :agencies="$agencies"
+        :production-houses="$productionHouses ?? $agencies"
         :selected-taxonomies="$selectedTaxonomies"
     />
 </div>

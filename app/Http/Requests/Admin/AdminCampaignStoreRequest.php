@@ -17,6 +17,21 @@ class AdminCampaignStoreRequest extends FormRequest
         return $this->user()?->isAdmin() ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        foreach (['agencies', 'production_houses', 'brands', 'industries', 'medium_types', 'countries'] as $field) {
+            $values = $this->input($field);
+
+            if (! is_array($values)) {
+                continue;
+            }
+
+            $this->merge([
+                $field => array_values(array_filter($values, fn ($value) => trim((string) $value) !== '')),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         $maxThumb = config('upload.max_thumbnail_kb');

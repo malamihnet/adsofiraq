@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AgencyCampaignRole;
 use App\Models\Concerns\HasAuthorityProfile;
 use App\Models\Concerns\HasPlatformVerification;
 use Illuminate\Database\Eloquent\Model;
@@ -50,7 +51,38 @@ class Agency extends Model
 
     public function campaigns(): BelongsToMany
     {
-        return $this->belongsToMany(Campaign::class, 'agency_campaign')->withTimestamps();
+        return $this->belongsToMany(Campaign::class, 'agency_campaign')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function agencyCampaigns(): BelongsToMany
+    {
+        return $this->belongsToMany(Campaign::class, 'agency_campaign')
+            ->withPivot('role')
+            ->withTimestamps()
+            ->wherePivot('role', AgencyCampaignRole::Agency->value);
+    }
+
+    public function productionHouseCampaigns(): BelongsToMany
+    {
+        return $this->belongsToMany(Campaign::class, 'agency_campaign')
+            ->withPivot('role')
+            ->withTimestamps()
+            ->wherePivot('role', AgencyCampaignRole::ProductionHouse->value);
+    }
+
+    public function getSeoTitleAttribute(): string
+    {
+        if ($this->meta_title) {
+            return $this->meta_title;
+        }
+
+        if ($this->is_production_house) {
+            return $this->name.' Production House | Ads of Iraq';
+        }
+
+        return $this->name.' — Ads of Iraq';
     }
 
     public function getRouteKeyName(): string

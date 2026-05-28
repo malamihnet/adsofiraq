@@ -10,7 +10,11 @@
         @forelse($agencies as $index => $agency)
             <li class="flex items-center gap-6 border border-archive-border p-4">
                 <span class="font-display text-3xl text-archive-gray w-10">{{ $index + 1 }}</span>
-                <a href="{{ route('agency.show', $agency) }}" class="font-display text-xl hover:underline">{{ $agency->name }}</a>
+                <a href="{{ route('agency.show', $agency) }}" class="font-display text-xl hover:underline inline-flex items-center gap-2">
+                    {{ $agency->name }}
+                    <x-production-house-badge />
+                </a>
+                <span class="ml-auto text-sm text-archive-gray">{{ $agency->production_house_campaigns_count }} campaigns</span>
             </li>
         @empty
             <li class="text-archive-gray">No production houses ranked yet.</li>

@@ -4,6 +4,7 @@ return [
 
     'limits' => [
         'agencies' => 5,
+        'production_houses' => 5,
         'brands' => 5,
         'industries' => 3,
         'medium_types' => 3,
@@ -12,6 +13,7 @@ return [
 
     'helpers' => [
         'agencies' => 'You can add up to 5 agencies or schools.',
+        'production_houses' => 'Optional. Add up to 5 production houses.',
         'brands' => 'You can add up to 5 brands.',
         'industries' => 'Select up to 3 industries.',
         'medium_types' => 'Select up to 3 medium types.',

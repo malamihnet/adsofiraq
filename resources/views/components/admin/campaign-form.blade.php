@@ -5,6 +5,7 @@
     'countries',
     'brands',
     'agencies',
+    'productionHouses' => null,
     'users',
     'defaultUserId' => null,
     'selectedTaxonomies' => [],
@@ -43,6 +44,7 @@
         <div class="md:col-span-2">
             <x-campaign-taxonomy-fields
                 :agencies="$agencies"
+                :production-houses="$productionHouses ?? $agencies"
                 :brands="$brands"
                 :industries="$industries"
                 :medium-types="$mediumTypes"

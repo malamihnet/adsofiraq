@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AgencyCampaignRole;
 use App\Models\Concerns\HasPlatformVerification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -279,7 +280,25 @@ class Campaign extends Model
 
     public function agencies(): BelongsToMany
     {
-        return $this->belongsToMany(Agency::class, 'agency_campaign')->withTimestamps();
+        return $this->belongsToMany(Agency::class, 'agency_campaign')
+            ->withPivot('role')
+            ->withTimestamps()
+            ->wherePivot('role', AgencyCampaignRole::Agency->value);
+    }
+
+    public function productionHouses(): BelongsToMany
+    {
+        return $this->belongsToMany(Agency::class, 'agency_campaign')
+            ->withPivot('role')
+            ->withTimestamps()
+            ->wherePivot('role', AgencyCampaignRole::ProductionHouse->value);
+    }
+
+    public function allAgencies(): BelongsToMany
+    {
+        return $this->belongsToMany(Agency::class, 'agency_campaign')
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     public function industries(): BelongsToMany
@@ -305,6 +324,13 @@ class Campaign extends Model
     public function getAgencyAttribute(): ?Agency
     {
         return $this->relationLoaded('agencies') ? $this->agencies->first() : $this->agencies()->first();
+    }
+
+    public function getProductionHouseAttribute(): ?Agency
+    {
+        return $this->relationLoaded('productionHouses')
+            ? $this->productionHouses->first()
+            : $this->productionHouses()->first();
     }
 
     public function getIndustryAttribute(): ?Industry

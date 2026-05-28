@@ -47,10 +47,18 @@
                     </a>
                 @endforeach
                 @foreach($campaign->agencies as $agency)
-                    @if($campaign->brands->isNotEmpty())<span>&middot;</span>@endif
+                    @if($campaign->brands->isNotEmpty() || ! $loop->first)<span>&middot;</span>@endif
                     <a href="{{ route('agency.show', $agency) }}" class="inline-flex items-center gap-1.5 hover:text-archive-black">
                         {{ $agency->name }}
                         <x-verified-badge :verified="$agency->is_verified" />
+                    </a>
+                @endforeach
+                @foreach($campaign->productionHouses as $productionHouse)
+                    @if($campaign->brands->isNotEmpty() || $campaign->agencies->isNotEmpty() || ! $loop->first)<span>&middot;</span>@endif
+                    <a href="{{ route('agency.show', $productionHouse) }}" class="inline-flex items-center gap-1.5 hover:text-archive-black">
+                        {{ $productionHouse->name }}
+                        <x-verified-badge :verified="$productionHouse->is_verified" />
+                        <x-production-house-badge />
                     </a>
                 @endforeach
             </div>
@@ -114,6 +122,22 @@
                                         <a href="{{ route('agency.show', $agency) }}" class="inline-flex items-center gap-1 underline">
                                             {{ $agency->name }}
                                             <x-verified-badge :verified="$agency->is_verified" />
+                                        </a>
+                                    </div>
+                                @endforeach
+                            </dd>
+                        </div>
+                    @endif
+                    @if($campaign->productionHouses->isNotEmpty())
+                        <div>
+                            <dt class="text-archive-gray">Production {{ $campaign->productionHouses->count() > 1 ? 'Houses' : 'House' }}</dt>
+                            <dd class="mt-1 space-y-1">
+                                @foreach($campaign->productionHouses as $productionHouse)
+                                    <div>
+                                        <a href="{{ route('agency.show', $productionHouse) }}" class="inline-flex items-center gap-1 underline">
+                                            {{ $productionHouse->name }}
+                                            <x-verified-badge :verified="$productionHouse->is_verified" />
+                                            <x-production-house-badge />
                                         </a>
                                     </div>
                                 @endforeach

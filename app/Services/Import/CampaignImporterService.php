@@ -271,9 +271,22 @@ class CampaignImporterService
             array_filter($names)
         );
 
+        $fromCredits = app(CampaignCreditsTaxonomyParser::class)->parse($parsed['credits'] ?? null);
+
+        $agencies = array_values(array_unique(array_merge(
+            $parsed['agencies'] ?? [],
+            $fromCredits['agencies'],
+        )));
+
+        $productionHouses = array_values(array_unique(array_merge(
+            $parsed['production_houses'] ?? [],
+            $fromCredits['production_houses'],
+        )));
+
         $this->taxonomySync->syncAll(
             $campaign,
-            agencies: $map($parsed['agencies'] ?? []),
+            agencies: $map($agencies),
+            productionHouses: $map($productionHouses),
             brands: $map($parsed['brands'] ?? []),
             industries: $map($parsed['industries'] ?? []),
             mediumTypes: $map($parsed['medium_types'] ?? []),
