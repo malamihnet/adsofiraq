@@ -20,7 +20,7 @@ class RepairImportedCampaignMedia
         protected CampaignUploadService $uploadService,
         protected VideoThumbnailService $videoThumbnailService,
         protected PublicStorageSyncService $publicStorageSync,
-        protected CampaignAssetDedupService $assetDedup,
+        protected CampaignMediaDeduplicationService $mediaDedup,
     ) {}
 
     /**
