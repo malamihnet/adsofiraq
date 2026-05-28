@@ -31,6 +31,26 @@ class CampaignPageParserGalleryTest extends TestCase
         $this->assertNotEmpty($parsed['videos']);
         $this->assertNotNull($parsed['og_image']);
         $this->assertContains($parsed['og_image'], $parsed['excluded_still_urls']);
+        $this->assertStringContainsString('Smarter Cooling', $parsed['title']);
+        $this->assertNotSame('', $parsed['description']);
+    }
+
+    public function test_invalid_child_selector_syntax_does_not_break_parse(): void
+    {
+        $html = file_get_contents(base_path('tests/fixtures/aotw-video-only.html'));
+        $this->assertNotFalse($html);
+
+        $parser = $this->parser();
+
+        $this->assertSame([], $parser->parse(
+            $html,
+            'https://www.adsoftheworld.com/campaigns/smarter-cooling-for-modern-living-seto-s-post-production',
+        )['image_urls']);
+
+        $this->assertNotEmpty($parser->parse(
+            $html,
+            'https://www.adsoftheworld.com/campaigns/smarter-cooling-for-modern-living-seto-s-post-production',
+        )['videos']);
     }
 
     public function test_single_uploaded_still_is_extracted_without_og_image(): void

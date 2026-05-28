@@ -3,6 +3,7 @@
 namespace App\Services\Import;
 
 use App\Services\VideoUrlParser;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\DomCrawler\Crawler;
 
 class CampaignPageParser
@@ -63,9 +64,9 @@ class CampaignPageParser
         $videos = $this->extractVideos($crawler, $html, $jsonLd, $sourceUrl);
         $imageUrls = $isAotw
             ? ($aotw['image_urls'] ?? [])
-            : $this->collectGenericGalleryUrls($crawler, $sourceUrl);
+            : $this->safeCollectGenericGalleryUrls($crawler, $sourceUrl);
         $directVideos = $this->extractDirectVideoUrls($crawler, $html, $sourceUrl);
-        $excludedStillUrls = $this->collectExcludedStillUrls($meta, $jsonLd, $crawler, $sourceUrl);
+        $excludedStillUrls = $this->safeCollectExcludedStillUrls($meta, $jsonLd, $crawler, $sourceUrl);
 
         $credits = $this->creditsExtractor->extract($crawler, $html, $sourceUrl, $isAotw);
 
@@ -259,7 +260,7 @@ class CampaignPageParser
             $data['description'] = $description;
         }
 
-        $data['image_urls'] = $this->extractAotwGalleryStills($main, $sourceUrl);
+        $data['image_urls'] = $this->safeExtractAotwGalleryStills($main, $sourceUrl);
 
         $summary = $crawler->filter('#main p.text-sm')->first();
 
@@ -268,6 +269,23 @@ class CampaignPageParser
         }
 
         return $data;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function safeExtractAotwGalleryStills(Crawler $main, string $sourceUrl): array
+    {
+        try {
+            return $this->extractAotwGalleryStills($main, $sourceUrl);
+        } catch (\Throwable $e) {
+            Log::warning('Campaign parser: gallery still extraction failed; continuing without stills.', [
+                'source_url' => $sourceUrl,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
     }
 
     /**
@@ -295,7 +313,7 @@ class CampaignPageParser
             $urls[] = $resolved;
         };
 
-        $main->filter('> div.bg-white.my-3')->each(function (Crawler $block) use ($add, $sourceUrl) {
+        $this->eachAotwMediaBlock($main, function (Crawler $block) use ($add, $sourceUrl) {
             if ($this->blockIsVideoMedia($block)) {
                 return;
             }
@@ -328,6 +346,44 @@ class CampaignPageParser
         });
 
         return $urls;
+    }
+
+    /**
+     * Iterate direct media blocks under #main (Symfony-safe; no leading-child CSS selectors).
+     */
+    protected function eachAotwMediaBlock(Crawler $main, callable $callback): void
+    {
+        if (! $main->count()) {
+            return;
+        }
+
+        $mainNode = $main->getNode(0);
+
+        if ($mainNode === null) {
+            return;
+        }
+
+        $matched = false;
+
+        $main->children('div.bg-white.my-3')->each(function (Crawler $block) use ($callback, &$matched) {
+            $matched = true;
+            $callback($block);
+        });
+
+        if ($matched) {
+            return;
+        }
+
+        $main->filter('div.bg-white.my-3')->each(function (Crawler $block) use ($callback, $mainNode, &$matched) {
+            $node = $block->getNode(0);
+
+            if ($node === null || $node->parentNode !== $mainNode) {
+                return;
+            }
+
+            $matched = true;
+            $callback($block);
+        });
     }
 
     protected function blockIsVideoMedia(Crawler $block): bool
@@ -385,6 +441,23 @@ class CampaignPageParser
     }
 
     /**
+     * @return list<string>
+     */
+    protected function safeCollectGenericGalleryUrls(Crawler $crawler, string $sourceUrl): array
+    {
+        try {
+            return $this->collectGenericGalleryUrls($crawler, $sourceUrl);
+        } catch (\Throwable $e) {
+            Log::warning('Campaign parser: generic gallery extraction failed; continuing without stills.', [
+                'source_url' => $sourceUrl,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
      * Non-AOTW pages: conservative img extraction (no og/json-ld/regex fallbacks).
      *
      * @return list<string>
@@ -398,6 +471,32 @@ class CampaignPageParser
         }
 
         return $this->extractImagesFromScope($main, $sourceUrl, strictGallery: true);
+    }
+
+    /**
+     * @param  array<string, string|null>  $meta
+     * @param  array{name: ?string, description: ?string, embedUrl: ?string, thumbnailUrl: ?string}  $jsonLd
+     * @return list<string>
+     */
+    protected function safeCollectExcludedStillUrls(
+        array $meta,
+        array $jsonLd,
+        Crawler $crawler,
+        string $sourceUrl,
+    ): array {
+        try {
+            return $this->collectExcludedStillUrls($meta, $jsonLd, $crawler, $sourceUrl);
+        } catch (\Throwable $e) {
+            Log::warning('Campaign parser: excluded still URL collection failed.', [
+                'source_url' => $sourceUrl,
+                'error' => $e->getMessage(),
+            ]);
+
+            return array_values(array_unique(array_filter([
+                $meta['og:image'] ?? null,
+                $jsonLd['thumbnailUrl'] ?? null,
+            ])));
+        }
     }
 
     /**
@@ -424,7 +523,7 @@ class CampaignPageParser
             return array_values(array_unique(array_filter($excluded)));
         }
 
-        $main->filter('> div.bg-white.my-3 video[poster]')->each(function (Crawler $video) use (&$excluded, $sourceUrl) {
+        $main->filter('div.bg-white.my-3 video[poster]')->each(function (Crawler $video) use (&$excluded, $sourceUrl) {
             $poster = trim($video->attr('poster') ?? '');
 
             if ($poster !== '') {
