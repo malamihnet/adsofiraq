@@ -40,11 +40,11 @@
     }
 
     .campaign-gallery-lightbox__stage {
-        @apply flex max-h-[85vh] max-w-[min(100%,72rem)] items-center justify-center px-12 md:px-16;
+        @apply flex max-h-[90vh] max-w-[95vw] items-center justify-center px-12 md:px-16;
     }
 
     .campaign-gallery-lightbox__image {
-        @apply max-h-[85vh] max-w-full object-contain;
+        @apply max-h-[90vh] max-w-[95vw] object-contain;
     }
 
     .campaign-gallery-lightbox__close {

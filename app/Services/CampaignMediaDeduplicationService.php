@@ -110,16 +110,25 @@ class CampaignMediaDeduplicationService
 
         $sourceKey = $this->sourceUrlKey($sourceUrl, $campaign->source_url);
 
-        return $campaign->assets()
-            ->where('file_type', 'image')
-            ->where(function ($builder) use ($contentHash, $sourceKey) {
-                $builder->where('content_hash', $contentHash);
+        if ($sourceKey !== null) {
+            $existsBySource = $campaign->assets()
+                ->where('file_type', 'image')
+                ->where('source_url_key', $sourceKey)
+                ->exists();
 
-                if ($sourceKey !== null) {
-                    $builder->orWhere('source_url_key', $sourceKey);
-                }
-            })
-            ->exists();
+            if ($existsBySource) {
+                return true;
+            }
+        }
+
+        if ($contentHash !== null) {
+            return $campaign->assets()
+                ->where('file_type', 'image')
+                ->where('content_hash', $contentHash)
+                ->exists();
+        }
+
+        return false;
     }
 
     public function videoEmbedKey(string $type, ?string $url): ?string

@@ -35,6 +35,62 @@ class CampaignPageParserGalleryTest extends TestCase
         $this->assertNotSame('', $parsed['description']);
     }
 
+    public function test_video_and_multiple_stills_extract_all_media(): void
+    {
+        $html = <<<'HTML'
+        <html><head>
+        <meta property="og:title" content="Mixed Media Campaign">
+        <meta property="og:image" content="https://www.adsoftheworld.com/rails/active_storage/blobs/redirect/og.png">
+        </head><body>
+        <div id="main">
+            <div id="campaign_header_1" class="bg-white"></div>
+            <div class="bg-white my-3">
+                <div class="aspect-w-16 aspect-h-9">
+                    <iframe src="https://player.vimeo.com/video/1174674945"></iframe>
+                </div>
+            </div>
+            <div class="bg-white my-3">
+                <div class="overflow-hidden">
+                    <img class="object-scale-down w-full max-h-screen" width="800" height="600" src="https://image.adsoftheworld.com/stillone" />
+                </div>
+            </div>
+            <div class="bg-white my-3">
+                <div class="overflow-hidden">
+                    <img class="object-scale-down w-full max-h-screen" width="800" height="600" src="https://image.adsoftheworld.com/stilltwo" />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 mt-3"></div>
+        </div>
+        </body></html>
+        HTML;
+
+        $parsed = $this->parser()->parse(
+            $html,
+            'https://www.adsoftheworld.com/campaigns/mixed-media-test',
+        );
+
+        $this->assertCount(2, $parsed['image_urls']);
+        $this->assertCount(1, $parsed['videos']);
+        $this->assertSame('vimeo', $parsed['videos'][0]['type']);
+        $this->assertNotContains('https://image.adsoftheworld.com/stillone', $parsed['excluded_still_urls']);
+    }
+
+    public function test_multi_still_campaign_extracts_all_gallery_images(): void
+    {
+        $html = file_get_contents(base_path('tests/fixtures/aotw-three-stills.html'));
+        $this->assertNotFalse($html);
+
+        $parsed = $this->parser()->parse(
+            $html,
+            'https://www.adsoftheworld.com/campaigns/every-blend-tells-a-story',
+        );
+
+        $this->assertCount(3, $parsed['image_urls']);
+        $this->assertContains('https://image.adsoftheworld.com/a8ikvoee53fulpc0prco4zexjpyd', $parsed['image_urls']);
+        $this->assertContains('https://image.adsoftheworld.com/qkxk9ldw36jiwei0xwiln6gr2gpx', $parsed['image_urls']);
+        $this->assertContains('https://image.adsoftheworld.com/yhh9l2puveb1wj8gpwm7axf6d8nq', $parsed['image_urls']);
+    }
+
     public function test_invalid_child_selector_syntax_does_not_break_parse(): void
     {
         $html = file_get_contents(base_path('tests/fixtures/aotw-video-only.html'));

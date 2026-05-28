@@ -66,14 +66,14 @@
         {{-- Main preview (server-rendered first still) --}}
         <button
             type="button"
-            class="group relative block aspect-[16/10] w-full overflow-hidden border border-archive-border bg-archive-light text-left"
+            class="group relative block w-full overflow-hidden border border-archive-border bg-archive-light text-left"
             x-on:click.prevent="openLightbox()"
             aria-label="Open image gallery"
         >
             <img
                 src="{{ $first['url'] }}"
                 alt="{{ $first['alt'] }}"
-                class="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.01]"
+                class="mx-auto block h-auto w-full max-h-[85vh] object-contain transition-transform duration-300 group-hover:scale-[1.01]"
                 x-bind:src="previewUrl()"
                 x-bind:alt="previewAlt()"
                 x-on:error="onImageError($event)"
