@@ -30,6 +30,8 @@ class CampaignPageParser
      *     image_urls: list<string>,
      *     direct_video_urls: list<string>,
      *     excluded_still_urls: list<string>,
+     *     hero_image_url: ?string,
+     *     aotw_parse_debug: array<string, mixed>,
      * }
      */
     public function parse(string $html, string $sourceUrl): array
@@ -41,7 +43,7 @@ class CampaignPageParser
         $jsonLd = $this->parseJsonLd($html, $sourceUrl);
 
         $isAotw = str_contains(strtolower($host), 'adsoftheworld.com');
-        $aotw = $isAotw ? $this->parseAdsOfTheWorld($crawler, $sourceUrl) : [];
+        $aotw = $isAotw ? $this->parseAdsOfTheWorld($crawler, $sourceUrl, $meta, $jsonLd) : [];
 
         $title = $this->firstNonEmpty([
             $aotw['title'] ?? null,
@@ -70,10 +72,19 @@ class CampaignPageParser
         $directVideos = $this->extractDirectVideoUrls($crawler, $html, $sourceUrl);
         $excludedStillUrls = $this->safeCollectExcludedStillUrls($meta, $jsonLd, $crawler, $sourceUrl);
 
+        $heroImageUrl = $isAotw
+            ? ($aotw['hero_image_url'] ?? $this->resolveAotwHeroImageUrl($meta, $jsonLd, $sourceUrl))
+            : null;
+        $parseDebug = $isAotw ? ($aotw['parse_debug'] ?? []) : [];
+
         if ($isAotw) {
             Log::info('AOTW campaign media parsed.', [
                 'source_url' => $sourceUrl,
-                'gallery_images_extracted' => count($imageUrls),
+                'hero_image_found' => $heroImageUrl !== null,
+                'gallery_containers' => $parseDebug['gallery_containers'] ?? 0,
+                'gallery_still_count' => count($imageUrls),
+                'gallery_video_count' => count($videos) + count($directVideos),
+                'skipped_non_gallery_images' => $parseDebug['skipped_non_gallery_images'] ?? 0,
                 'videos_extracted' => count($videos),
                 'direct_videos_extracted' => count($directVideos),
             ]);
@@ -88,6 +99,7 @@ class CampaignPageParser
             'canonical_url' => $this->urlResolver->resolve($meta['canonical'] ?? null, $sourceUrl) ?? $sourceUrl,
             'og_image' => $meta['og:image'] ?? null,
             'thumbnail_url' => $jsonLd['thumbnailUrl'] ?? null,
+            'hero_image_url' => $heroImageUrl,
             'brands' => array_values(array_unique(array_filter($aotw['brands'] ?? []))),
             'agencies' => array_values(array_unique(array_filter($aotw['agencies'] ?? []))),
             'countries' => array_values(array_unique(array_filter($aotw['countries'] ?? []))),
@@ -97,6 +109,43 @@ class CampaignPageParser
             'image_urls' => $imageUrls,
             'direct_video_urls' => $directVideos,
             'excluded_still_urls' => $excludedStillUrls,
+            'aotw_parse_debug' => $parseDebug,
+        ];
+    }
+
+    /**
+     * Fetch-free parse for admin debugging (thumbnail vs gallery stills vs videos).
+     *
+     * @return array{
+     *     thumbnail_url: ?string,
+     *     still_urls: list<string>,
+     *     video_urls: list<string>,
+     *     debug: array<string, mixed>,
+     * }
+     */
+    public function parsePreview(string $html, string $sourceUrl): array
+    {
+        $parsed = $this->parse($html, $sourceUrl);
+
+        $videoUrls = [];
+
+        foreach ($parsed['videos'] as $video) {
+            if (! empty($video['url'])) {
+                $videoUrls[] = $video['url'];
+            }
+        }
+
+        foreach ($parsed['direct_video_urls'] as $url) {
+            if (is_string($url) && $url !== '') {
+                $videoUrls[] = $url;
+            }
+        }
+
+        return [
+            'thumbnail_url' => $parsed['hero_image_url'] ?? $parsed['og_image'] ?? null,
+            'still_urls' => $parsed['image_urls'],
+            'video_urls' => array_values(array_unique($videoUrls)),
+            'debug' => $parsed['aotw_parse_debug'],
         ];
     }
 
@@ -198,7 +247,11 @@ class CampaignPageParser
     /**
      * @return array<string, mixed>
      */
-    protected function parseAdsOfTheWorld(Crawler $crawler, string $sourceUrl): array
+    /**
+     * @param  array<string, string|null>  $meta
+     * @param  array{name: ?string, description: ?string, embedUrl: ?string, thumbnailUrl: ?string}  $jsonLd
+     */
+    protected function parseAdsOfTheWorld(Crawler $crawler, string $sourceUrl, array $meta, array $jsonLd): array
     {
         $data = [
             'title' => null,
@@ -271,7 +324,12 @@ class CampaignPageParser
             $data['description'] = $description;
         }
 
-        $data['image_urls'] = $this->safeExtractAotwGalleryStills($main, $sourceUrl);
+        $heroImageUrl = $this->resolveAotwHeroImageUrl($meta, $jsonLd, $sourceUrl);
+
+        $galleryResult = $this->safeExtractAotwGalleryStills($main, $sourceUrl, $heroImageUrl);
+        $data['image_urls'] = $galleryResult['urls'];
+        $data['hero_image_url'] = $heroImageUrl;
+        $data['parse_debug'] = $galleryResult['debug'];
 
         $summary = $crawler->filter('#main p.text-sm')->first();
 
@@ -283,40 +341,64 @@ class CampaignPageParser
     }
 
     /**
-     * @return list<string>
+     * @return array{urls: list<string>, debug: array<string, mixed>}
      */
-    protected function safeExtractAotwGalleryStills(Crawler $main, string $sourceUrl): array
+    protected function safeExtractAotwGalleryStills(Crawler $main, string $sourceUrl, ?string $heroImageUrl): array
     {
         try {
-            return $this->extractAotwGalleryStills($main, $sourceUrl);
+            return $this->extractAotwGalleryStills($main, $sourceUrl, $heroImageUrl);
         } catch (\Throwable $e) {
             Log::warning('Campaign parser: gallery still extraction failed; continuing without stills.', [
                 'source_url' => $sourceUrl,
                 'error' => $e->getMessage(),
             ]);
 
-            return [];
+            return [
+                'urls' => [],
+                'debug' => [
+                    'hero_image_found' => $heroImageUrl !== null,
+                    'gallery_containers' => 0,
+                    'gallery_still_count' => 0,
+                    'gallery_video_count' => 0,
+                    'skipped_non_gallery_images' => 0,
+                    'error' => $e->getMessage(),
+                ],
+            ];
         }
     }
 
     /**
-     * Uploaded campaign stills only: direct media blocks under #main (not og/meta/related cards).
+     * Uploaded campaign stills only: media blocks under #main (not og/meta/related cards).
      *
-     * @return list<string>
+     * @return array{urls: list<string>, debug: array<string, mixed>}
      */
-    protected function extractAotwGalleryStills(Crawler $main, string $sourceUrl): array
+    protected function extractAotwGalleryStills(Crawler $main, string $sourceUrl, ?string $heroImageUrl): array
     {
         $urls = [];
         $seen = [];
+        $skipped = 0;
+        $videoBlocks = 0;
 
-        $add = function (?string $url) use (&$urls, &$seen, $sourceUrl) {
+        $add = function (?string $url) use (&$urls, &$seen, &$skipped, $sourceUrl, $heroImageUrl) {
             if ($url === null || $url === '') {
                 return;
             }
 
             $resolved = $this->urlResolver->resolve($url, $sourceUrl);
 
-            if ($resolved === null || ! $this->isGalleryStillUrl($resolved) || isset($seen[$resolved])) {
+            if ($resolved === null || ! $this->isGalleryStillUrl($resolved)) {
+                $skipped++;
+
+                return;
+            }
+
+            if ($heroImageUrl !== null && $resolved === $heroImageUrl) {
+                $skipped++;
+
+                return;
+            }
+
+            if (isset($seen[$resolved])) {
                 return;
             }
 
@@ -328,22 +410,38 @@ class CampaignPageParser
 
         Log::info('AOTW gallery media blocks found.', [
             'source_url' => $sourceUrl,
-            'blocks' => count($blocks),
+            'hero_image_found' => $heroImageUrl !== null,
+            'gallery_containers' => count($blocks),
         ]);
 
         foreach ($blocks as $block) {
-            $this->extractGalleryImagesFromMediaBlock($block, $add, $sourceUrl);
+            if ($this->blockIsVideoMedia($block)) {
+                $videoBlocks++;
+            }
+
+            $this->extractGalleryImagesFromMediaBlock($block, $add, $sourceUrl, $skipped);
         }
 
-        Log::info('AOTW gallery images extracted.', [
-            'source_url' => $sourceUrl,
-            'count' => count($urls),
-        ]);
+        $debug = [
+            'hero_image_found' => $heroImageUrl !== null,
+            'hero_image_url' => $heroImageUrl,
+            'gallery_containers' => count($blocks),
+            'gallery_still_count' => count($urls),
+            'gallery_video_blocks' => $videoBlocks,
+            'skipped_non_gallery_images' => $skipped,
+        ];
 
-        return $urls;
+        Log::info('AOTW gallery images extracted.', array_merge(['source_url' => $sourceUrl], $debug));
+
+        return [
+            'urls' => $urls,
+            'debug' => $debug,
+        ];
     }
 
     /**
+     * All campaign media blocks in page order (before related/footer regions).
+     *
      * @return list<Crawler>
      */
     protected function collectAotwMediaBlocks(Crawler $main, string $sourceUrl): array
@@ -352,48 +450,100 @@ class CampaignPageParser
             return [];
         }
 
-        $mainNode = $main->getNode(0);
-
-        if ($mainNode === null) {
-            return [];
-        }
-
         $blocks = [];
-        $baseUri = $main->getUri() ?: $sourceUrl;
 
-        foreach ($mainNode->childNodes as $child) {
-            if (! ($child instanceof \DOMElement)) {
-                continue;
+        $main->filter('div.bg-white.my-3')->each(function (Crawler $block) use (&$blocks) {
+            if ($this->isAotwCampaignGalleryMediaBlock($block)) {
+                $blocks[] = $block;
             }
-
-            if ($this->domElementIsDescriptionGrid($child)) {
-                break;
-            }
-
-            if ($this->domElementIsCampaignMediaBlock($child)) {
-                $blocks[] = new Crawler($child, $baseUri);
-            }
-        }
-
-        if ($blocks !== []) {
-            return $blocks;
-        }
-
-        $main->filter('div.bg-white.my-3')->each(function (Crawler $block) use (&$blocks, $mainNode) {
-            $node = $block->getNode(0);
-
-            if ($node === null || $node->parentNode !== $mainNode) {
-                return;
-            }
-
-            if (str_starts_with($node->getAttribute('id') ?? '', 'campaign_header')) {
-                return;
-            }
-
-            $blocks[] = $block;
         });
 
         return $blocks;
+    }
+
+    protected function isAotwCampaignGalleryMediaBlock(Crawler $block): bool
+    {
+        $node = $block->getNode(0);
+
+        if (! ($node instanceof \DOMElement) || ! $this->domElementIsCampaignMediaBlock($node)) {
+            return false;
+        }
+
+        if ($block->ancestors()->filter('[id^="campaign_header"]')->count() > 0) {
+            return false;
+        }
+
+        if ($this->blockIsInRelatedCampaignsRegion($block)) {
+            return false;
+        }
+
+        if ($block->ancestors()->filter('footer')->count() > 0) {
+            return false;
+        }
+
+        return $this->blockContainsUploadedCampaignMedia($block);
+    }
+
+    protected function blockContainsUploadedCampaignMedia(Crawler $block): bool
+    {
+        if ($this->blockIsVideoMedia($block)) {
+            return true;
+        }
+
+        $hasStill = false;
+
+        $block->filter('img')->each(function (Crawler $img) use (&$hasStill, $block) {
+            if ($this->imgIsVideoPoster($img, $block)) {
+                return;
+            }
+
+            if ($this->imgLooksLikeUploadedStill($img)) {
+                $hasStill = true;
+            }
+        });
+
+        return $hasStill;
+    }
+
+    protected function blockIsInRelatedCampaignsRegion(Crawler $block): bool
+    {
+        $ancestors = $block->ancestors();
+
+        if ($ancestors->filter('div.grid.gap-6')->count() > 0) {
+            return true;
+        }
+
+        if ($ancestors->filter('[onclick*="location.href"][onclick*="/campaigns/"]')->count() > 0) {
+            return true;
+        }
+
+        if ($ancestors->filter('.shadow-lg[onclick*="/campaigns/"]')->count() > 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, string|null>  $meta
+     * @param  array{name: ?string, description: ?string, embedUrl: ?string, thumbnailUrl: ?string}  $jsonLd
+     */
+    protected function resolveAotwHeroImageUrl(array $meta, array $jsonLd, string $sourceUrl): ?string
+    {
+        $candidates = [
+            $meta['og:image'] ?? null,
+            $jsonLd['thumbnailUrl'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $resolved = $this->urlResolver->resolve($candidate, $sourceUrl);
+
+            if ($resolved !== null && $resolved !== '') {
+                return $resolved;
+            }
+        }
+
+        return null;
     }
 
     protected function domElementIsCampaignMediaBlock(\DOMElement $element): bool
@@ -413,40 +563,45 @@ class CampaignPageParser
         return ! str_starts_with($id, 'campaign_header');
     }
 
-    protected function domElementIsDescriptionGrid(\DOMElement $element): bool
-    {
-        $class = $element->getAttribute('class') ?? '';
-
-        return str_contains($class, 'grid') && str_contains($class, 'grid-cols');
-    }
-
     /**
      * @param  callable(string): void  $add
      */
-    protected function extractGalleryImagesFromMediaBlock(Crawler $block, callable $add, string $sourceUrl): void
-    {
+    protected function extractGalleryImagesFromMediaBlock(
+        Crawler $block,
+        callable $add,
+        string $sourceUrl,
+        int &$skippedNonGallery,
+    ): void {
         if ($this->blockIsVideoMedia($block)) {
             return;
         }
 
-        $block->filter('picture')->each(function (Crawler $picture) use ($add, $sourceUrl) {
+        $block->filter('picture')->each(function (Crawler $picture) use ($add, $sourceUrl, &$skippedNonGallery) {
             if ($this->nodeIsInsideRelatedCampaignLink($picture)) {
+                $skippedNonGallery++;
+
                 return;
             }
 
             $add($this->extractBestUrlFromPicture($picture, $sourceUrl));
         });
 
-        $block->filter('img')->each(function (Crawler $img) use ($add, $sourceUrl, $block) {
+        $block->filter('img')->each(function (Crawler $img) use ($add, $sourceUrl, $block, &$skippedNonGallery) {
             if ($this->nodeIsInsidePicture($img) || $this->nodeIsInsideRelatedCampaignLink($img)) {
+                $skippedNonGallery++;
+
                 return;
             }
 
             if ($this->imgIsVideoPoster($img, $block)) {
+                $skippedNonGallery++;
+
                 return;
             }
 
             if (! $this->imgLooksLikeUploadedStill($img)) {
+                $skippedNonGallery++;
+
                 return;
             }
 
@@ -706,6 +861,7 @@ class CampaignPageParser
         $excluded = array_filter([
             $meta['og:image'] ?? null,
             $jsonLd['thumbnailUrl'] ?? null,
+            $this->resolveAotwHeroImageUrl($meta, $jsonLd, $sourceUrl),
         ]);
 
         $main = $crawler->filter('#main');

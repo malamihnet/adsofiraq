@@ -128,6 +128,7 @@ class CampaignImporterService
 
             $thumbnailPath = null;
             $thumbnailCandidates = array_values(array_filter(array_unique([
+                $parsed['hero_image_url'] ?? null,
                 $parsed['og_image'] ?? null,
                 $parsed['thumbnail_url'] ?? null,
             ])));

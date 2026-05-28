@@ -7,6 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ImportCampaignUrlRequest;
 use App\Services\CampaignMediaDeduplicationService;
 use App\Services\Import\CampaignImporterService;
+use App\Services\Import\CampaignPageFetcher;
+use App\Services\Import\CampaignPageParser;
+use App\Services\Import\CampaignUrlNormalizer;
 use App\Services\Import\RepairImportedCampaignMedia;
 use App\Services\PublicStorageSyncService;
 use Illuminate\Http\RedirectResponse;
@@ -20,11 +23,53 @@ class ImportCampaignController extends Controller
         protected RepairImportedCampaignMedia $mediaRepair,
         protected PublicStorageSyncService $publicStorageSync,
         protected CampaignMediaDeduplicationService $mediaDedup,
+        protected CampaignPageFetcher $pageFetcher,
+        protected CampaignPageParser $pageParser,
+        protected CampaignUrlNormalizer $urlNormalizer,
     ) {}
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('admin.import-campaign.create');
+        return view('admin.import-campaign.create', [
+            'debugPreview' => $request->session()->get('import_debug_preview'),
+        ]);
+    }
+
+    public function debugParse(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'url' => ['required', 'string', 'max:2048'],
+        ]);
+
+        $url = $request->string('url')->toString();
+
+        if (! $this->urlNormalizer->isValidHttpUrl($url)) {
+            return back()
+                ->withInput()
+                ->withErrors(['debug_url' => 'Please enter a valid campaign URL (http or https).']);
+        }
+
+        try {
+            $normalizedUrl = $this->urlNormalizer->normalize($url);
+            $html = $this->pageFetcher->fetch($normalizedUrl);
+            $preview = $this->pageParser->parsePreview($html, $normalizedUrl);
+
+            return back()
+                ->withInput()
+                ->with('import_debug_preview', array_merge($preview, [
+                    'source_url' => $normalizedUrl,
+                ]));
+        } catch (CampaignImportException $e) {
+            return back()
+                ->withInput()
+                ->withErrors(['debug_url' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withInput()
+                ->withErrors(['debug_url' => 'Could not parse that URL. Please try again.']);
+        }
     }
 
     public function store(ImportCampaignUrlRequest $request): RedirectResponse

@@ -51,6 +51,71 @@
 </form>
 
 <div class="mt-10 max-w-2xl border border-archive-border bg-white p-6">
+    <h2 class="font-display text-lg">Debug AOTW Parser</h2>
+    <p class="mt-2 text-sm text-archive-gray">
+        Fetch a live Ads of the World campaign URL and preview extracted thumbnail, gallery stills, and videos
+        without importing.
+    </p>
+
+    <form method="POST" action="{{ route('admin.import-campaign.debug-parse') }}" class="mt-4 space-y-4">
+        @csrf
+        <div>
+            <label for="debug_url" class="section-label mb-2 block">Campaign URL</label>
+            <input
+                type="url"
+                name="url"
+                id="debug_url"
+                value="{{ old('url') }}"
+                required
+                placeholder="https://www.adsoftheworld.com/campaigns/..."
+                class="input-field"
+            >
+            @error('debug_url')
+                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <button type="submit" class="btn-secondary">Preview Extracted Media</button>
+    </form>
+
+    @if(!empty($debugPreview))
+        <div class="mt-6 space-y-4 border-t border-archive-border pt-6 text-sm">
+            <p class="text-archive-gray">
+                Source:
+                <a href="{{ $debugPreview['source_url'] ?? '#' }}" class="underline break-all" target="_blank" rel="noopener">
+                    {{ $debugPreview['source_url'] ?? '—' }}
+                </a>
+            </p>
+            <div>
+                <p class="section-label mb-1">Thumbnail URL</p>
+                <p class="font-mono text-xs break-all text-archive-black">{{ $debugPreview['thumbnail_url'] ?? '—' }}</p>
+            </div>
+            <div>
+                <p class="section-label mb-1">Gallery stills ({{ count($debugPreview['still_urls'] ?? []) }})</p>
+                @forelse($debugPreview['still_urls'] ?? [] as $stillUrl)
+                    <p class="font-mono text-xs break-all text-archive-black">{{ $stillUrl }}</p>
+                @empty
+                    <p class="text-archive-gray">None extracted.</p>
+                @endforelse
+            </div>
+            <div>
+                <p class="section-label mb-1">Videos ({{ count($debugPreview['video_urls'] ?? []) }})</p>
+                @forelse($debugPreview['video_urls'] ?? [] as $videoUrl)
+                    <p class="font-mono text-xs break-all text-archive-black">{{ $videoUrl }}</p>
+                @empty
+                    <p class="text-archive-gray">None extracted.</p>
+                @endforelse
+            </div>
+            @if(!empty($debugPreview['debug']))
+                <div>
+                    <p class="section-label mb-1">Parser debug</p>
+                    <pre class="overflow-x-auto rounded border border-archive-border bg-archive-cream p-3 text-xs">{{ json_encode($debugPreview['debug'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                </div>
+            @endif
+        </div>
+    @endif
+</div>
+
+<div class="mt-10 max-w-2xl border border-archive-border bg-white p-6">
     <h2 class="font-display text-lg">Repair Missing Media</h2>
     <p class="mt-2 text-sm text-archive-gray">
         Re-fetch Ads of the World pages for imported campaigns and download missing thumbnails and stills into local storage.

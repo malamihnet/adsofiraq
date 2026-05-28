@@ -138,4 +138,32 @@ class CampaignPageParserGalleryTest extends TestCase
         $poster = 'https://image.adsoftheworld.com/uvff0sucxo6et74ndt2krlad5w35';
         $this->assertContains($poster, $parsed['excluded_still_urls']);
     }
+
+    public function test_nowruz_campaign_extracts_two_gallery_stills_and_separate_thumbnail(): void
+    {
+        $html = file_get_contents(base_path('tests/fixtures/aotw-nowruz-two-stills.html'));
+        $this->assertNotFalse($html);
+
+        $parsed = $this->parser()->parse(
+            $html,
+            'https://www.adsoftheworld.com/campaigns/speaking-native-kurdish-for-nowruz',
+        );
+
+        $this->assertCount(2, $parsed['image_urls']);
+        $this->assertContains('https://image.adsoftheworld.com/nf4qdxt8tla5utbz8j9s4k0ms2mk', $parsed['image_urls']);
+        $this->assertContains('https://image.adsoftheworld.com/qheyz8sow8wkary047s0449hbckb', $parsed['image_urls']);
+        $this->assertStringContainsString('active_storage', $parsed['hero_image_url'] ?? '');
+        $this->assertNotContains($parsed['hero_image_url'], $parsed['image_urls']);
+        $this->assertNotContains('https://image.adsoftheworld.com/o5o8q4uz2bo5d6mz47jh7sadalt0', $parsed['image_urls']);
+        $this->assertSame(2, $parsed['aotw_parse_debug']['gallery_containers'] ?? null);
+        $this->assertSame(2, $parsed['aotw_parse_debug']['gallery_still_count'] ?? null);
+
+        $preview = $this->parser()->parsePreview(
+            $html,
+            'https://www.adsoftheworld.com/campaigns/speaking-native-kurdish-for-nowruz',
+        );
+
+        $this->assertCount(2, $preview['still_urls']);
+        $this->assertStringContainsString('active_storage', $preview['thumbnail_url'] ?? '');
+    }
 }

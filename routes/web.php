@@ -85,6 +85,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/import-campaign', [ImportCampaignController::class, 'create'])->name('import-campaign.create');
+    Route::post('/import-campaign/debug-parse', [ImportCampaignController::class, 'debugParse'])->name('import-campaign.debug-parse');
     Route::post('/import-campaign', [ImportCampaignController::class, 'store'])->name('import-campaign.store');
     Route::post('/import-campaign/repair-media', [ImportCampaignController::class, 'repairMedia'])->name('import-campaign.repair-media');
     Route::post('/import-campaign/remove-duplicate-stills', [ImportCampaignController::class, 'removeDuplicateStills'])->name('import-campaign.remove-duplicate-stills');
