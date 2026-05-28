@@ -87,14 +87,17 @@ class RepairImportedCampaignMedia
 
         if ($needsStills && $imageUrls !== []) {
             $before = $campaign->assets()->count();
-            $this->mediaService->importStills($campaign, $imageUrls);
-            $result['stills_added'] = max(0, $campaign->assets()->count() - $before);
+            $stillResult = $this->mediaService->importStills($campaign, $imageUrls);
+            $result['stills_added'] = $stillResult['saved'] > 0
+                ? max(0, $campaign->assets()->count() - $before)
+                : 0;
         }
 
         $campaign = $campaign->fresh(['assets']);
 
         if (! $this->uploadService->hasValidThumbnail($campaign->fresh()) || $replaceExisting) {
             $thumbnailCandidates = array_values(array_filter(array_unique([
+                $parsed['hero_image_url'] ?? null,
                 $parsed['og_image'] ?? null,
                 $parsed['thumbnail_url'] ?? null,
             ])));

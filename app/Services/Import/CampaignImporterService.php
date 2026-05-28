@@ -109,7 +109,7 @@ class CampaignImporterService
 
             $convertVideos = (bool) ($options['convert_videos'] ?? true);
 
-            $this->mediaService->importVideos(
+            $videoResult = $this->mediaService->importVideos(
                 $campaign,
                 is_array($parsed['videos'] ?? null) ? $parsed['videos'] : [],
                 is_array($parsed['direct_video_urls'] ?? null) ? $parsed['direct_video_urls'] : [],
@@ -117,14 +117,8 @@ class CampaignImporterService
             );
 
             $imageUrls = is_array($parsed['image_urls'] ?? null) ? $parsed['image_urls'] : [];
-
-            Log::info('Campaign import: media extraction summary.', [
-                'campaign_id' => $campaign->id,
-                'image_count' => count($imageUrls),
-                'source_url' => $sourceUrl,
-            ]);
-
-            $assets = $this->mediaService->importStills($campaign, $imageUrls);
+            $stillResult = $this->mediaService->importStills($campaign, $imageUrls);
+            $assets = $stillResult['assets'];
 
             $thumbnailPath = null;
             $thumbnailCandidates = array_values(array_filter(array_unique([
@@ -144,6 +138,25 @@ class CampaignImporterService
             if ($thumbnailPath) {
                 $campaign->update(['thumbnail_path' => $thumbnailPath]);
             }
+
+            $parseDebug = is_array($parsed['aotw_parse_debug'] ?? null) ? $parsed['aotw_parse_debug'] : [];
+
+            Log::info('Campaign imported: media summary.', [
+                'campaign_id' => $campaign->id,
+                'title' => $campaign->title,
+                'source_url' => $sourceUrl,
+                'thumbnail_imported' => $thumbnailPath !== null,
+                'stills_found' => $stillResult['found'],
+                'stills_saved' => $stillResult['saved'],
+                'stills_skipped' => count($stillResult['skipped']),
+                'videos_found' => $videoResult['found'],
+                'videos_saved' => $videoResult['saved'],
+                'videos_skipped' => count($videoResult['skipped']),
+                'parser_stills_found' => $parseDebug['gallery_still_count'] ?? count($imageUrls),
+                'parser_videos_found' => ($parseDebug['gallery_video_count'] ?? 0) + ($parseDebug['gallery_direct_video_count'] ?? 0),
+                'still_skip_reasons' => $stillResult['skipped'],
+                'video_skip_reasons' => $videoResult['skipped'],
+            ]);
 
             $campaign = $campaign->fresh(['videos', 'assets']);
 

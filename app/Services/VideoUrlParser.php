@@ -20,7 +20,15 @@ class VideoUrlParser
             ];
         }
 
-        if (preg_match('/vimeo\.com\/(?:video\/)?(\d+)/', $url, $matches)) {
+        if (preg_match('/player\.vimeo\.com\/video\/(\d+)/', $url, $matches)) {
+            return [
+                'provider' => 'vimeo',
+                'video_id' => $matches[1],
+                'embed_url' => 'https://player.vimeo.com/video/'.$matches[1],
+            ];
+        }
+
+        if (preg_match('/vimeo\.com\/(?:channels\/[^\/]+\/|groups\/[^\/]+\/videos\/|video\/)?(\d+)/', $url, $matches)) {
             return [
                 'provider' => 'vimeo',
                 'video_id' => $matches[1],

@@ -11,6 +11,7 @@ class CampaignPageParser
     public function __construct(
         protected CampaignCreditsExtractor $creditsExtractor,
         protected CampaignImportImageUrlResolver $urlResolver,
+        protected AotwCampaignMediaExtractor $aotwMediaExtractor,
     ) {}
 
     /**
@@ -64,12 +65,14 @@ class CampaignPageParser
         }
 
         $videos = $isAotw
-            ? $this->safeExtractAotwVideos($crawler, $jsonLd, $sourceUrl)
+            ? ($aotw['videos'] ?? [])
             : $this->extractVideos($crawler, $html, $jsonLd, $sourceUrl);
         $imageUrls = $isAotw
             ? ($aotw['image_urls'] ?? [])
             : $this->safeCollectGenericGalleryUrls($crawler, $sourceUrl);
-        $directVideos = $this->extractDirectVideoUrls($crawler, $html, $sourceUrl);
+        $directVideos = $isAotw
+            ? ($aotw['direct_video_urls'] ?? [])
+            : $this->extractDirectVideoUrls($crawler, $html, $sourceUrl);
         $excludedStillUrls = $this->safeCollectExcludedStillUrls($meta, $jsonLd, $crawler, $sourceUrl);
 
         $heroImageUrl = $isAotw
@@ -141,11 +144,16 @@ class CampaignPageParser
             }
         }
 
+        $debug = $parsed['aotw_parse_debug'] ?? [];
+
         return [
             'thumbnail_url' => $parsed['hero_image_url'] ?? $parsed['og_image'] ?? null,
             'still_urls' => $parsed['image_urls'],
             'video_urls' => array_values(array_unique($videoUrls)),
-            'debug' => $parsed['aotw_parse_debug'],
+            'skipped_urls' => $debug['skipped_urls'] ?? [],
+            'media_blocks' => $debug['media_blocks'] ?? [],
+            'raw_media_block_count' => $debug['gallery_containers'] ?? count($debug['media_blocks'] ?? []),
+            'debug' => $debug,
         ];
     }
 
@@ -326,10 +334,27 @@ class CampaignPageParser
 
         $heroImageUrl = $this->resolveAotwHeroImageUrl($meta, $jsonLd, $sourceUrl);
 
-        $galleryResult = $this->safeExtractAotwGalleryStills($main, $sourceUrl, $heroImageUrl);
-        $data['image_urls'] = $galleryResult['urls'];
+        try {
+            $media = $this->aotwMediaExtractor->extract($main, $sourceUrl, $heroImageUrl, $jsonLd);
+        } catch (\Throwable $e) {
+            Log::warning('Campaign parser: AOTW media extraction failed.', [
+                'source_url' => $sourceUrl,
+                'error' => $e->getMessage(),
+            ]);
+
+            $media = [
+                'image_urls' => [],
+                'videos' => [],
+                'direct_video_urls' => [],
+                'debug' => ['error' => $e->getMessage()],
+            ];
+        }
+
+        $data['image_urls'] = $media['image_urls'];
+        $data['videos'] = $media['videos'];
+        $data['direct_video_urls'] = $media['direct_video_urls'];
         $data['hero_image_url'] = $heroImageUrl;
-        $data['parse_debug'] = $galleryResult['debug'];
+        $data['parse_debug'] = $media['debug'];
 
         $summary = $crawler->filter('#main p.text-sm')->first();
 

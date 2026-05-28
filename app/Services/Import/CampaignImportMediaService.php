@@ -22,7 +22,12 @@ class CampaignImportMediaService
 
     /**
      * @param  list<string>  $imageUrls
-     * @return list<CampaignAsset>
+     * @return array{
+     *     assets: list<CampaignAsset>,
+     *     found: int,
+     *     saved: int,
+     *     skipped: list<array{url: string, reason: string}>,
+     * }
      */
     public function importStills(Campaign $campaign, array $imageUrls): array
     {
@@ -32,6 +37,7 @@ class CampaignImportMediaService
         ]);
 
         $assets = [];
+        $skipped = [];
         $this->mediaDedup->backfillStillMetadata($campaign->assets()->get());
         $sortOrder = (int) $campaign->assets()->max('sort_order');
         $seenUrls = [];
@@ -39,7 +45,15 @@ class CampaignImportMediaService
         foreach ($imageUrls as $url) {
             $absolute = $this->resolveAbsoluteUrl($url, $campaign->source_url);
 
-            if ($absolute === null || isset($seenUrls[$absolute])) {
+            if ($absolute === null) {
+                $skipped[] = ['url' => $url, 'reason' => 'invalid_url'];
+
+                continue;
+            }
+
+            if (isset($seenUrls[$absolute])) {
+                $skipped[] = ['url' => $absolute, 'reason' => 'duplicate'];
+
                 continue;
             }
 
@@ -53,12 +67,16 @@ class CampaignImportMediaService
             $body = $this->downloadImageBody($campaign, $absolute);
 
             if ($body === null) {
+                $skipped[] = ['url' => $absolute, 'reason' => 'download_failed'];
+
                 continue;
             }
 
             $contentHash = $this->mediaDedup->visualContentHash($body);
 
             if ($contentHash === null) {
+                $skipped[] = ['url' => $absolute, 'reason' => 'hash_failed'];
+
                 continue;
             }
 
@@ -74,6 +92,7 @@ class CampaignImportMediaService
                     'content_hash' => $contentHash,
                     'file_path' => $relativePath,
                 ]);
+                $skipped[] = ['url' => $absolute, 'reason' => 'duplicate_content_or_source'];
 
                 continue;
             }
@@ -81,6 +100,8 @@ class CampaignImportMediaService
             $path = $this->storeImageBody($campaign, $body, $absolute, $directory, $filename);
 
             if ($path === null) {
+                $skipped[] = ['url' => $absolute, 'reason' => 'store_failed'];
+
                 continue;
             }
 
@@ -102,13 +123,23 @@ class CampaignImportMediaService
             ]);
         }
 
-        return $assets;
+        return [
+            'assets' => $assets,
+            'found' => count($imageUrls),
+            'saved' => count($assets),
+            'skipped' => $skipped,
+        ];
     }
 
     /**
      * @param  list<array{type: string, url: string}>  $videos
      * @param  list<string>  $directVideoUrls
-     * @return list<CampaignVideo>
+     * @return array{
+     *     videos: list<CampaignVideo>,
+     *     found: int,
+     *     saved: int,
+     *     skipped: list<array{url: string, reason: string}>,
+     * }
      */
     public function importVideos(
         Campaign $campaign,
@@ -117,6 +148,7 @@ class CampaignImportMediaService
         bool $convertVideos = true,
     ): array {
         $created = [];
+        $skipped = [];
         $sortOrder = (int) $campaign->videos()->max('sort_order');
         $this->mediaDedup->backfillVideoMetadata($campaign->videos()->get());
         $seenKeys = [];
@@ -126,12 +158,16 @@ class CampaignImportMediaService
             $url = trim($video['url'] ?? '');
 
             if ($url === '' || ! in_array($type, ['youtube', 'vimeo'], true)) {
+                $skipped[] = ['url' => $url, 'reason' => 'unsupported'];
+
                 continue;
             }
 
             $embedKey = $this->mediaDedup->videoEmbedKey($type, $url);
 
             if ($embedKey === null || isset($seenKeys[$embedKey])) {
+                $skipped[] = ['url' => $url, 'reason' => 'duplicate'];
+
                 continue;
             }
 
@@ -141,6 +177,7 @@ class CampaignImportMediaService
                     'url' => $url,
                     'embed_key' => $embedKey,
                 ]);
+                $skipped[] = ['url' => $url, 'reason' => 'duplicate_embed_key'];
 
                 continue;
             }
@@ -160,18 +197,24 @@ class CampaignImportMediaService
             $url = $this->resolveAbsoluteUrl($url, $campaign->source_url);
 
             if ($url === null) {
+                $skipped[] = ['url' => (string) $url, 'reason' => 'invalid_url'];
+
                 continue;
             }
 
             $sourceKey = $this->mediaDedup->sourceUrlKey($url, $campaign->source_url);
 
             if ($sourceKey !== null && isset($seenKeys['file:url:'.$sourceKey])) {
+                $skipped[] = ['url' => $url, 'reason' => 'duplicate'];
+
                 continue;
             }
 
             $filePath = $this->downloadVideoFile($campaign, $url, $convertVideos);
 
             if ($filePath === null) {
+                $skipped[] = ['url' => $url, 'reason' => 'download_failed'];
+
                 continue;
             }
 
@@ -186,6 +229,8 @@ class CampaignImportMediaService
                 if (Storage::disk('public')->exists($filePath)) {
                     Storage::disk('public')->delete($filePath);
                 }
+
+                $skipped[] = ['url' => $url, 'reason' => 'duplicate_content_or_source'];
 
                 continue;
             }
@@ -208,7 +253,14 @@ class CampaignImportMediaService
             ]);
         }
 
-        return $created;
+        $found = count($videos) + count($directVideoUrls);
+
+        return [
+            'videos' => $created,
+            'found' => $found,
+            'saved' => count($created),
+            'skipped' => $skipped,
+        ];
     }
 
     public function downloadThumbnail(Campaign $campaign, ?string $url): ?string

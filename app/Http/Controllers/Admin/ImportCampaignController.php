@@ -79,9 +79,16 @@ class ImportCampaignController extends Controller
         try {
             $campaign = $this->importer->import($url, $request->user());
 
+            $campaign->loadCount(['assets', 'videos']);
+
             return redirect()
                 ->route('admin.campaigns.edit', $campaign)
-                ->with('success', 'Campaign imported successfully as pending.');
+                ->with('success', sprintf(
+                    'Campaign imported as pending. Thumbnail: %s. Saved %d still(s) and %d video(s). Use Debug AOTW Media Parser first if counts look wrong.',
+                    $campaign->thumbnail_path ? 'yes' : 'no',
+                    $campaign->assets_count,
+                    $campaign->videos_count,
+                ));
         } catch (CampaignImportException $e) {
             return $this->handleImportException($e, $url);
         } catch (\InvalidArgumentException) {

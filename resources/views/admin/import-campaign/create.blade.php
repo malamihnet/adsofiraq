@@ -50,11 +50,11 @@
     <button type="submit" class="btn-primary mt-6">Import Campaign</button>
 </form>
 
-<div class="mt-10 max-w-2xl border border-archive-border bg-white p-6">
-    <h2 class="font-display text-lg">Debug AOTW Parser</h2>
+<div class="mt-10 max-w-3xl border border-archive-border bg-white p-6">
+    <h2 class="font-display text-lg">Debug AOTW Media Parser</h2>
     <p class="mt-2 text-sm text-archive-gray">
         Fetch a live Ads of the World campaign URL and preview extracted thumbnail, gallery stills, and videos
-        without importing.
+        without importing. Compare results with the live AOTW page before running a bulk import.
     </p>
 
     <form method="POST" action="{{ route('admin.import-campaign.debug-parse') }}" class="mt-4 space-y-4">
@@ -105,9 +105,37 @@
                     <p class="text-archive-gray">None extracted.</p>
                 @endforelse
             </div>
+            <div>
+                <p class="section-label mb-1">Raw media blocks ({{ $debugPreview['raw_media_block_count'] ?? 0 }})</p>
+                @forelse($debugPreview['media_blocks'] ?? [] as $block)
+                    <div class="mb-3 rounded border border-archive-border bg-archive-cream p-3">
+                        <p class="text-xs font-semibold">Block #{{ ($block['index'] ?? 0) + 1 }} — {{ $block['type'] ?? 'unknown' }}</p>
+                        @if(!empty($block['urls']))
+                            <ul class="mt-1 list-inside list-disc font-mono text-xs break-all">
+                                @foreach($block['urls'] as $blockUrl)
+                                    <li>{{ $blockUrl }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-archive-gray">No media blocks detected.</p>
+                @endforelse
+            </div>
+            <div>
+                <p class="section-label mb-1">Skipped URLs ({{ count($debugPreview['skipped_urls'] ?? []) }})</p>
+                @forelse($debugPreview['skipped_urls'] ?? [] as $skipped)
+                    <p class="font-mono text-xs break-all text-archive-black">
+                        <span class="text-red-700">[{{ $skipped['reason'] ?? 'unknown' }}]</span>
+                        {{ $skipped['url'] ?? '' }}
+                    </p>
+                @empty
+                    <p class="text-archive-gray">None skipped.</p>
+                @endforelse
+            </div>
             @if(!empty($debugPreview['debug']))
                 <div>
-                    <p class="section-label mb-1">Parser debug</p>
+                    <p class="section-label mb-1">Parser debug (raw)</p>
                     <pre class="overflow-x-auto rounded border border-archive-border bg-archive-cream p-3 text-xs">{{ json_encode($debugPreview['debug'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                 </div>
             @endif

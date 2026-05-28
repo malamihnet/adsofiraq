@@ -11,9 +11,12 @@ class CampaignPageParserGalleryTest extends TestCase
 {
     protected function parser(): CampaignPageParser
     {
+        $urlResolver = new CampaignImportImageUrlResolver;
+
         return new CampaignPageParser(
             new CampaignCreditsExtractor,
-            new CampaignImportImageUrlResolver,
+            $urlResolver,
+            new \App\Services\Import\AotwCampaignMediaExtractor($urlResolver),
         );
     }
 
@@ -165,5 +168,24 @@ class CampaignPageParserGalleryTest extends TestCase
 
         $this->assertCount(2, $preview['still_urls']);
         $this->assertStringContainsString('active_storage', $preview['thumbnail_url'] ?? '');
+        $this->assertArrayHasKey('skipped_urls', $preview);
+        $this->assertArrayHasKey('media_blocks', $preview);
+    }
+
+    public function test_multiple_videos_in_order(): void
+    {
+        $html = <<<'HTML'
+        <html><body><div id="main">
+            <div class="bg-white my-3"><iframe src="https://player.vimeo.com/video/111"></iframe></div>
+            <div class="bg-white my-3"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3"></div>
+        </div></body></html>
+        HTML;
+
+        $parsed = $this->parser()->parse($html, 'https://www.adsoftheworld.com/campaigns/multi-video-test');
+
+        $this->assertCount(2, $parsed['videos']);
+        $this->assertSame('vimeo', $parsed['videos'][0]['type']);
+        $this->assertSame('youtube', $parsed['videos'][1]['type']);
     }
 }
