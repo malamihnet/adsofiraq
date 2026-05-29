@@ -362,7 +362,7 @@ class CampaignController extends Controller
             'countries' => Country::orderBy('name')->get(),
             'brands' => Brand::orderBy('name')->get(),
             'agencies' => Agency::orderBy('name')->get(),
-            'productionHouses' => Agency::where('is_production_house', true)->orderBy('name')->get(),
+            'productionHouses' => Agency::query()->forProductionHouseSelect()->orderBy('name')->get(),
             'users' => User::orderBy('name')->get(['id', 'name', 'username', 'email']),
             'selectedTaxonomies' => $campaign
                 ? $this->taxonomySyncService->selectedForForm($campaign)

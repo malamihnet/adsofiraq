@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AgencyCompanyRole;
 use App\Enums\AgencyCampaignRole;
 use App\Models\Agency;
 use App\Models\Brand;
@@ -16,6 +17,7 @@ class CampaignTaxonomySyncService
 {
     public function __construct(
         protected TaxonomyService $taxonomyService,
+        protected AgencyRoleService $agencyRoles,
     ) {}
 
     /**
@@ -50,7 +52,11 @@ class CampaignTaxonomySyncService
                 $id = (int) $value;
 
                 if ($asProductionHouse) {
-                    Agency::whereKey($id)->update(['is_production_house' => true]);
+                    $agency = Agency::find($id);
+
+                    if ($agency) {
+                        $this->agencyRoles->ensureRole($agency, AgencyCompanyRole::ProductionHouse);
+                    }
                 }
 
                 $ids[] = $id;

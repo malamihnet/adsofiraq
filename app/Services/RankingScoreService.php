@@ -83,6 +83,7 @@ class RankingScoreService
     public function topAgencies(int $limit = 20): Collection
     {
         return Agency::query()
+            ->forTopAgencies()
             ->withCount(['agencyCampaigns' => fn ($q) => $q->approved()->where('is_draft', false)])
             ->having('agency_campaigns_count', '>', 0)
             ->orderByDesc('ranking_score')
@@ -96,7 +97,7 @@ class RankingScoreService
     public function topProductionHouses(int $limit = 20): Collection
     {
         return Agency::query()
-            ->where('is_production_house', true)
+            ->forTopProductionHouses()
             ->withCount(['productionHouseCampaigns' => fn ($q) => $q->approved()->where('is_draft', false)])
             ->having('production_house_campaigns_count', '>', 0)
             ->orderByDesc('ranking_score')

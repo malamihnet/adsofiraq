@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AgencyCompanyRole;
 use App\Models\Agency;
 use App\Models\Brand;
 use App\Models\Country;
@@ -12,6 +13,10 @@ use Illuminate\Support\Str;
 
 class TaxonomyService
 {
+    public function __construct(
+        protected AgencyRoleService $agencyRoles,
+    ) {}
+
     public function findOrCreateBrand(?string $name): ?Brand
     {
         return $this->findOrCreateByName(Brand::class, $name);
@@ -19,7 +24,13 @@ class TaxonomyService
 
     public function findOrCreateAgency(?string $name): ?Agency
     {
-        return $this->findOrCreateByName(Agency::class, $name);
+        $agency = $this->findOrCreateByName(Agency::class, $name);
+
+        if ($agency) {
+            $this->agencyRoles->ensureRole($agency, AgencyCompanyRole::Agency);
+        }
+
+        return $agency;
     }
 
     public function findOrCreateProductionHouse(?string $name): ?Agency
@@ -36,19 +47,44 @@ class TaxonomyService
             ->orWhere('name', $name)
             ->first();
 
-        if ($agency) {
-            if (! $agency->is_production_house) {
-                $agency->update(['is_production_house' => true]);
-            }
-
-            return $agency;
+        if (! $agency) {
+            $agency = Agency::create([
+                'name' => $name,
+                'slug' => $slug,
+                'is_production_house' => true,
+            ]);
         }
 
-        return Agency::create([
-            'name' => $name,
-            'slug' => $slug,
-            'is_production_house' => true,
-        ]);
+        $this->agencyRoles->ensureRole($agency, AgencyCompanyRole::ProductionHouse);
+
+        return $agency->fresh(['roles']);
+    }
+
+    public function findOrCreateAgencyWithRole(?string $name, AgencyCompanyRole $role): ?Agency
+    {
+        if (empty(trim($name ?? ''))) {
+            return null;
+        }
+
+        $name = trim($name);
+        $slug = Str::slug($name);
+
+        $agency = Agency::query()
+            ->where('slug', $slug)
+            ->orWhere('name', $name)
+            ->first();
+
+        if (! $agency) {
+            $agency = Agency::create([
+                'name' => $name,
+                'slug' => $slug,
+                'is_production_house' => $role === AgencyCompanyRole::ProductionHouse,
+            ]);
+        }
+
+        $this->agencyRoles->ensureRole($agency, $role);
+
+        return $agency->fresh(['roles']);
     }
 
     public function findOrCreateIndustry(?string $name): ?Industry

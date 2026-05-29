@@ -16,8 +16,8 @@
   <x-authority-profile-hero
       :name="$agency->name"
       :verified="$agency->is_verified"
-      :is-production-house="$agency->is_production_house"
-      :subtitle="$agency->is_production_house ? 'Production House' : 'Agency'"
+      :role-badges="$agency->roleLabels()"
+      :subtitle="$agency->profileSubtitle()"
       :bio="$agency->bio"
       :logo-url="$agency->logo_url"
       :cover-url="$agency->cover_url"

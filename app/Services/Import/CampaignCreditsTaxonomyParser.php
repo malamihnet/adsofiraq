@@ -2,6 +2,9 @@
 
 namespace App\Services\Import;
 
+use App\Enums\AgencyCompanyRole;
+use App\Services\TaxonomyService;
+
 class CampaignCreditsTaxonomyParser
 {
     /** @var list<string> */
@@ -13,18 +16,38 @@ class CampaignCreditsTaxonomyParser
         'production company',
     ];
 
+    /** @var list<string> */
+    protected array $postProductionLabels = [
+        'post production',
+        'post-production',
+        'post house',
+        'post prod',
+        'editing',
+        'color grading',
+        'color',
+        'vfx studio',
+        'vfx',
+        'visual effects',
+    ];
+
     /**
-     * @return array{agencies: list<string>, production_houses: list<string>}
+     * @return array{
+     *     agencies: list<string>,
+     *     production_houses: list<string>,
+     *     post_production_houses: list<string>
+     * }
      */
     public function parse(?string $credits): array
     {
         $agencies = [];
         $productionHouses = [];
+        $postProductionHouses = [];
 
         if ($credits === null || trim($credits) === '') {
             return [
                 'agencies' => [],
                 'production_houses' => [],
+                'post_production_houses' => [],
             ];
         }
 
@@ -47,7 +70,9 @@ class CampaignCreditsTaxonomyParser
             }
 
             foreach ($this->splitValues($value) as $name) {
-                if ($this->isProductionLabel($label)) {
+                if ($this->isPostProductionLabel($label)) {
+                    $postProductionHouses[] = $name;
+                } elseif ($this->isProductionLabel($label)) {
                     $productionHouses[] = $name;
                 } elseif ($this->isAgencyLabel($label)) {
                     $agencies[] = $name;
@@ -58,6 +83,7 @@ class CampaignCreditsTaxonomyParser
         return [
             'agencies' => array_values(array_unique($agencies)),
             'production_houses' => array_values(array_unique($productionHouses)),
+            'post_production_houses' => array_values(array_unique($postProductionHouses)),
         ];
     }
 
@@ -69,6 +95,21 @@ class CampaignCreditsTaxonomyParser
             }
 
             if (strlen($productionLabel) > 12 && str_starts_with($label, $productionLabel)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function isPostProductionLabel(string $label): bool
+    {
+        foreach ($this->postProductionLabels as $postProductionLabel) {
+            if ($label === $postProductionLabel) {
+                return true;
+            }
+
+            if (str_contains($label, $postProductionLabel)) {
                 return true;
             }
         }

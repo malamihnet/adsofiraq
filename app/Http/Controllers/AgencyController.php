@@ -25,7 +25,7 @@ class AgencyController extends Controller
 
     public function show(Agency $agency): View
     {
-        $agency->loadCount(['campaigns' => fn ($q) => $q->approved()->where('is_draft', false)]);
+        $agency->load(['roles'])->loadCount(['campaigns' => fn ($q) => $q->approved()->where('is_draft', false)]);
 
         $stats = $agency->aggregateStats();
 
@@ -65,8 +65,10 @@ class AgencyController extends Controller
             ->get();
 
         $canonicalUrl = route('agency.show', $agency);
-        $parentLabel = $agency->is_production_house ? 'Production Houses' : 'Agencies';
-        $parentUrl = $agency->is_production_house
+        $parentLabel = $agency->isProductionHouse() && ! $agency->isAgency()
+            ? 'Production Houses'
+            : 'Agencies';
+        $parentUrl = $agency->isProductionHouse() && ! $agency->isAgency()
             ? route('rankings.top-production-houses')
             : route('agencies.index');
 

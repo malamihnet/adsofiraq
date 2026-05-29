@@ -2,12 +2,14 @@
 
 namespace App\Services\Import;
 
+use App\Enums\AgencyCompanyRole;
 use App\Exceptions\CampaignImportException;
 use App\Models\Campaign;
 use App\Models\User;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
 use App\Services\PublicStorageSyncService;
+use App\Services\TaxonomyService;
 use App\Services\VideoThumbnailService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -292,5 +294,12 @@ class CampaignImporterService
             mediumTypes: $map($parsed['medium_types'] ?? []),
             countries: $map($parsed['countries'] ?? []),
         );
+
+        foreach ($fromCredits['post_production_houses'] as $name) {
+            app(TaxonomyService::class)->findOrCreateAgencyWithRole(
+                $name,
+                AgencyCompanyRole::PostProductionHouse,
+            );
+        }
     }
 }

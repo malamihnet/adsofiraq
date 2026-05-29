@@ -187,6 +187,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::delete('/brands/{id}', [TaxonomyController::class, 'destroyBrand'])->name('brands.destroy')->whereNumber('id');
 
     Route::get('/agencies', [TaxonomyController::class, 'agencies'])->name('agencies.index');
+    Route::post('/agencies/backfill-roles', [TaxonomyController::class, 'backfillAgencyRoles'])->name('agencies.backfill-roles');
     Route::get('/agencies/{id}', [TaxonomyController::class, 'showAgency'])->name('agencies.show')->whereNumber('id');
     Route::post('/agencies', [TaxonomyController::class, 'storeAgencies'])->name('agencies.store');
     Route::put('/agencies/{id}', [TaxonomyController::class, 'updateAgency'])->name('agencies.update')->whereNumber('id');

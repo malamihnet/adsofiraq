@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\AgencyCompanyRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdatePlatformVerificationRequest;
 use App\Models\Agency;
 use App\Models\Brand;
+use App\Services\AgencyRoleService;
 use App\Services\PlatformVerificationService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -35,12 +37,17 @@ class TaxonomyController extends Controller
 
     public function __construct(
         protected PlatformVerificationService $verificationService,
+        protected AgencyRoleService $agencyRoles,
     ) {}
 
     public function index(string $type): View
     {
         $model = $this->getModel($type);
         $query = $model::orderBy('name');
+
+        if ($type === 'agencies') {
+            $query->with('roles');
+        }
 
         if ($this->isVerifiable($type)) {
             $query->platformVerificationFilter(request()->input('verified'));
@@ -50,6 +57,7 @@ class TaxonomyController extends Controller
             'type' => $type,
             'label' => $this->labels[$type],
             'verifiable' => $this->isVerifiable($type),
+            'companyRoles' => $type === 'agencies' ? AgencyCompanyRole::cases() : [],
             'items' => $query->paginate(50)->withQueryString(),
         ]);
     }
@@ -86,12 +94,13 @@ class TaxonomyController extends Controller
         }
 
         $model = $this->getModel($type);
-        $item = $model::with(['verifiedBy'])->withCount('campaigns')->findOrFail($id);
+        $item = $model::with(['verifiedBy', 'roles'])->withCount('campaigns')->findOrFail($id);
 
         return view('admin.taxonomy.show', [
             'type' => $type,
             'label' => $this->labels[$type],
             'item' => $item,
+            'companyRoles' => $type === 'agencies' ? AgencyCompanyRole::cases() : [],
         ]);
     }
 
@@ -156,7 +165,8 @@ class TaxonomyController extends Controller
         ];
 
         if ($type === 'agencies') {
-            $rules['is_production_house'] = ['sometimes', 'boolean'];
+            $rules['company_roles'] = ['nullable', 'array'];
+            $rules['company_roles.*'] = ['string', 'in:'.implode(',', AgencyCompanyRole::values())];
         }
 
         $validated = $request->validate($rules);
@@ -166,11 +176,11 @@ class TaxonomyController extends Controller
             'slug' => Str::slug($validated['name']),
         ];
 
-        if ($type === 'agencies') {
-            $payload['is_production_house'] = $request->boolean('is_production_house');
-        }
-
         $item->update($payload);
+
+        if ($type === 'agencies') {
+            $this->agencyRoles->syncRoles($item, $request->input('company_roles', []));
+        }
 
         return back()->with('success', 'Item updated.');
     }
@@ -198,6 +208,13 @@ class TaxonomyController extends Controller
     public function updateCountry(Request $request, int $id): RedirectResponse
     {
         return $this->update($request, 'countries', $id);
+    }
+
+    public function backfillAgencyRoles(): RedirectResponse
+    {
+        $updated = $this->agencyRoles->backfillAll();
+
+        return back()->with('success', "Agency roles backfilled. {$updated} agenc".($updated === 1 ? 'y' : 'ies').' updated.');
     }
 
     public function updateVerification(UpdatePlatformVerificationRequest $request, string $type, int $id): RedirectResponse

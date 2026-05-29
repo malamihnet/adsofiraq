@@ -5,6 +5,13 @@
 @section('content')
 <h1 class="section-title mb-8">{{ $label }}</h1>
 
+@if($type === 'agencies')
+    <form method="POST" action="{{ route('admin.agencies.backfill-roles') }}" class="mb-8">
+        @csrf
+        <button type="submit" class="btn-outline text-xs">Backfill Agency Roles</button>
+    </form>
+@endif
+
 <form method="POST" action="{{ route('admin.' . $type . '.store') }}" class="mb-8 flex gap-4">
     @csrf
     <input type="text" name="name" placeholder="Name" required class="input-field max-w-sm">
@@ -25,7 +32,7 @@
                 <th class="px-4 py-3 text-left">Name</th>
                 <th class="px-4 py-3 text-left">Slug</th>
                 @if($type === 'agencies')
-                    <th class="px-4 py-3 text-left">Production House</th>
+                    <th class="px-4 py-3 text-left">Roles</th>
                 @endif
                 @if($verifiable ?? false)
                     <th class="px-4 py-3 text-left">Verified</th>
@@ -38,12 +45,9 @@
                 <tr class="border-b border-archive-border">
                     <td class="px-4 py-3">
                         @if($verifiable ?? false)
-                            <a href="{{ route('admin.' . $type . '.show', $item->id) }}" class="inline-flex items-center gap-2 underline">
+                            <a href="{{ route('admin.' . $type . '.show', $item->id) }}" class="inline-flex flex-wrap items-center gap-2 underline">
                                 {{ $item->name }}
                                 <x-verified-badge :verified="$item->is_verified" />
-                                @if($item->is_production_house)
-                                    <x-production-house-badge />
-                                @endif
                             </a>
                         @else
                             <form method="POST" action="{{ route('admin.' . $type . '.update', $item->id) }}" class="flex gap-2">
@@ -56,11 +60,7 @@
                     <td class="px-4 py-3 text-archive-gray">{{ $item->slug }}</td>
                     @if($type === 'agencies')
                         <td class="px-4 py-3">
-                            @if($item->is_production_house)
-                                <span class="text-xs uppercase tracking-wider text-archive-gray">Yes</span>
-                            @else
-                                —
-                            @endif
+                            <x-agency-role-badges :roles="$item->roleLabels()" />
                         </td>
                     @endif
                     @if($verifiable ?? false)

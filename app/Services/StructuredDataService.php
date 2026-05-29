@@ -29,17 +29,23 @@ class StructuredDataService
 
     public function organizationAgency(Agency $agency, string $url): array
     {
+        $isProductionHouse = $agency->isProductionHouse();
+        $isAgency = $agency->isAgency();
+
         $data = [
             '@context' => 'https://schema.org',
             '@type' => 'Organization',
-            'name' => $agency->is_production_house
-                ? $agency->name.' Production House'
-                : $agency->name,
+            'name' => match (true) {
+                $isAgency && $isProductionHouse => $agency->name.' Creative Agency & Production House',
+                $isProductionHouse => $agency->name.' Production House',
+                $isAgency => $agency->name.' Agency',
+                default => $agency->name,
+            },
             'url' => $url,
             'description' => $agency->seo_description,
         ];
 
-        if ($agency->is_production_house) {
+        if ($isProductionHouse) {
             $data['additionalType'] = 'https://schema.org/ProductionCompany';
         }
 
