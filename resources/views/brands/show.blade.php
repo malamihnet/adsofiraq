@@ -12,49 +12,44 @@
 @endpush
 
 @section('content')
-<div class="mx-auto max-w-7xl px-4 py-12 md:px-8">
-  <x-authority-profile-hero
-      :name="$brand->name"
-      :verified="$brand->is_verified"
-      subtitle="Brand"
-      :bio="$brand->bio"
-      :logo-url="$brand->logo_url"
-      :cover-url="$brand->cover_url"
-      :website-url="$brand->website_url"
-      :socials="[
-          'Instagram' => $brand->instagram_url,
-          'LinkedIn' => $brand->linkedin_url,
-      ]"
-      :stats="[
-          'Campaigns' => $stats['campaigns'],
-          'Views' => $stats['views'],
-          'Saves' => $stats['bookmarks'],
-          'Years active' => $stats['years_active'] !== [] ? implode(', ', $stats['years_active']) : '—',
-      ]"
-  />
+<div class="agency-profile-page bg-white">
+    <div class="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
+        <nav aria-label="Breadcrumb" class="mb-10 sm:mb-12">
+            <ol class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-archive-gray">
+                <li>
+                    <a href="{{ route('home') }}" class="transition-colors hover:text-archive-black">Home</a>
+                </li>
+                <li aria-hidden="true" class="text-archive-border">/</li>
+                <li>
+                    <a href="{{ route('brands.index') }}" class="transition-colors hover:text-archive-black">Brands</a>
+                </li>
+                <li aria-hidden="true" class="text-archive-border">/</li>
+                <li class="font-medium text-archive-black" aria-current="page">{{ $brand->name }}</li>
+            </ol>
+        </nav>
 
-  @if($featuredCampaigns->isNotEmpty())
-    <section class="mb-12">
-      <h2 class="section-label mb-6">Featured campaigns</h2>
-      <x-campaign-grid :campaigns="$featuredCampaigns" />
-    </section>
-  @endif
+        <x-brand-profile-header :brand="$brand" :stats="$stats" />
 
-  <section>
-    <h2 class="section-label mb-6">Campaign archive</h2>
-    <x-campaign-grid :campaigns="$campaigns" />
-    <div class="mt-8">{{ $campaigns->links() }}</div>
-  </section>
+        <section class="mt-14 sm:mt-16">
+            <div class="mb-8 flex items-end justify-between gap-4 border-b border-archive-border/40 pb-4">
+                <h2 class="text-[11px] font-medium uppercase tracking-[0.22em] text-archive-gray">Campaigns</h2>
+                @if($campaigns->total() > 0)
+                    <p class="text-xs text-archive-gray">{{ number_format($campaigns->total()) }} total</p>
+                @endif
+            </div>
 
-  @if($collaboratingAgencies->isNotEmpty())
-    <section class="mt-12 border-t border-archive-border pt-10">
-      <h2 class="section-label mb-4">Agency collaborations</h2>
-      <div class="flex flex-wrap gap-3">
-        @foreach($collaboratingAgencies as $agency)
-          <a href="{{ route('agency.show', $agency) }}" class="border border-archive-border px-3 py-1 text-sm hover:bg-archive-cream">{{ $agency->name }}</a>
-        @endforeach
-      </div>
-    </section>
-  @endif
+            @if($campaigns->isNotEmpty())
+                <x-campaign-grid
+                    :campaigns="$campaigns"
+                    card-variant="profile"
+                    grid-class="grid gap-7 sm:grid-cols-2 lg:gap-8 xl:grid-cols-3"
+                />
+            @else
+                <div class="rounded-2xl border border-dashed border-archive-border/70 bg-archive-cream/30 px-6 py-20 text-center">
+                    <p class="text-sm text-archive-gray">No published campaigns yet.</p>
+                </div>
+            @endif
+        </section>
+    </div>
 </div>
 @endsection
