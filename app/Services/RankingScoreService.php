@@ -70,13 +70,13 @@ class RankingScoreService
 
     public function refreshAgency(Agency $agency): void
     {
-        $score = $agency->approvedCampaignsQuery()->get()->sum(fn (Campaign $c) => $this->scoreCampaign($c));
+        $score = $agency->approvedCampaignsForScoring()->sum(fn (Campaign $c) => $this->scoreCampaign($c));
         $agency->forceFill(['ranking_score' => round($score, 4)])->saveQuietly();
     }
 
     public function refreshBrand(Brand $brand): void
     {
-        $score = $brand->approvedCampaignsQuery()->get()->sum(fn (Campaign $c) => $this->scoreCampaign($c));
+        $score = $brand->approvedCampaignsForScoring()->sum(fn (Campaign $c) => $this->scoreCampaign($c));
         $brand->forceFill(['ranking_score' => round($score, 4)])->saveQuietly();
     }
 

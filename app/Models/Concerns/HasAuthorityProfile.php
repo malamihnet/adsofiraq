@@ -2,7 +2,10 @@
 
 namespace App\Models\Concerns;
 
+use App\Models\Campaign;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 trait HasAuthorityProfile
@@ -36,11 +39,11 @@ trait HasAuthorityProfile
             return $this->meta_description;
         }
 
-        $count = $this->approved_campaigns_count ?? $this->campaigns()->approved()->count();
+        $count = $this->approved_campaigns_count ?? $this->approvedCampaignStatsQuery()->value('campaigns');
 
         return sprintf(
             'Explore %d approved advertising campaigns by %s on Ads of Iraq — Iraq’s curated archive of creative work.',
-            $count,
+            (int) $count,
             $this->name,
         );
     }
@@ -53,22 +56,60 @@ trait HasAuthorityProfile
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, Campaign>
+     */
+    public function approvedCampaignsForScoring(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Campaign::query()
+            ->approved()
+            ->where('campaigns.is_draft', false)
+            ->whereIn('campaigns.id', fn (Builder $query) => $this->applyApprovedCampaignIdsSubquery($query))
+            ->get();
+    }
+
+    /**
+     * Aggregate stats without pivot columns (MySQL ONLY_FULL_GROUP_BY safe).
+     */
+    protected function approvedCampaignStatsQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Campaign::query()
+            ->approved()
+            ->where('campaigns.is_draft', false)
+            ->whereIn('campaigns.id', fn (Builder $query) => $this->applyApprovedCampaignIdsSubquery($query))
+            ->select([
+                DB::raw('COUNT(DISTINCT campaigns.id) as campaigns'),
+                DB::raw('COALESCE(SUM(campaigns.views_count), 0) as views'),
+                DB::raw('COALESCE(SUM(campaigns.bookmarks_count), 0) as bookmarks'),
+            ]);
+    }
+
+    protected function applyApprovedCampaignIdsSubquery(Builder $query): void
+    {
+        $relation = $this->campaigns();
+
+        $query
+            ->select($relation->getRelatedPivotKeyName())
+            ->from($relation->getTable())
+            ->where($relation->getForeignPivotKeyName(), $this->getKey())
+            ->distinct();
+    }
+
+    /**
      * @return array{campaigns: int, views: int, bookmarks: int, years_active: list<int>}
      */
     public function aggregateStats(): array
     {
-        $stats = $this->approvedCampaignsQuery()
-            ->selectRaw('COUNT(*) as campaigns')
-            ->selectRaw('COALESCE(SUM(views_count), 0) as views')
-            ->selectRaw('COALESCE(SUM(bookmarks_count), 0) as bookmarks')
-            ->first();
+        $stats = $this->approvedCampaignStatsQuery()->toBase()->first();
 
-        $years = $this->approvedCampaignsQuery()
-            ->whereNotNull('published_at')
-            ->get(['published_at'])
-            ->map(fn ($campaign) => (int) $campaign->published_at->format('Y'))
-            ->unique()
-            ->sortDesc()
+        $years = Campaign::query()
+            ->approved()
+            ->where('campaigns.is_draft', false)
+            ->whereIn('campaigns.id', fn (Builder $query) => $this->applyApprovedCampaignIdsSubquery($query))
+            ->whereNotNull('campaigns.published_at')
+            ->selectRaw('DISTINCT YEAR(campaigns.published_at) as year')
+            ->orderByDesc('year')
+            ->pluck('year')
+            ->map(fn ($year) => (int) $year)
             ->values()
             ->all();
 

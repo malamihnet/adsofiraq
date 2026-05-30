@@ -29,16 +29,17 @@ class CompanyRankingService
     {
         $campaignIds = static::rankableProductionHouseCampaignIdsSubquery($agency->id);
 
+        $recentSince = now()->subMonths($this->recentMonths())->toDateTimeString();
+
         $row = DB::table('campaigns')
             ->whereIn('id', $campaignIds)
-            ->selectRaw('COUNT(*) as campaign_count')
-            ->selectRaw('COALESCE(SUM(views_count), 0) as total_views')
-            ->selectRaw('COALESCE(SUM(bookmarks_count), 0) as bookmarks')
-            ->selectRaw('COALESCE(SUM(CASE WHEN is_featured = 1 OR editorial_label IS NOT NULL THEN 1 ELSE 0 END), 0) as featured_campaigns')
-            ->selectRaw(
-                'COALESCE(SUM(CASE WHEN COALESCE(published_at, approved_at) >= ? THEN 1 ELSE 0 END), 0) as recent_campaign_count',
-                [now()->subMonths($this->recentMonths())->toDateTimeString()],
-            )
+            ->selectRaw('
+                COUNT(DISTINCT campaigns.id) as campaign_count,
+                COALESCE(SUM(campaigns.views_count), 0) as total_views,
+                COALESCE(SUM(campaigns.bookmarks_count), 0) as bookmarks,
+                COALESCE(SUM(CASE WHEN campaigns.is_featured = 1 OR campaigns.editorial_label IS NOT NULL THEN 1 ELSE 0 END), 0) as featured_campaigns,
+                COALESCE(SUM(CASE WHEN COALESCE(campaigns.published_at, campaigns.approved_at) >= ? THEN 1 ELSE 0 END), 0) as recent_campaign_count
+            ', [$recentSince])
             ->first();
 
         $metrics = [
