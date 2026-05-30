@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Agency;
 use App\Models\Brand;
 use App\Models\Campaign;
+use App\Services\CompanyRankingService;
 use App\Services\RankingScoreService;
 use Illuminate\Console\Command;
 
@@ -14,7 +15,7 @@ class RefreshRankingScoresCommand extends Command
 
     protected $description = 'Recalculate ranking scores for campaigns, agencies, and brands';
 
-    public function handle(RankingScoreService $rankings): int
+    public function handle(RankingScoreService $rankings, CompanyRankingService $companyRankings): int
     {
         Campaign::query()->chunkById(100, function ($campaigns) use ($rankings) {
             foreach ($campaigns as $campaign) {
@@ -28,6 +29,8 @@ class RefreshRankingScoresCommand extends Command
             }
         });
 
+        $productionHouses = $companyRankings->refreshAllProductionHouses();
+
         Brand::query()->chunkById(50, function ($brands) use ($rankings) {
             foreach ($brands as $brand) {
                 $rankings->refreshBrand($brand);
@@ -35,6 +38,7 @@ class RefreshRankingScoresCommand extends Command
         });
 
         $this->info('Ranking scores refreshed.');
+        $this->info("Production house rankings recalculated for {$productionHouses} companies.");
 
         return self::SUCCESS;
     }

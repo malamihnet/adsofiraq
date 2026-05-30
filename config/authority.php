@@ -20,4 +20,31 @@ return [
         ],
         'recency_half_life_days' => 180,
     ],
+
+    'company_ranking' => [
+        'cache_ttl_seconds' => 3600,
+        'recent_months' => 12,
+        'profiles' => [
+            'production_house' => [
+                'campaign_count' => 10,
+                'views' => 0.02,
+                'bookmarks' => 3,
+                'featured_campaign' => 15,
+                'verified_bonus' => 25,
+                'recent_activity_bonus' => 15,
+                'recent_campaign_bonus' => 3,
+                'recent_campaign_bonus_cap' => 5,
+            ],
+            'agency' => [
+                'campaign_count' => 10,
+                'views' => 0.02,
+                'bookmarks' => 3,
+                'featured_campaign' => 15,
+                'verified_bonus' => 25,
+                'recent_activity_bonus' => 15,
+                'recent_campaign_bonus' => 3,
+                'recent_campaign_bonus_cap' => 5,
+            ],
+        ],
+    ],
 ];

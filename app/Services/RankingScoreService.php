@@ -10,6 +10,9 @@ use Illuminate\Support\Collection;
 
 class RankingScoreService
 {
+    public function __construct(
+        protected CompanyRankingService $companyRankings,
+    ) {}
     /**
      * @return array<string, float>
      */
@@ -96,13 +99,7 @@ class RankingScoreService
      */
     public function topProductionHouses(int $limit = 20): Collection
     {
-        return Agency::query()
-            ->forTopProductionHouses()
-            ->withRankableProductionHouseCampaignCount()
-            ->having('production_house_campaigns_count', '>', 0)
-            ->orderByDesc('ranking_score')
-            ->limit($limit)
-            ->get();
+        return $this->companyRankings->topProductionHouses($limit);
     }
 
     /**

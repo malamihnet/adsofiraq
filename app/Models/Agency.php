@@ -33,6 +33,7 @@ class Agency extends Model
         'meta_title',
         'meta_description',
         'ranking_score',
+        'production_house_ranking_score',
     ];
 
     protected function casts(): array
@@ -41,6 +42,7 @@ class Agency extends Model
             'is_production_house' => 'boolean',
             'founded_year' => 'integer',
             'ranking_score' => 'float',
+            'production_house_ranking_score' => 'float',
         ];
     }
 
