@@ -10,7 +10,7 @@ class SyncPublicStorageCommand extends Command
     protected $signature = 'storage:sync-public
                             {--campaign= : Sync media for a single campaign ID}';
 
-    protected $description = 'Copy campaign media from storage/app/public to the web-accessible public storage path';
+    protected $description = 'Copy public disk files (campaigns, revisions, agency logos/covers) to the web-accessible storage path';
 
     public function handle(PublicStorageSyncService $syncService): int
     {

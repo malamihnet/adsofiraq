@@ -26,8 +26,8 @@ return [
     | Public storage copy sync (cPanel / public_html)
     |--------------------------------------------------------------------------
     |
-    | When set, campaign media saved to storage/app/public is also copied here
-    | so URLs like /storage/campaigns/{id}/... work without a symlink.
+    | When set, files saved to storage/app/public are also copied here so URLs like
+    | /storage/campaigns/... and /storage/agencies/logos/... work without a symlink.
     | Example: /home/adsofiraq/public_html/storage
     |
     */

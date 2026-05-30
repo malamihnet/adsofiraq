@@ -7,14 +7,24 @@ use Illuminate\Support\Facades\Storage;
 
 class AgencyProfileMediaService
 {
+    public function __construct(
+        protected PublicStorageSyncService $publicStorageSync,
+    ) {}
+
     public function storeLogo(UploadedFile $file): string
     {
-        return $file->store('agencies/logos', 'public');
+        $path = $file->store('agencies/logos', 'public');
+        $this->publicStorageSync->syncRelativePath($path);
+
+        return $path;
     }
 
     public function storeCover(UploadedFile $file): string
     {
-        return $file->store('agencies/covers', 'public');
+        $path = $file->store('agencies/covers', 'public');
+        $this->publicStorageSync->syncRelativePath($path);
+
+        return $path;
     }
 
     public function delete(?string $path): void

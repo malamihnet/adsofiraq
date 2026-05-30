@@ -123,3 +123,15 @@
         <a href="{{ route('agency.show', $agency) }}" class="btn-outline text-xs" target="_blank" rel="noopener">View public page</a>
     </div>
 </form>
+
+<div class="mt-10 max-w-2xl border border-archive-border bg-archive-light/40 p-5">
+    <h3 class="text-sm font-medium text-archive-black">Public storage (cPanel)</h3>
+    <p class="mt-2 text-xs leading-relaxed text-archive-gray">
+        Logos and covers are saved to <code>storage/app/public</code> and copied to
+        <code>public_html/storage</code> on upload when sync is configured. Run a full sync if an image URL returns 404.
+    </p>
+    <form method="POST" action="{{ route('admin.sync-public-storage') }}" class="mt-4">
+        @csrf
+        <button type="submit" class="btn-secondary text-xs">Sync public storage</button>
+    </form>
+</div>

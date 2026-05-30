@@ -218,6 +218,42 @@ class PublicStorageSyncService
     }
 
     /**
+     * @return list<string>
+     */
+    public function defaultSyncDirectories(): array
+    {
+        $base = config('upload.campaign_path', 'campaigns');
+
+        return [
+            $base,
+            'campaigns/thumbnails',
+            'campaigns/assets',
+            'campaigns/videos',
+            'campaign-revisions',
+            'agencies/logos',
+            'agencies/covers',
+        ];
+    }
+
+    /**
+     * @return array{copied: int, skipped: int, failed: int, target: ?string}
+     */
+    public function syncAgencyProfilePaths(?string $logoPath = null, ?string $coverPath = null): array
+    {
+        $stats = $this->emptyStats();
+
+        foreach (array_filter([$logoPath, $coverPath]) as $path) {
+            if ($this->syncRelativePath($path)) {
+                $stats['copied']++;
+            } else {
+                $stats['skipped']++;
+            }
+        }
+
+        return $stats;
+    }
+
+    /**
      * @return array{copied: int, skipped: int, failed: int, target: ?string}
      */
     public function syncAll(?int $campaignId = null): array
@@ -229,12 +265,9 @@ class PublicStorageSyncService
         }
 
         $stats = $this->emptyStats();
-        $base = config('upload.campaign_path', 'campaigns');
 
-        $stats = $this->mergeStats($stats, $this->syncDirectory($base));
-
-        foreach (['campaigns/thumbnails', 'campaigns/assets', 'campaigns/videos'] as $legacyDir) {
-            $stats = $this->mergeStats($stats, $this->syncDirectory($legacyDir));
+        foreach ($this->defaultSyncDirectories() as $directory) {
+            $stats = $this->mergeStats($stats, $this->syncDirectory($directory));
         }
 
         $this->logInfo('Public storage sync: full sync complete.', $stats);

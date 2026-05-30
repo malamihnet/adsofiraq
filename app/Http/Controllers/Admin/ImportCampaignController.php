@@ -167,7 +167,7 @@ class ImportCampaignController extends Controller
         $campaignId = $request->filled('campaign_id') ? $request->integer('campaign_id') : null;
         $stats = $this->publicStorageSync->syncAll($campaignId);
 
-        return back()->with('success', 'Media repair finished and public storage synced. '.$this->publicStorageSync->formatStatsMessage($stats));
+        return back()->with('success', $this->publicStorageSync->formatStatsMessage($stats));
     }
 
     /**

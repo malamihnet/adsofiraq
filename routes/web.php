@@ -114,6 +114,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::post('/import-campaign/repair-media', [ImportCampaignController::class, 'repairMedia'])->name('import-campaign.repair-media');
     Route::post('/import-campaign/remove-duplicate-stills', [ImportCampaignController::class, 'removeDuplicateStills'])->name('import-campaign.remove-duplicate-stills');
     Route::post('/import-campaign/sync-public-storage', [ImportCampaignController::class, 'syncPublicStorage'])->name('import-campaign.sync-public-storage');
+    Route::post('/sync-public-storage', [ImportCampaignController::class, 'syncPublicStorage'])->name('sync-public-storage');
 
     Route::get('/maintenance/clean-duplicate-media', [MediaMaintenanceController::class, 'index'])->name('maintenance.clean-duplicate-media');
     Route::post('/maintenance/clean-duplicate-media', [MediaMaintenanceController::class, 'cleanDuplicateMedia'])->name('maintenance.clean-duplicate-media.run');
