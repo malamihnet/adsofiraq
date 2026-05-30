@@ -13,10 +13,22 @@
         'Instagram' => $agency->instagram_url,
         'LinkedIn' => $agency->linkedin_url,
         'X' => $agency->twitter_url,
+        'Facebook' => $agency->facebook_url,
     ]);
 @endphp
 
 <header class="agency-profile-header">
+    @if($agency->cover_url)
+        <div class="mb-8 overflow-hidden rounded-2xl border border-neutral-200/80 bg-neutral-50 shadow-sm">
+            <img
+                src="{{ $agency->cover_url }}"
+                alt=""
+                class="h-28 w-full object-cover sm:h-32"
+                decoding="async"
+            >
+        </div>
+    @endif
+
     <div class="flex flex-col gap-8 sm:gap-10 lg:flex-row lg:items-start lg:gap-12">
         {{-- Avatar --}}
         <div class="flex shrink-0 justify-center lg:justify-start">

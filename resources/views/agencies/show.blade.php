@@ -14,6 +14,19 @@
 @section('content')
 <div class="agency-profile-page bg-white">
     <div class="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
+        @auth
+            @if(auth()->user()->isAdmin())
+                <div class="mb-6 flex justify-end">
+                    <a
+                        href="{{ route('admin.agencies.show', $agency->id) }}"
+                        class="inline-flex items-center rounded-full border border-neutral-200/90 bg-white px-4 py-2 text-xs font-medium text-neutral-600 shadow-sm transition-colors hover:border-neutral-300 hover:text-archive-black"
+                    >
+                        Edit profile
+                    </a>
+                </div>
+            @endif
+        @endauth
+
         <nav aria-label="Breadcrumb" class="mb-10 sm:mb-12">
             <ol class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-archive-gray">
                 <li>

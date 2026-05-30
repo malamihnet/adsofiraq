@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\AgencyCompanyRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateAgencyProfileRequest;
 use App\Http\Requests\Admin\UpdatePlatformVerificationRequest;
 use App\Models\Agency;
 use App\Models\Brand;
+use App\Services\AgencyProfileMediaService;
 use App\Services\AgencyRoleService;
 use App\Services\PlatformVerificationService;
 use Illuminate\Database\Eloquent\Model;
@@ -38,6 +40,7 @@ class TaxonomyController extends Controller
     public function __construct(
         protected PlatformVerificationService $verificationService,
         protected AgencyRoleService $agencyRoles,
+        protected AgencyProfileMediaService $agencyMedia,
     ) {}
 
     public function index(string $type): View
@@ -164,30 +167,56 @@ class TaxonomyController extends Controller
             'name' => ['required', 'string', 'max:255'],
         ];
 
-        if ($type === 'agencies') {
-            $rules['company_roles'] = ['nullable', 'array'];
-            $rules['company_roles.*'] = ['string', 'in:'.implode(',', AgencyCompanyRole::values())];
-        }
-
         $validated = $request->validate($rules);
 
-        $payload = [
+        $item->update([
             'name' => $validated['name'],
             'slug' => Str::slug($validated['name']),
-        ];
-
-        $item->update($payload);
-
-        if ($type === 'agencies') {
-            $this->agencyRoles->syncRoles($item, $request->input('company_roles', []));
-        }
+        ]);
 
         return back()->with('success', 'Item updated.');
     }
 
-    public function updateAgency(Request $request, int $id): RedirectResponse
+    public function updateAgency(UpdateAgencyProfileRequest $request, int $id): RedirectResponse
     {
-        return $this->update($request, 'agencies', $id);
+        $agency = Agency::findOrFail($id);
+
+        $agency->fill([
+            'name' => $request->validated('name'),
+            'slug' => Str::slug($request->validated('name')),
+            'bio' => $request->validated('bio'),
+            'website_url' => $request->validated('website_url'),
+            'instagram_url' => $request->validated('instagram_url'),
+            'facebook_url' => $request->validated('facebook_url'),
+            'linkedin_url' => $request->validated('linkedin_url'),
+            'twitter_url' => $request->validated('twitter_url'),
+        ]);
+
+        if ($request->boolean('remove_logo')) {
+            $this->agencyMedia->delete($agency->logo_path);
+            $agency->logo_path = null;
+        } elseif ($request->hasFile('logo')) {
+            $agency->logo_path = $this->agencyMedia->replaceLogo($agency->logo_path, $request->file('logo'));
+        }
+
+        if ($request->boolean('remove_cover')) {
+            $this->agencyMedia->delete($agency->cover_path);
+            $agency->cover_path = null;
+        } elseif ($request->hasFile('cover')) {
+            $agency->cover_path = $this->agencyMedia->replaceCover($agency->cover_path, $request->file('cover'));
+        }
+
+        $agency->save();
+
+        $this->agencyRoles->syncRoles($agency, $request->input('company_roles', []));
+
+        $this->verificationService->update(
+            $agency,
+            $request->user(),
+            $request->boolean('is_verified'),
+        );
+
+        return back()->with('success', 'Agency profile updated.');
     }
 
     public function updateBrand(Request $request, int $id): RedirectResponse
