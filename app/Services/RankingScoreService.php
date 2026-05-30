@@ -98,7 +98,7 @@ class RankingScoreService
     {
         return Agency::query()
             ->forTopProductionHouses()
-            ->withCount(['productionHouseCampaigns' => fn ($q) => $q->approved()->where('is_draft', false)])
+            ->withRankableProductionHouseCampaignCount()
             ->having('production_house_campaigns_count', '>', 0)
             ->orderByDesc('ranking_score')
             ->limit($limit)

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Agency extends Model
@@ -179,6 +180,41 @@ class Agency extends Model
                 ->where('is_production_house', true)
                 ->orWhereHas('roles', fn (Builder $roles) => $roles->where('role', AgencyCompanyRole::ProductionHouse->value));
         });
+    }
+
+    /**
+     * Count distinct approved campaigns for production-house rankings:
+     * pivot role=production_house, plus legacy pivot role=agency when marked as production house.
+     */
+    public function scopeWithRankableProductionHouseCampaignCount(Builder $query): Builder
+    {
+        $productionHousePivot = AgencyCampaignRole::ProductionHouse->value;
+        $agencyPivot = AgencyCampaignRole::Agency->value;
+        $productionHouseCompanyRole = AgencyCompanyRole::ProductionHouse->value;
+
+        return $query->select('agencies.*')->selectSub(function ($sub) use ($productionHousePivot, $agencyPivot, $productionHouseCompanyRole) {
+            $sub->from('agency_campaign')
+                ->join('campaigns', 'campaigns.id', '=', 'agency_campaign.campaign_id')
+                ->whereColumn('agency_campaign.agency_id', 'agencies.id')
+                ->where('campaigns.status', 'approved')
+                ->where('campaigns.is_draft', false)
+                ->where(function ($roleQuery) use ($productionHousePivot, $agencyPivot, $productionHouseCompanyRole) {
+                    $roleQuery->where('agency_campaign.role', $productionHousePivot)
+                        ->orWhere(function ($legacy) use ($agencyPivot, $productionHouseCompanyRole) {
+                            $legacy->where('agency_campaign.role', $agencyPivot)
+                                ->where(function ($phAgency) use ($productionHouseCompanyRole) {
+                                    $phAgency->where('agencies.is_production_house', true)
+                                        ->orWhereExists(function ($roles) use ($productionHouseCompanyRole) {
+                                            $roles->select(DB::raw(1))
+                                                ->from('agency_roles')
+                                                ->whereColumn('agency_roles.agency_id', 'agencies.id')
+                                                ->where('agency_roles.role', $productionHouseCompanyRole);
+                                        });
+                                });
+                        });
+                })
+                ->selectRaw('count(distinct campaigns.id)');
+        }, 'production_house_campaigns_count');
     }
 
     public function getSeoTitleAttribute(): string
