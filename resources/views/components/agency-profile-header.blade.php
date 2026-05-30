@@ -37,7 +37,7 @@
                     <img
                         src="{{ $agency->logo_url }}"
                         alt="{{ $agency->name }}"
-                        class="h-full w-full object-contain p-2.5"
+                        class="h-full w-full object-contain p-0"
                         decoding="async"
                     >
                 @else

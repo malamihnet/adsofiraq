@@ -123,4 +123,8 @@
         background-color: #000;
         object-fit: cover;
     }
+
+    .agency-profile-page .p-2\.5 {
+        padding: 0;
+    }
 }
