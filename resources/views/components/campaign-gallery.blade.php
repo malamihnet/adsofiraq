@@ -4,7 +4,7 @@
 ])
 
 @php
-    $placeholder = placeholderUrl('landscape');
+    $placeholder = \App\Support\Placeholder::url('landscape');
 
     $seenPaths = [];
     $seenUrls = [];

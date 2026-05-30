@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasPlatformVerification;
+use App\Support\Placeholder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -116,7 +117,7 @@ class Person extends Model
             return Storage::disk('public')->url($this->photo_path);
         }
 
-        return placeholderUrl('square');
+        return Placeholder::url('square');
     }
 
     public function getFeaturedWorksAttribute(): array

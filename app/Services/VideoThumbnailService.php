@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Campaign;
+use App\Support\Placeholder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -244,7 +245,7 @@ class VideoThumbnailService
 
     public function placeholderUrl(): string
     {
-        return placeholderUrl('landscape');
+        return Placeholder::url('landscape');
     }
 
     protected function downloadYouTubeThumbnail(Campaign $campaign, string $videoUrl): ?string

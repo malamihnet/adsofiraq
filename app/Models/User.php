@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasPlatformVerification;
+use App\Support\Placeholder;
 use App\Notifications\VerifyEmailNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -124,7 +125,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return asset('storage/'.$this->avatar);
         }
 
-        return placeholderUrl('square');
+        return Placeholder::url('square');
     }
 
     public function getRouteKeyName(): string

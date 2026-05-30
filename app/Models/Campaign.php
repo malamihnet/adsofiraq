@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AgencyCampaignRole;
+use App\Support\Placeholder;
 use App\Models\Concerns\HasPlatformVerification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -573,7 +574,7 @@ class Campaign extends Model
 
     protected function placeholderThumbnailUrl(): string
     {
-        return placeholderUrl('landscape');
+        return Placeholder::url('landscape');
     }
 
     public function getRouteKeyName(): string

@@ -21,7 +21,7 @@ class Placeholder
         self::TYPE_PORTRAIT,
     ];
 
-    public static function url(string $type): string
+    public static function url(string $type = self::TYPE_LANDSCAPE): string
     {
         return asset(self::publicRelativePath(self::normalizeType($type)));
     }

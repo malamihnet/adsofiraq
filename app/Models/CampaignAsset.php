@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\CampaignMediaDeduplicationService;
+use App\Support\Placeholder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
@@ -123,6 +124,6 @@ class CampaignAsset extends Model
 
     protected function placeholderUrl(): string
     {
-        return placeholderUrl('landscape');
+        return Placeholder::url('landscape');
     }
 }

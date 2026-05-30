@@ -3,6 +3,7 @@
 namespace App\Models\Concerns;
 
 use App\Models\Campaign;
+use App\Support\Placeholder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -13,13 +14,13 @@ trait HasAuthorityProfile
     public function getLogoUrlAttribute(): string
     {
         if (empty($this->logo_path)) {
-            return placeholderUrl('square');
+            return Placeholder::url('square');
         }
 
         $path = ltrim(str_replace('\\', '/', $this->logo_path), '/');
 
         if (! Storage::disk('public')->exists($path)) {
-            return placeholderUrl('square');
+            return Placeholder::url('square');
         }
 
         return asset('storage/'.$path);
