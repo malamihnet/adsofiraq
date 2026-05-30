@@ -1,8 +1,8 @@
-@props(['campaigns', 'showActions' => false, 'gridClass' => 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3'])
+@props(['campaigns', 'showActions' => false, 'gridClass' => 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3', 'cardVariant' => 'default'])
 
 <div class="{{ $gridClass }}">
     @foreach($campaigns as $campaign)
-        <x-campaign-card :campaign="$campaign" :show-actions="$showActions" />
+        <x-campaign-card :campaign="$campaign" :show-actions="$showActions" :variant="$cardVariant" />
     @endforeach
 </div>
 

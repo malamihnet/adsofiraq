@@ -12,25 +12,44 @@
 @endpush
 
 @section('content')
-<div class="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-14">
-    <p class="mb-8 text-xs text-archive-gray">
-        <a href="{{ $parentUrl }}" class="underline decoration-archive-border underline-offset-4 hover:text-archive-black">{{ $parentLabel }}</a>
-    </p>
+<div class="agency-profile-page bg-white">
+    <div class="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
+        <nav aria-label="Breadcrumb" class="mb-10 sm:mb-12">
+            <ol class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-archive-gray">
+                <li>
+                    <a href="{{ route('home') }}" class="transition-colors hover:text-archive-black">Home</a>
+                </li>
+                <li aria-hidden="true" class="text-archive-border">/</li>
+                <li>
+                    <a href="{{ $parentUrl }}" class="transition-colors hover:text-archive-black">{{ $parentLabel }}</a>
+                </li>
+                <li aria-hidden="true" class="text-archive-border">/</li>
+                <li class="font-medium text-archive-black" aria-current="page">{{ $agency->name }}</li>
+            </ol>
+        </nav>
 
-    <x-agency-profile-header :agency="$agency" :stats="$stats" />
+        <x-agency-profile-header :agency="$agency" :stats="$stats" />
 
-    <section>
-        @if($campaigns->isNotEmpty())
-            <h2 class="mb-6 text-[10px] font-medium uppercase tracking-[0.2em] text-archive-gray">Campaigns</h2>
-            <x-campaign-grid
-                :campaigns="$campaigns"
-                grid-class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-            />
-        @else
-            <p class="border border-dashed border-archive-border/80 py-16 text-center text-sm text-archive-gray">
-                No published campaigns yet.
-            </p>
-        @endif
-    </section>
+        <section class="mt-14 sm:mt-16">
+            <div class="mb-8 flex items-end justify-between gap-4 border-b border-archive-border/40 pb-4">
+                <h2 class="text-[11px] font-medium uppercase tracking-[0.22em] text-archive-gray">Campaigns</h2>
+                @if($campaigns->total() > 0)
+                    <p class="text-xs text-archive-gray">{{ number_format($campaigns->total()) }} total</p>
+                @endif
+            </div>
+
+            @if($campaigns->isNotEmpty())
+                <x-campaign-grid
+                    :campaigns="$campaigns"
+                    card-variant="profile"
+                    grid-class="grid gap-7 sm:grid-cols-2 lg:gap-8 xl:grid-cols-3"
+                />
+            @else
+                <div class="rounded-2xl border border-dashed border-archive-border/70 bg-archive-cream/30 px-6 py-20 text-center">
+                    <p class="text-sm text-archive-gray">No published campaigns yet.</p>
+                </div>
+            @endif
+        </section>
+    </div>
 </div>
 @endsection

@@ -16,54 +16,59 @@
     ]);
 @endphp
 
-<header class="mb-10 border-b border-archive-border/50 pb-10 md:mb-14 md:pb-12">
-    <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-        <div class="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-archive-border/80 bg-white shadow-sm sm:h-24 sm:w-24">
-            @if($agency->logo_url)
-                <img
-                    src="{{ $agency->logo_url }}"
-                    alt="{{ $agency->name }}"
-                    class="h-full w-full object-contain p-2"
-                    decoding="async"
-                >
-            @else
-                <div class="flex h-full w-full items-center justify-center bg-archive-light font-display text-2xl text-archive-gray">
-                    {{ mb_substr($agency->name, 0, 1) }}
-                </div>
-            @endif
+<header class="agency-profile-header">
+    <div class="flex flex-col gap-8 sm:gap-10 lg:flex-row lg:items-start lg:gap-12">
+        {{-- Avatar --}}
+        <div class="flex shrink-0 justify-center lg:justify-start">
+            <div class="h-[88px] w-[88px] overflow-hidden rounded-full border border-neutral-200/90 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-4 ring-white sm:h-24 sm:w-24">
+                @if($agency->logo_url)
+                    <img
+                        src="{{ $agency->logo_url }}"
+                        alt="{{ $agency->name }}"
+                        class="h-full w-full object-contain p-2.5"
+                        decoding="async"
+                    >
+                @else
+                    <div class="flex h-full w-full items-center justify-center bg-neutral-50 font-display text-2xl text-neutral-400">
+                        {{ mb_substr($agency->name, 0, 1) }}
+                    </div>
+                @endif
+            </div>
         </div>
 
-        <div class="min-w-0 flex-1 space-y-5">
-            <div>
-                <h1 class="font-display text-2xl leading-tight tracking-tight text-archive-black sm:text-3xl">
-                    <span class="inline-flex flex-wrap items-center gap-2.5">
+        {{-- Identity + content --}}
+        <div class="min-w-0 flex-1 space-y-8 sm:space-y-9">
+            <div class="space-y-4 text-center lg:text-left">
+                <h1 class="font-display text-[1.75rem] font-normal leading-[1.15] tracking-tight text-archive-black sm:text-4xl">
+                    <span class="inline-flex flex-wrap items-center justify-center gap-2.5 lg:justify-start">
                         {{ $agency->name }}
                         <x-verified-badge :verified="$agency->is_verified" />
                     </span>
                 </h1>
+
                 @if($agency->roleLabels() !== [])
-                    <div class="mt-3">
-                        <x-agency-role-badges :roles="$agency->roleLabels()" />
+                    <div class="flex justify-center lg:justify-start">
+                        <x-agency-role-badges :roles="$agency->roleLabels()" class="gap-2" />
                     </div>
                 @endif
             </div>
 
-            <div>
-                <h2 class="text-[10px] font-medium uppercase tracking-[0.2em] text-archive-gray">About</h2>
+            <div class="mx-auto max-w-2xl space-y-3 lg:mx-0">
+                <h2 class="text-center text-[10px] font-medium uppercase tracking-[0.24em] text-archive-gray lg:text-left">About</h2>
                 <p @class([
-                    'mt-2 max-w-2xl text-sm leading-relaxed sm:text-[15px]',
-                    filled($agency->bio) ? 'text-archive-black/85' : 'text-archive-gray italic',
+                    'text-center text-[15px] leading-7 lg:text-left',
+                    filled($agency->bio) ? 'text-neutral-600' : 'italic text-archive-gray',
                 ])>{{ $about }}</p>
             </div>
 
             @if($socialLinks !== [])
-                <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+                <div class="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
                     @foreach($socialLinks as $label => $url)
                         <a
                             href="{{ $url }}"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="text-archive-gray underline decoration-archive-border underline-offset-4 transition-colors hover:text-archive-black"
+                            class="inline-flex items-center rounded-full border border-neutral-200/90 bg-white px-4 py-2 text-xs font-medium text-neutral-600 shadow-sm transition-colors hover:border-neutral-300 hover:text-archive-black"
                         >
                             {{ $label }}
                         </a>
@@ -71,20 +76,23 @@
                 </div>
             @endif
 
-            <dl class="flex flex-wrap gap-x-10 gap-y-4 border-t border-archive-border/40 pt-5">
-                <div>
-                    <dt class="text-[10px] font-medium uppercase tracking-[0.18em] text-archive-gray">Campaigns</dt>
-                    <dd class="mt-1 font-display text-xl text-archive-black">{{ number_format($stats['campaigns']) }}</dd>
-                </div>
-                <div>
-                    <dt class="text-[10px] font-medium uppercase tracking-[0.18em] text-archive-gray">Views</dt>
-                    <dd class="mt-1 font-display text-xl text-archive-black">{{ number_format($stats['views']) }}</dd>
-                </div>
-                <div>
-                    <dt class="text-[10px] font-medium uppercase tracking-[0.18em] text-archive-gray">Saves</dt>
-                    <dd class="mt-1 font-display text-xl text-archive-black">{{ number_format($stats['bookmarks']) }}</dd>
-                </div>
-            </dl>
+            {{-- Stats card --}}
+            <div class="overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                <dl class="grid grid-cols-1 divide-y divide-neutral-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                    <div class="px-6 py-5 text-center sm:py-6">
+                        <dt class="text-[10px] font-medium uppercase tracking-[0.2em] text-archive-gray">Campaigns</dt>
+                        <dd class="mt-2 font-display text-2xl tabular-nums text-archive-black sm:text-[1.65rem]">{{ number_format($stats['campaigns']) }}</dd>
+                    </div>
+                    <div class="px-6 py-5 text-center sm:py-6">
+                        <dt class="text-[10px] font-medium uppercase tracking-[0.2em] text-archive-gray">Views</dt>
+                        <dd class="mt-2 font-display text-2xl tabular-nums text-archive-black sm:text-[1.65rem]">{{ number_format($stats['views']) }}</dd>
+                    </div>
+                    <div class="px-6 py-5 text-center sm:py-6">
+                        <dt class="text-[10px] font-medium uppercase tracking-[0.2em] text-archive-gray">Saves</dt>
+                        <dd class="mt-2 font-display text-2xl tabular-nums text-archive-black sm:text-[1.65rem]">{{ number_format($stats['bookmarks']) }}</dd>
+                    </div>
+                </dl>
+            </div>
         </div>
     </div>
 </header>
