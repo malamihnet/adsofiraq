@@ -20,6 +20,8 @@ yarn-error.log
 /.vscode
 
 /storage/app/public/*
+/storage/app/*.html
+/public/build.zip
 /public/storage
 /storage/logs/*
 /storage/framework/cache/*
