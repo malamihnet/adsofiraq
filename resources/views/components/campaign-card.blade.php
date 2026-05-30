@@ -2,23 +2,23 @@
 
 <article class="group">
     <a href="{{ route('campaigns.show', $campaign) }}" class="block">
-        <div class="aspect-[4/3] overflow-hidden border border-archive-border bg-archive-light">
+        <div class="aspect-[4/3] overflow-hidden border border-archive-border/70 bg-archive-light transition-colors duration-300 group-hover:border-archive-black/30">
             @if($campaign->thumbnail_url)
                 <x-campaign-image src="{{ $campaign->thumbnail_url }}" alt="{{ $campaign->title }}"
-                     class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                     class="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
                      loading="lazy" />
             @else
                 <div class="flex h-full items-center justify-center text-archive-gray">
-                    <span class="text-xs uppercase tracking-widest">No image</span>
+                    <span class="text-[10px] uppercase tracking-[0.16em]">No image</span>
                 </div>
             @endif
         </div>
-        <div class="mt-4">
-            <h3 class="font-display text-lg leading-snug group-hover:underline inline-flex items-center gap-2 flex-wrap">
-                {{ $campaign->title }}
+        <div class="mt-3.5">
+            <h3 class="font-display text-base leading-snug text-archive-black transition-colors group-hover:text-archive-black sm:text-[17px] inline-flex items-center gap-2 flex-wrap">
+                <span class="group-hover:underline">{{ $campaign->title }}</span>
                 <x-verified-badge :verified="$campaign->is_verified" />
             </h3>
-            <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-archive-gray">
+            <div class="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1 text-[11px] leading-relaxed text-archive-gray">
                 @foreach($campaign->brands as $brand)
                     <span class="inline-flex items-center gap-1">
                         {{ $brand->name }}

@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agency;
-use App\Models\Brand;
-use App\Models\Industry;
 use App\Services\StructuredDataService;
 use Illuminate\View\View;
 
@@ -25,44 +23,14 @@ class AgencyController extends Controller
 
     public function show(Agency $agency): View
     {
-        $agency->load(['roles'])->loadCount(['campaigns' => fn ($q) => $q->approved()->where('is_draft', false)]);
+        $agency->load(['roles']);
 
         $stats = $agency->aggregateStats();
 
         $campaigns = $agency->approvedCampaignsQuery()
-            ->with(['brands', 'agencies', 'mediumTypes', 'industries'])
+            ->with(['brands', 'agencies', 'mediumTypes'])
             ->latestOnPlatform()
             ->paginate(24);
-
-        $featuredCampaigns = $agency->approvedCampaignsQuery()
-            ->where(function ($q) {
-                $q->where('is_featured', true)->orWhereNotNull('editorial_label');
-            })
-            ->with(['brands', 'agencies'])
-            ->latestOnPlatform()
-            ->limit(6)
-            ->get();
-
-        $industries = Industry::query()
-            ->whereHas('campaigns', fn ($q) => $q->whereHas('agencies', fn ($a) => $a->where('agencies.id', $agency->id)))
-            ->withCount(['campaigns' => fn ($q) => $q->approved()->where('is_draft', false)])
-            ->orderByDesc('campaigns_count')
-            ->limit(12)
-            ->get();
-
-        $collaboratingBrands = Brand::query()
-            ->whereHas('campaigns', fn ($q) => $q->whereHas('agencies', fn ($a) => $a->where('agencies.id', $agency->id)))
-            ->withCount(['campaigns' => fn ($q) => $q->approved()->where('is_draft', false)])
-            ->orderByDesc('campaigns_count')
-            ->limit(12)
-            ->get();
-
-        $relatedAgencies = Agency::query()
-            ->where('id', '!=', $agency->id)
-            ->whereHas('campaigns', fn ($q) => $q->approved()->where('is_draft', false))
-            ->orderByDesc('ranking_score')
-            ->limit(8)
-            ->get();
 
         $canonicalUrl = route('agency.show', $agency);
         $parentLabel = $agency->isProductionHouse() && ! $agency->isAgency()
@@ -85,11 +53,9 @@ class AgencyController extends Controller
             'agency',
             'campaigns',
             'stats',
-            'featuredCampaigns',
-            'industries',
-            'collaboratingBrands',
-            'relatedAgencies',
             'canonicalUrl',
+            'parentLabel',
+            'parentUrl',
             'schema',
         ));
     }
