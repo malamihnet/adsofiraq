@@ -11,7 +11,7 @@
     <h1 class="section-title inline-flex items-center gap-2 flex-wrap">
         {{ $item->name }}
         <x-verified-badge :verified="$item->is_verified" />
-        @if($type === 'agencies')
+        @if($type === 'agencies' && method_exists($item, 'roleLabels'))
             <x-agency-role-badges :roles="$item->roleLabels()" />
         @endif
     </h1>

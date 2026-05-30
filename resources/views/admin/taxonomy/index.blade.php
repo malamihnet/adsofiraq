@@ -58,7 +58,7 @@
                         @endif
                     </td>
                     <td class="px-4 py-3 text-archive-gray">{{ $item->slug }}</td>
-                    @if($type === 'agencies')
+                    @if($type === 'agencies' && method_exists($item, 'roleLabels'))
                         <td class="px-4 py-3">
                             <x-agency-role-badges :roles="$item->roleLabels()" />
                         </td>

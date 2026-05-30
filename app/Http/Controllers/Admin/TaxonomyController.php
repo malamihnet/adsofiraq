@@ -99,7 +99,13 @@ class TaxonomyController extends Controller
         }
 
         $model = $this->getModel($type);
-        $item = $model::with(['verifiedBy', 'roles'])->withCount('campaigns')->findOrFail($id);
+        $query = $model::with(['verifiedBy'])->withCount('campaigns');
+
+        if ($type === 'agencies') {
+            $query->with('roles');
+        }
+
+        $item = $query->findOrFail($id);
 
         return view('admin.taxonomy.show', [
             'type' => $type,
