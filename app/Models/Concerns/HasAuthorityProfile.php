@@ -16,7 +16,13 @@ trait HasAuthorityProfile
             return null;
         }
 
-        return Storage::disk('public')->url($this->logo_path);
+        $path = ltrim(str_replace('\\', '/', $this->logo_path), '/');
+
+        if (! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return asset('storage/'.$path);
     }
 
     public function getCoverUrlAttribute(): ?string

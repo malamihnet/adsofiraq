@@ -4,22 +4,26 @@
 @section('meta_description', 'Ranked list of Iraq’s leading advertising agencies by campaign quality, engagement, and editorial recognition.')
 
 @section('content')
-<div class="mx-auto max-w-7xl px-4 py-12 md:px-8">
-    <p class="text-sm"><a href="{{ route('rankings.index') }}" class="underline">Rankings</a></p>
-    <h1 class="section-title mt-4 mb-12">Top Agencies — Iraq</h1>
+<div class="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
+    <nav aria-label="Breadcrumb" class="mb-8 text-xs text-archive-gray">
+        <a href="{{ route('rankings.index') }}" class="underline decoration-neutral-300 underline-offset-4 hover:text-archive-black">Rankings</a>
+    </nav>
+
+    <header class="mb-10 sm:mb-12">
+        <h1 class="font-display text-3xl tracking-tight text-archive-black sm:text-4xl">Top Agencies — Iraq</h1>
+        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-archive-gray">
+            Leading agencies by approved campaigns, engagement, and platform recognition.
+        </p>
+    </header>
 
     <ol class="space-y-4">
         @foreach($agencies as $index => $agency)
-            <li class="flex items-center gap-6 border border-archive-border p-4">
-                <span class="font-display text-3xl text-archive-gray w-10">{{ $index + 1 }}</span>
-                <div class="flex-1">
-                    <a href="{{ route('agency.show', $agency) }}" class="font-display text-xl hover:underline inline-flex items-center gap-2">
-                        {{ $agency->name }}
-                        <x-verified-badge :verified="$agency->is_verified" />
-                    </a>
-                    <p class="text-sm text-archive-gray mt-1">{{ $agency->campaigns_count }} campaigns · Score {{ number_format($agency->ranking_score, 0) }}</p>
-                </div>
-            </li>
+            <x-ranking-agency-row
+                :agency="$agency"
+                :rank="$index + 1"
+                :campaign-count="$agency->agency_campaigns_count ?? 0"
+                :total-views="$agency->ranking_total_views ?? 0"
+            />
         @endforeach
     </ol>
 </div>

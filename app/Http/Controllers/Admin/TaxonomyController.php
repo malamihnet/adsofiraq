@@ -10,6 +10,7 @@ use App\Models\Agency;
 use App\Models\Brand;
 use App\Services\AgencyProfileMediaService;
 use App\Services\AgencyRoleService;
+use App\Services\CompanyRankingService;
 use App\Services\PlatformVerificationService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +42,7 @@ class TaxonomyController extends Controller
         protected PlatformVerificationService $verificationService,
         protected AgencyRoleService $agencyRoles,
         protected AgencyProfileMediaService $agencyMedia,
+        protected CompanyRankingService $companyRankings,
     ) {}
 
     public function index(string $type): View
@@ -215,6 +217,8 @@ class TaxonomyController extends Controller
             $request->user(),
             $request->boolean('is_verified'),
         );
+
+        $this->companyRankings->clearProductionHouseCache();
 
         return back()->with('success', 'Agency profile updated.');
     }

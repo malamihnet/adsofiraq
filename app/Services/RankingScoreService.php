@@ -87,11 +87,20 @@ class RankingScoreService
     {
         return Agency::query()
             ->forTopAgencies()
+            ->with(['roles'])
             ->withCount(['agencyCampaigns' => fn ($q) => $q->approved()->where('is_draft', false)])
             ->having('agency_campaigns_count', '>', 0)
             ->orderByDesc('ranking_score')
+            ->orderByDesc('agency_campaigns_count')
+            ->orderBy('name')
             ->limit($limit)
-            ->get();
+            ->get()
+            ->map(function (Agency $agency) {
+                $stats = $agency->aggregateStats();
+                $agency->setAttribute('ranking_total_views', $stats['views']);
+
+                return $agency;
+            });
     }
 
     /**
