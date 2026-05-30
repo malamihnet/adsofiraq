@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -119,11 +120,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function getAvatarUrlAttribute(): string
     {
-        if ($this->avatar) {
+        if ($this->avatar && Storage::disk('public')->exists($this->avatar)) {
             return asset('storage/'.$this->avatar);
         }
 
-        return 'https://ui-avatars.com/api/?name='.urlencode($this->name).'&background=0a0a0a&color=fff';
+        return placeholderUrl('square');
     }
 
     public function getRouteKeyName(): string

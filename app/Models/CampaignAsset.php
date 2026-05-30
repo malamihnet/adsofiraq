@@ -123,12 +123,6 @@ class CampaignAsset extends Model
 
     protected function placeholderUrl(): string
     {
-        $webp = config('upload.placeholder', 'images/placeholder.webp');
-
-        if (file_exists(public_path($webp))) {
-            return asset($webp);
-        }
-
-        return asset(config('upload.placeholder_fallback', 'images/placeholder.jpg'));
+        return placeholderUrl('landscape');
     }
 }

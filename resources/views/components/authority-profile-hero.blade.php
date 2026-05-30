@@ -21,11 +21,7 @@
     <div class="relative px-6 pb-8 pt-0 md:px-10">
         <div class="-mt-12 mb-6 flex flex-col gap-6 md:flex-row md:items-end">
             <div class="h-24 w-24 shrink-0 overflow-hidden border-4 border-white bg-white shadow md:h-28 md:w-28">
-                @if($logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $name }}" class="h-full w-full object-contain p-2">
-                @else
-                    <div class="flex h-full w-full items-center justify-center bg-archive-light text-2xl font-display">{{ mb_substr($name, 0, 1) }}</div>
-                @endif
+                <img src="{{ $logoUrl ?: placeholderUrl('square') }}" alt="{{ $name }}" class="h-full w-full object-contain p-2">
             </div>
             <div class="flex-1">
                 <h1 class="font-display text-3xl md:text-4xl inline-flex items-center gap-3 flex-wrap">

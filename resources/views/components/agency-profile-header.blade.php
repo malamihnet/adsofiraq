@@ -33,18 +33,12 @@
         {{-- Avatar --}}
         <div class="flex shrink-0 justify-center lg:justify-start">
             <div class="h-[88px] w-[88px] overflow-hidden rounded-full border border-neutral-200/90 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-4 ring-white sm:h-24 sm:w-24">
-                @if($agency->logo_url)
-                    <img
-                        src="{{ $agency->logo_url }}"
-                        alt="{{ $agency->name }}"
-                        class="h-full w-full object-contain p-0"
-                        decoding="async"
-                    >
-                @else
-                    <div class="flex h-full w-full items-center justify-center bg-neutral-50 font-display text-2xl text-neutral-400">
-                        {{ mb_substr($agency->name, 0, 1) }}
-                    </div>
-                @endif
+                <img
+                    src="{{ $agency->logo_url }}"
+                    alt="{{ $agency->name }}"
+                    class="h-full w-full object-contain p-0"
+                    decoding="async"
+                >
             </div>
         </div>
 

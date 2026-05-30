@@ -2,7 +2,7 @@
 
 @section('title', $agency->seo_title)
 @section('meta_description', $agency->seo_description)
-@if($agency->logo_url)
+@if($agency->hasLogo())
     @section('og_image', $agency->logo_url)
 @endif
 

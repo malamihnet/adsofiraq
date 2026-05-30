@@ -10,19 +10,30 @@ use Illuminate\Support\Facades\Storage;
 
 trait HasAuthorityProfile
 {
-    public function getLogoUrlAttribute(): ?string
+    public function getLogoUrlAttribute(): string
     {
         if (empty($this->logo_path)) {
-            return null;
+            return placeholderUrl('square');
         }
 
         $path = ltrim(str_replace('\\', '/', $this->logo_path), '/');
 
         if (! Storage::disk('public')->exists($path)) {
-            return null;
+            return placeholderUrl('square');
         }
 
         return asset('storage/'.$path);
+    }
+
+    public function hasLogo(): bool
+    {
+        if (empty($this->logo_path)) {
+            return false;
+        }
+
+        $path = ltrim(str_replace('\\', '/', $this->logo_path), '/');
+
+        return Storage::disk('public')->exists($path);
     }
 
     public function getCoverUrlAttribute(): ?string

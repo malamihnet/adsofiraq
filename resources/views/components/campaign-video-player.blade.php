@@ -2,7 +2,7 @@
 
 @php
     $embedId = $video->embed_id;
-    $posterUrl = $video->poster_url ?? $campaign->thumbnail_url ?? asset('images/placeholder.jpg');
+    $posterUrl = $video->poster_url ?? $campaign->thumbnail_url ?? placeholderUrl('landscape');
 @endphp
 
 <div class="campaign-plyr w-full">

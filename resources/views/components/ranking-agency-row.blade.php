@@ -19,19 +19,13 @@
                 class="relative block h-14 w-14 shrink-0 overflow-hidden rounded-full border border-neutral-200/90 bg-white shadow-sm ring-2 ring-white sm:h-16 sm:w-16"
                 aria-label="{{ $agency->name }} profile"
             >
-                @if($agency->logo_url)
-                    <img
-                        src="{{ $agency->logo_url }}"
-                        alt=""
-                        class="h-full w-full object-contain object-center p-0"
-                        loading="lazy"
-                        decoding="async"
-                    >
-                @else
-                    <span class="flex h-full w-full items-center justify-center bg-neutral-50 font-display text-lg text-neutral-400 sm:text-xl">
-                        {{ mb_substr($agency->name, 0, 1) }}
-                    </span>
-                @endif
+                <img
+                    src="{{ $agency->logo_url }}"
+                    alt=""
+                    class="h-full w-full object-contain object-center p-0"
+                    loading="lazy"
+                    decoding="async"
+                >
             </a>
 
             <div class="min-w-0 flex-1">
@@ -73,14 +67,12 @@
                 class="group block w-full shrink-0 sm:w-36 md:w-40"
             >
                 <div class="aspect-[4/3] overflow-hidden rounded-xl border border-neutral-200/80 bg-neutral-50">
-                    @if($preview->thumbnail_url)
-                        <x-campaign-image
-                            src="{{ $preview->thumbnail_url }}"
-                            alt="{{ $preview->title }}"
-                            class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                            loading="lazy"
-                        />
-                    @endif
+                    <x-campaign-image
+                        src="{{ $preview->thumbnail_url }}"
+                        alt="{{ $preview->title }}"
+                        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                        loading="lazy"
+                    />
                 </div>
                 <p class="mt-2 line-clamp-2 text-[11px] leading-snug text-archive-gray group-hover:underline">{{ $preview->title }}</p>
             </a>

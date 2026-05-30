@@ -244,13 +244,7 @@ class VideoThumbnailService
 
     public function placeholderUrl(): string
     {
-        $webp = config('upload.placeholder', 'images/placeholder.webp');
-
-        if (file_exists(public_path($webp))) {
-            return asset($webp);
-        }
-
-        return asset(config('upload.placeholder_fallback', 'images/placeholder.jpg'));
+        return placeholderUrl('landscape');
     }
 
     protected function downloadYouTubeThumbnail(Campaign $campaign, string $videoUrl): ?string

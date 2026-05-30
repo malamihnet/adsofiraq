@@ -21,18 +21,12 @@
             'aspect-[4/3] rounded-xl' => $isProfile,
             'aspect-[4/3] border border-archive-border/70 transition-colors duration-300 group-hover:border-archive-black/30' => ! $isProfile,
         ])>
-            @if($campaign->thumbnail_url)
-                <x-campaign-image
-                    src="{{ $campaign->thumbnail_url }}"
-                    alt="{{ $campaign->title }}"
-                    class="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
-                    loading="lazy"
-                />
-            @else
-                <div class="flex h-full items-center justify-center text-archive-gray">
-                    <span class="text-[10px] uppercase tracking-[0.16em]">No image</span>
-                </div>
-            @endif
+            <x-campaign-image
+                src="{{ $campaign->thumbnail_url }}"
+                alt="{{ $campaign->title }}"
+                class="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
+                loading="lazy"
+            />
         </div>
 
         <div @class([

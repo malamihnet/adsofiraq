@@ -49,7 +49,7 @@ class StructuredDataService
             $data['additionalType'] = 'https://schema.org/ProductionCompany';
         }
 
-        if ($agency->logo_url) {
+        if ($agency->hasLogo()) {
             $data['logo'] = $agency->logo_url;
         }
 
@@ -75,7 +75,7 @@ class StructuredDataService
             'description' => $brand->seo_description,
         ];
 
-        if ($brand->logo_url) {
+        if ($brand->hasLogo()) {
             $data['logo'] = $brand->logo_url;
         }
 

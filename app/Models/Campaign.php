@@ -573,15 +573,7 @@ class Campaign extends Model
 
     protected function placeholderThumbnailUrl(): string
     {
-        $webp = config('upload.placeholder', 'images/placeholder.webp');
-
-        if (file_exists(public_path($webp))) {
-            return asset($webp);
-        }
-
-        $fallback = config('upload.placeholder_fallback', 'images/placeholder.jpg');
-
-        return asset($fallback);
+        return placeholderUrl('landscape');
     }
 
     public function getRouteKeyName(): string

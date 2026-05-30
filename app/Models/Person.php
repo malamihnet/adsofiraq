@@ -116,7 +116,7 @@ class Person extends Model
             return Storage::disk('public')->url($this->photo_path);
         }
 
-        return 'https://ui-avatars.com/api/?name='.urlencode($this->name).'&background=0a0a0a&color=fff&size=512';
+        return placeholderUrl('square');
     }
 
     public function getFeaturedWorksAttribute(): array

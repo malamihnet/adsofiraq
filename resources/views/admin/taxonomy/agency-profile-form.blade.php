@@ -18,7 +18,7 @@
     <div class="grid gap-6 sm:grid-cols-2">
         <div>
             <label class="section-label mb-2 block">Logo</label>
-            @if($agency->logo_url)
+            @if($agency->hasLogo())
                 <img src="{{ $agency->logo_url }}" alt="" class="mb-3 h-20 w-20 rounded-full border border-archive-border object-contain p-1">
             @endif
             <input type="file" name="logo" accept="image/*" class="input-field text-sm">
