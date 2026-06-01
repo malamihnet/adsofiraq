@@ -42,7 +42,7 @@ SVG;
 @endphp
 
 <header class="site-header border-b border-white/10 bg-black text-white" x-data="{ open: false }">
-    <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 max-md:min-h-[4.5rem] md:min-h-[72px] md:px-8">
+    <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 max-md:py-3 md:min-h-[72px] md:px-8 md:py-0">
         {{-- Left: platform navigation --}}
         <div class="flex items-center justify-start">
             <nav aria-label="Primary" class="hidden items-center gap-5 md:flex">
@@ -68,20 +68,20 @@ SVG;
         {{-- Center: brand logo --}}
         <a
             href="{{ route('home') }}"
-            class="inline-flex shrink-0 items-center justify-self-center brightness-0 invert transition-opacity hover:opacity-80"
+            class="inline-flex shrink-0 items-center justify-self-center leading-none brightness-0 invert transition-opacity hover:opacity-80"
             aria-label="Ads of Iraq"
         >
             <img
                 src="{{ $logoUrl }}"
                 alt="Ads of Iraq"
-                class="block h-[40px] w-auto max-w-[180px] md:h-[52px] md:max-w-[220px]"
+                class="block h-[44px] w-auto max-w-[180px] md:h-[52px] md:max-w-[220px]"
                 decoding="async"
                 fetchpriority="high"
             >
         </a>
 
         {{-- Right: account actions + mobile menu --}}
-        <div class="site-header__actions flex flex-wrap items-center justify-end gap-3 md:gap-4">
+        <div class="site-header__actions flex flex-wrap items-center justify-end gap-3 max-md:leading-none md:gap-4">
             <div class="hidden items-center gap-4 md:flex">
             @guest
                 <a href="{{ route('login') }}" class="{{ $accountLink }}">Login</a>
@@ -136,7 +136,7 @@ SVG;
             {{-- Mobile menu toggle --}}
             <button
                 type="button"
-                class="inline-flex h-11 w-11 shrink-0 items-center justify-center text-white transition-opacity hover:opacity-80 md:hidden"
+                class="inline-flex h-11 w-11 shrink-0 items-center justify-center leading-none text-white transition-opacity hover:opacity-80 md:hidden"
                 @click="open = !open"
                 :aria-expanded="open"
                 aria-controls="site-mobile-nav"

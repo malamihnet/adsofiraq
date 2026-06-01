@@ -24,8 +24,11 @@
     }
 
     @media (max-width: 767px) {
+        /* 4.5rem content band + py-3 (0.75rem × 2) — bar grows visually, not compressed */
         .site-header__bar {
-            min-height: 4.5rem;
+            min-height: calc(4.5rem + 1.5rem);
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
         }
     }
 
