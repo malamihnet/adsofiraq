@@ -17,7 +17,7 @@
 
 <a
     href="{{ $href }}"
-    class="group flex h-full flex-col items-center rounded-lg border border-archive-border/80 bg-white px-2 py-3 text-center transition-colors hover:border-archive-black md:px-3 md:py-4"
+    class="group flex h-full flex-col items-center rounded-lg border border-archive-border/80 bg-white px-2 py-3 text-center transition-colors hover:border-archive-black md:p-4"
 >
     <div class="{{ $avatarSizeClass }} aspect-square shrink-0 overflow-hidden rounded-full border border-archive-border/70 bg-archive-light">
         <img
@@ -29,7 +29,7 @@
     </div>
 
     <div class="mt-2 w-full min-w-0 md:mt-3">
-        <h3 class="font-display text-xs leading-snug text-archive-black line-clamp-2 group-hover:underline md:text-sm">
+        <h3 class="font-display text-xs leading-snug text-archive-black line-clamp-2 group-hover:underline md:text-sm lg:text-[15px]">
             <span class="inline-flex items-center justify-center gap-0.5 md:gap-1">
                 <span class="min-w-0">{{ $name }}</span>
                 <x-verified-badge :verified="$verified" class="shrink-0" />
@@ -37,7 +37,7 @@
         </h3>
 
         @if($subtitle)
-            <p class="mt-1 text-[10px] leading-snug text-archive-gray line-clamp-2 md:text-[11px]">
+            <p class="mt-1 text-[10px] leading-snug text-archive-gray line-clamp-2 md:mt-1.5 md:text-[11px]">
                 {{ $subtitle }}
             </p>
         @endif
@@ -49,7 +49,7 @@
         @endif
 
         @if($meta)
-            <p class="mt-1 text-[10px] text-archive-gray md:text-[11px]">{{ $meta }}</p>
+            <p class="mt-1 text-[10px] text-archive-gray md:mt-1.5 md:text-[11px]">{{ $meta }}</p>
         @endif
     </div>
 </a>
