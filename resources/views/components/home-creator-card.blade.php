@@ -10,26 +10,28 @@
 
 @php
     $avatarClass = match ($imageSize) {
-        'person' => 'h-11 w-11 md:h-16 md:w-16',
-        default => 'h-14 w-14 md:h-[4.5rem] md:w-[4.5rem]',
+        'person' => 'h-12 w-12 min-h-12 min-w-12 max-h-12 max-w-12 md:h-16 md:w-16 md:min-h-16 md:min-w-16 md:max-h-16 md:max-w-16',
+        default => 'h-14 w-14 min-h-14 min-w-14 max-h-14 max-w-14 md:h-20 md:w-20 md:min-h-20 md:min-w-20 md:max-h-20 md:max-w-20',
     };
 @endphp
 
 <a
     href="{{ $href }}"
-    class="group flex h-full flex-col items-center rounded-lg border border-archive-border/80 bg-white text-center transition-colors hover:border-archive-black max-md:px-2 max-md:py-3 md:border-archive-border/80 md:p-4 md:hover:border-archive-black"
+    class="group flex h-full min-h-[7.5rem] flex-col items-center rounded-lg border border-archive-border/80 bg-white text-center transition-colors hover:border-archive-black max-md:min-h-[6.5rem] max-md:px-2 max-md:py-3 md:min-h-[11rem] md:border-archive-border/80 md:p-4 md:hover:border-archive-black"
 >
-    <div class="{{ $avatarClass }} aspect-square shrink-0 overflow-hidden rounded-full border border-archive-border/70 bg-archive-light">
+    <div class="{{ $avatarClass }} mx-auto shrink-0 overflow-hidden rounded-full bg-archive-light">
         <img
             src="{{ $imageUrl }}"
             alt=""
-            class="block h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.03]"
+            class="block h-full w-full rounded-full object-cover object-center"
             loading="lazy"
             decoding="async"
+            width="80"
+            height="80"
         >
     </div>
 
-    <div class="mt-2 w-full min-w-0 max-md:px-0.5 md:mt-3">
+    <div class="mt-2 w-full min-w-0 flex-1 max-md:px-0.5 md:mt-3">
         <h3 class="font-display leading-snug text-archive-black line-clamp-2 group-hover:underline max-md:text-[10px] max-md:leading-tight md:text-sm md:leading-snug lg:text-[15px]">
             <span class="inline-flex items-center justify-center gap-0.5 md:gap-1">
                 <span class="min-w-0">{{ $name }}</span>
