@@ -10,53 +10,49 @@
 
 @php
     $avatarClass = match ($imageSize) {
-        'person' => 'h-10 w-10 md:h-12 md:w-12',
-        default => 'h-14 w-14 md:h-14 md:w-14',
+        'person' => 'h-11 w-11 md:h-16 md:w-16',
+        default => 'h-14 w-14 md:h-[4.5rem] md:w-[4.5rem]',
     };
 @endphp
 
 <a
     href="{{ $href }}"
-    class="group flex h-full flex-col items-center rounded-lg border border-archive-border/80 bg-white text-center transition-colors hover:border-archive-black max-md:px-1.5 max-md:py-2.5 md:flex-row md:items-start md:gap-6 md:rounded-none md:border-0 md:bg-transparent md:px-1 md:py-2.5 md:text-left md:hover:bg-archive-light/50 lg:gap-7"
+    class="group flex h-full flex-col items-center rounded-lg border border-archive-border/80 bg-white text-center transition-colors hover:border-archive-black max-md:px-2 max-md:py-3 md:border-archive-border/80 md:p-4 md:hover:border-archive-black"
 >
-    <div
-        class="{{ $avatarClass }} shrink-0 overflow-hidden rounded-full border border-archive-border/70 bg-archive-light md:border-0"
-    >
+    <div class="{{ $avatarClass }} aspect-square shrink-0 overflow-hidden rounded-full border border-archive-border/70 bg-archive-light">
         <img
             src="{{ $imageUrl }}"
             alt=""
-            class="block h-full w-full object-cover object-center"
+            class="block h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.03]"
             loading="lazy"
             decoding="async"
         >
     </div>
 
-    <div class="mt-1.5 w-full min-w-0 max-md:px-0.5 md:mt-0 md:flex-1">
-        <div class="flex flex-col gap-0.5 md:gap-1">
-            <h3 class="font-display leading-snug text-archive-black line-clamp-2 group-hover:underline max-md:text-[10px] max-md:leading-tight md:text-sm md:font-medium md:leading-snug">
-                <span class="inline-flex items-center gap-1 max-md:justify-center md:justify-start">
-                    <span class="min-w-0">{{ $name }}</span>
-                    <x-verified-badge :verified="$verified" class="shrink-0 max-md:scale-90 md:scale-100" />
-                </span>
-            </h3>
+    <div class="mt-2 w-full min-w-0 max-md:px-0.5 md:mt-3">
+        <h3 class="font-display leading-snug text-archive-black line-clamp-2 group-hover:underline max-md:text-[10px] max-md:leading-tight md:text-sm md:leading-snug lg:text-[15px]">
+            <span class="inline-flex items-center justify-center gap-0.5 md:gap-1">
+                <span class="min-w-0">{{ $name }}</span>
+                <x-verified-badge :verified="$verified" class="shrink-0 max-md:scale-90 md:scale-100" />
+            </span>
+        </h3>
 
-            @if($subtitle)
-                <p class="leading-snug text-archive-gray line-clamp-2 max-md:hidden md:text-[11px] md:leading-snug">
-                    {{ $subtitle }}
-                </p>
-            @endif
+        @if($subtitle)
+            <p class="mt-1 leading-snug text-archive-gray line-clamp-2 max-md:text-[10px] max-md:leading-snug md:mt-1.5 md:text-[11px]">
+                {{ $subtitle }}
+            </p>
+        @endif
 
-            @if(isset($badges))
-                <div class="hidden max-md:hidden md:block">
-                    {{ $badges }}
-                </div>
-            @endif
+        @if(isset($badges))
+            <div class="mt-1.5 flex justify-center md:mt-2">
+                {{ $badges }}
+            </div>
+        @endif
 
-            @if($meta)
-                <p class="text-archive-gray max-md:text-[9px] max-md:line-clamp-1 md:text-[10px] md:leading-snug">
-                    {{ $meta }}
-                </p>
-            @endif
-        </div>
+        @if($meta)
+            <p class="mt-1 text-archive-gray max-md:text-[10px] max-md:line-clamp-1 md:mt-1.5 md:text-[11px]">
+                {{ $meta }}
+            </p>
+        @endif
     </div>
 </a>
