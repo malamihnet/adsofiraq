@@ -5,6 +5,19 @@
 @layer base {
     html {
         @apply scroll-smooth;
+        background: #000;
+    }
+
+    body {
+        background: #ffffff;
+    }
+
+    main {
+        background: #ffffff;
+    }
+
+    footer {
+        background: #000;
     }
 }
 
@@ -14,6 +27,7 @@
         position: relative;
         z-index: 9999;
         overflow: visible;
+        background: #000;
     }
 
     .site-header__bar,
@@ -146,5 +160,17 @@
     .home-creator-grid > .contents > a {
         min-width: 0;
         min-height: 0;
+    }
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+    .site-header {
+        padding-top: env(safe-area-inset-top);
+        background: #000;
+    }
+
+    footer {
+        padding-bottom: env(safe-area-inset-bottom);
+        background: #000;
     }
 }
