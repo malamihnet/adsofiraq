@@ -2,9 +2,33 @@
 
 This guide covers deploying Ads of Iraq on standard shared cPanel hosting (no VPS, Redis, Docker, or queue workers required).
 
+## Frontend assets in Git (cPanel Git deploy)
+
+`public/build/` is **tracked in git** so cPanel does not need Node.js. After pulling, CSS/JS work immediately.
+
+### Before every push (local or Cursor)
+
+```bash
+npm run build
+# or: npm run build:deploy
+# or: ./scripts/prepare-deploy.sh   (Linux/macOS)
+# or: .\scripts\prepare-deploy.ps1 (Windows)
+git add resources/css resources/js resources/views public/build
+git commit -m "Your message"
+git push origin main
+```
+
+**Push checklist**
+
+- [ ] `npm run build`: done
+- [ ] `public/build` committed: yes
+- [ ] pushed to GitHub: yes
+
+Do **not** commit: `node_modules/`, `.env`, `storage/logs/`, temporary HTML/debug files under `storage/app/`.
+
 ## Pre-deployment Checklist
 
-- [ ] Build assets locally: `npm run build`
+- [ ] Built assets are in the commit (`public/build/` — run `npm run build` before push)
 - [ ] Set `APP_ENV=production` and `APP_DEBUG=false`
 - [ ] Generate app key: `php artisan key:generate`
 - [ ] Run migrations locally or on server
@@ -199,17 +223,16 @@ MAIL_FROM_NAME="Ads of Iraq"
 |-------|-----|
 | 500 error | Check `storage/logs/laravel.log`, verify permissions |
 | Images not loading | Run `php artisan storage:link`, check `public/storage` symlink |
-| CSS/JS missing | Run `npm run build` locally, upload `public/build/` |
+| CSS/JS missing | Pull latest `main` (includes `public/build/`). If still missing, run `npm run build` locally, commit `public/build/`, push |
 | Database connection failed | Verify cPanel DB host is `localhost`, check credentials |
 | Route not found | Run `php artisan route:cache`, verify `.htaccess` and mod_rewrite |
 
 ## Updating the Site
 
 ```bash
-git pull   # or upload changed files
+git pull   # includes public/build/ from GitHub
 composer install --optimize-autoloader --no-dev
 php artisan migrate --force
-npm run build   # locally, then upload public/build/
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
