@@ -42,7 +42,7 @@ SVG;
 @endphp
 
 <header class="site-header border-b border-white/10 bg-black text-white" x-data="{ open: false }">
-    <div class="site-header__bar mx-auto grid min-h-14 max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 md:min-h-[72px] md:px-8">
+    <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 max-md:min-h-[4.5rem] md:min-h-[72px] md:px-8">
         {{-- Left: platform navigation --}}
         <div class="flex items-center justify-start">
             <nav aria-label="Primary" class="hidden items-center gap-5 md:flex">
