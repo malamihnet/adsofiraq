@@ -5,15 +5,31 @@ namespace App\Services;
 use App\Models\Campaign;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class CampaignArchiveOrderingService
 {
     public const CACHE_KEY = 'archive_campaign_order_ids';
 
+    public const HOMEPAGE_LATEST_CACHE_KEY = 'homepage_latest_campaign_ids';
+
     public function clearCache(): void
     {
         Cache::forget(self::CACHE_KEY);
+        Cache::forget(self::HOMEPAGE_LATEST_CACHE_KEY);
+        Cache::forget('hero_campaigns');
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    public function clearCacheAndLog(string $reason = 'archive_order_saved', array $context = []): void
+    {
+        $this->clearCache();
+
+        Log::info('Archive order saved and caches cleared.', array_merge(['reason' => $reason], $context));
     }
 
     /**
@@ -34,35 +50,11 @@ class CampaignArchiveOrderingService
             return $baseQuery->paginate($perPage)->withQueryString();
         }
 
-        $matchingIds = (clone $baseQuery)->pluck('campaigns.id')->all();
-        $matchingLookup = array_fill_keys($matchingIds, true);
-
-        $orderedIds = $this->resolveFullArchiveOrderedIds();
-        $filteredIds = array_values(array_filter(
-            $orderedIds,
-            static fn (int $id) => isset($matchingLookup[$id])
-        ));
-
+        $filteredIds = $this->filterOrderedIdsForQuery($baseQuery);
         $total = count($filteredIds);
         $offset = max(0, ($page - 1) * $perPage);
         $sliceIds = array_slice($filteredIds, $offset, $perPage);
-
-        if ($sliceIds === []) {
-            return new LengthAwarePaginator(
-                collect(),
-                $total,
-                $perPage,
-                $page,
-                ['path' => request()->url(), 'query' => request()->query()]
-            );
-        }
-
-        $campaigns = Campaign::query()
-            ->whereIn('id', $sliceIds)
-            ->when($eagerLoads !== [], fn ($q) => $q->with($eagerLoads))
-            ->get()
-            ->sortBy(fn (Campaign $campaign) => array_search($campaign->id, $sliceIds, true))
-            ->values();
+        $campaigns = $this->loadCampaignsInOrder($sliceIds, $eagerLoads);
 
         return new LengthAwarePaginator(
             $campaigns,
@@ -71,6 +63,56 @@ class CampaignArchiveOrderingService
             $page,
             ['path' => request()->url(), 'query' => request()->query()]
         );
+    }
+
+    /**
+     * First N public archive campaigns in manual + automatic order.
+     *
+     * @param  array<int, string>  $eagerLoads
+     */
+    public function take(Builder $baseQuery, int $limit, array $eagerLoads = []): Collection
+    {
+        if ($limit < 1) {
+            return collect();
+        }
+
+        $filteredIds = $this->filterOrderedIdsForQuery($baseQuery);
+        $sliceIds = array_slice($filteredIds, 0, $limit);
+
+        return $this->loadCampaignsInOrder($sliceIds, $eagerLoads);
+    }
+
+    /**
+     * @param  array<int, string>  $eagerLoads
+     */
+    protected function loadCampaignsInOrder(array $orderedIds, array $eagerLoads = []): Collection
+    {
+        if ($orderedIds === []) {
+            return collect();
+        }
+
+        return Campaign::query()
+            ->whereIn('id', $orderedIds)
+            ->when($eagerLoads !== [], fn ($q) => $q->with($eagerLoads))
+            ->get()
+            ->sortBy(fn (Campaign $campaign) => array_search($campaign->id, $orderedIds, true))
+            ->values();
+    }
+
+    /**
+     * @return list<int>
+     */
+    protected function filterOrderedIdsForQuery(Builder $baseQuery): array
+    {
+        $matchingIds = (clone $baseQuery)->pluck('campaigns.id')->all();
+        $matchingLookup = array_fill_keys($matchingIds, true);
+
+        $orderedIds = $this->resolveFullArchiveOrderedIds();
+
+        return array_values(array_filter(
+            $orderedIds,
+            static fn (int $id) => isset($matchingLookup[$id])
+        ));
     }
 
     /**

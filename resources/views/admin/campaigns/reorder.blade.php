@@ -8,8 +8,13 @@
         <a href="{{ route('admin.campaigns.index') }}" class="text-sm underline">&larr; All campaigns</a>
         <h1 class="section-title mt-4">Archive Order</h1>
         <p class="mt-2 max-w-2xl text-sm text-archive-gray">
-            Drag campaigns to set their order on the public archive (<strong>Latest</strong> sort).
-            The list order you save becomes the manual archive order. Use <strong>Reset</strong> to return to automatic date ordering.
+            Drag campaigns to set their order on the public archive (<strong>Latest</strong> sort) and the homepage
+            <strong>Latest Campaigns</strong> section. The list order you save becomes the manual archive order.
+            Use <strong>Reset</strong> to return to automatic date ordering.
+        </p>
+        <p class="mt-2 max-w-2xl text-sm text-archive-gray">
+            This order controls the public archive and homepage Latest Campaigns.
+            Featured and hero slider placement are controlled separately.
         </p>
     </div>
     <div class="flex flex-wrap gap-2">

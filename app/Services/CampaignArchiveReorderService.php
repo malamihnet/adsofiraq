@@ -45,7 +45,9 @@ class CampaignArchiveReorderService
                 ->update(['manual_order' => null]);
         });
 
-        $this->archiveOrdering->clearCache();
+        $this->archiveOrdering->clearCacheAndLog('archive_reorder_saved', [
+            'campaign_count' => count($orderedIds),
+        ]);
     }
 
     public function resetAll(): int
@@ -56,7 +58,7 @@ class CampaignArchiveReorderService
             ->whereNotNull('manual_order')
             ->update(['manual_order' => null]);
 
-        $this->archiveOrdering->clearCache();
+        $this->archiveOrdering->clearCacheAndLog('archive_reorder_reset');
 
         return $count;
     }
@@ -64,6 +66,6 @@ class CampaignArchiveReorderService
     public function unpin(Campaign $campaign): void
     {
         $campaign->update(['manual_order' => null]);
-        $this->archiveOrdering->clearCache();
+        $this->archiveOrdering->clearCacheAndLog('archive_unpin');
     }
 }

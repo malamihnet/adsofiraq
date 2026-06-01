@@ -331,7 +331,7 @@ class CampaignController extends Controller
 
         return redirect()
             ->route('admin.campaigns.reorder')
-            ->with('success', 'Archive order saved.');
+            ->with('success', 'Archive order saved. Public archive and homepage Latest Campaigns will use this order.');
     }
 
     public function resetReorder(): RedirectResponse

@@ -37,4 +37,12 @@ class CampaignArchiveOrderingServiceTest extends TestCase
         $this->assertSame(count($merged), count(array_unique($merged)));
         $this->assertSame([5, 6, 7], $merged);
     }
+
+    public function test_clear_cache_forgets_archive_and_homepage_keys(): void
+    {
+        $service = new CampaignArchiveOrderingService;
+
+        $this->assertSame('archive_campaign_order_ids', CampaignArchiveOrderingService::CACHE_KEY);
+        $this->assertSame('homepage_latest_campaign_ids', CampaignArchiveOrderingService::HOMEPAGE_LATEST_CACHE_KEY);
+    }
 }
