@@ -42,7 +42,7 @@ SVG;
 @endphp
 
 <header class="site-header border-b border-white/10 bg-black text-white" x-data="{ open: false }">
-    <div class="site-header__bar mobile-site-header mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 md:min-h-[72px] md:px-8">
+    <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 md:min-h-[72px] md:px-8">
         {{-- Left: platform navigation --}}
         <div class="flex items-center justify-start">
             <nav aria-label="Primary" class="hidden items-center gap-5 md:flex">
@@ -68,13 +68,13 @@ SVG;
         {{-- Center: brand logo --}}
         <a
             href="{{ route('home') }}"
-            class="inline-flex shrink-0 items-center justify-self-center brightness-0 invert transition-opacity hover:opacity-80"
+            class="site-header__logo inline-flex shrink-0 items-center justify-self-center brightness-0 invert transition-opacity hover:opacity-80"
             aria-label="Ads of Iraq"
         >
             <img
                 src="{{ $logoUrl }}"
                 alt="Ads of Iraq"
-                class="mobile-site-logo block w-auto md:h-[52px] md:max-w-[220px]"
+                class="block w-auto md:h-[52px] md:max-w-[220px]"
                 decoding="async"
                 fetchpriority="high"
             >
@@ -136,7 +136,7 @@ SVG;
             {{-- Mobile menu toggle --}}
             <button
                 type="button"
-                class="mobile-menu-button text-white transition-opacity hover:opacity-80 md:hidden"
+                class="mobile-menu-button inline-flex text-white transition-opacity hover:opacity-80 md:hidden"
                 @click="open = !open"
                 :aria-expanded="open"
                 aria-controls="site-mobile-nav"
