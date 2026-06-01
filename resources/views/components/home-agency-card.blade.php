@@ -7,11 +7,9 @@
 
 <x-home-creator-card
     :href="route('agency.show', $agency)"
-    :image-url="$agency->logo_url"
     :name="$agency->name"
     :verified="$agency->is_verified"
     :meta="$meta"
-    type="company"
 >
     @if($agency->roleLabels() !== [])
         <x-slot:badges>
