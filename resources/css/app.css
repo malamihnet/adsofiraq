@@ -16,6 +16,12 @@
         overflow: visible;
     }
 
+    @media (max-width: 767px) {
+        .site-header {
+            background-color: rgba(255, 255, 255, 0.82);
+        }
+    }
+
     .site-header__bar,
     .site-header__bar > *,
     .site-header__actions,
