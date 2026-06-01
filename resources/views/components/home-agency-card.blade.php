@@ -14,7 +14,7 @@
     >
         @if($agency->roleLabels() !== [])
             <x-slot:badges>
-                <x-agency-role-badges :roles="$agency->roleLabels()" class="justify-center gap-1" />
+                <x-home-creator-roles :roles="$agency->roleLabels()" />
             </x-slot:badges>
         @endif
     </x-home-creator-card>
