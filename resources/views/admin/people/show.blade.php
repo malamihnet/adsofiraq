@@ -18,7 +18,7 @@
 @endif
 
 <div class="mb-8 flex flex-wrap gap-8 border border-archive-border p-6">
-    <img src="{{ $person->photo_url }}" alt="" class="h-32 w-32 rounded-full object-cover">
+    <img src="{{ $person->avatar_url }}" alt="" class="h-32 w-32 rounded-full object-cover">
     <div>
         <h1 class="section-title inline-flex items-center gap-2">{{ $person->name }} <x-verified-badge :verified="$person->is_verified" /></h1>
         <p class="mt-1 text-archive-gray">{{ $person->position }}</p>

@@ -2,16 +2,33 @@
 
 <div class="grid gap-6 sm:grid-cols-2">
     <div class="sm:col-span-2">
-        <label class="section-label mb-2 block">Photo @if($requirePhoto)<span class="text-red-600">*</span>@endif</label>
-        @if($person?->photo_path)
-            <img src="{{ $person->photo_url }}" alt="" class="mb-3 h-24 w-24 rounded-full object-cover">
+        <label class="section-label mb-2 block">
+            Avatar @if($requirePhoto)<span class="text-red-600">*</span>@endif
+        </label>
+        @if($person?->hasAvatar())
+            <div class="mb-4 flex items-center gap-4">
+                <img
+                    src="{{ $person->avatar_url }}"
+                    alt=""
+                    class="h-20 w-20 rounded-full border border-archive-border object-cover"
+                >
+                <p class="text-xs text-archive-gray">Current avatar</p>
+            </div>
             <label class="mb-3 inline-flex items-center gap-2 text-sm text-archive-gray">
                 <input type="checkbox" name="remove_photo" value="1" class="rounded border-archive-border">
-                Remove photo
+                Remove current avatar
             </label>
         @endif
-        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" @if($requirePhoto) required @endif class="block w-full text-sm">
+        <input
+            type="file"
+            name="photo"
+            accept="image/jpeg,image/png,image/webp,image/svg+xml,.jpg,.jpeg,.png,.webp,.svg"
+            @if($requirePhoto && ! $person?->hasAvatar()) required @endif
+            class="block w-full text-sm"
+        >
+        <p class="mt-1 text-xs text-archive-gray">JPG, PNG, WebP, or SVG — max 5MB</p>
         @error('photo')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+        @error('avatar')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
     <div>
@@ -21,7 +38,7 @@
     </div>
 
     <div>
-        <label class="section-label mb-2 block">Position</label>
+        <label class="section-label mb-2 block">Position / title</label>
         <input type="text" name="position" value="{{ old('position', $person?->position) }}" required class="input-field">
         @error('position')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>

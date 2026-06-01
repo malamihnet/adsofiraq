@@ -46,7 +46,7 @@
                 <tr class="border-b border-archive-border">
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-3">
-                            <img src="{{ $person->photo_url }}" alt="" class="h-10 w-10 rounded-full object-cover">
+                            <img src="{{ $person->avatar_url }}" alt="" class="h-10 w-10 rounded-full object-cover">
                             <a href="{{ route('admin.people.show', $person) }}" class="font-medium underline">{{ $person->name }}</a>
                         </div>
                     </td>

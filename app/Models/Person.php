@@ -111,13 +111,65 @@ class Person extends Model
         return 'slug';
     }
 
-    public function getPhotoUrlAttribute(): string
+    public function getAvatarUrlAttribute(): string
     {
-        if ($this->photo_path && Storage::disk('public')->exists($this->photo_path)) {
-            return Storage::disk('public')->url($this->photo_path);
+        $path = $this->resolveAvatarStoragePath();
+
+        if ($path === null) {
+            return Placeholder::url('square');
+        }
+
+        if ($this->avatarFileIsReachable($path)) {
+            return asset('storage/'.$path);
         }
 
         return Placeholder::url('square');
+    }
+
+    public function getPhotoUrlAttribute(): string
+    {
+        return $this->avatar_url;
+    }
+
+    public function hasAvatar(): bool
+    {
+        $path = $this->resolveAvatarStoragePath();
+
+        return $path !== null && $this->avatarFileIsReachable($path);
+    }
+
+    /** @alias */
+    public function hasPhoto(): bool
+    {
+        return $this->hasAvatar();
+    }
+
+    protected function resolveAvatarStoragePath(): ?string
+    {
+        foreach (['photo_path', 'avatar_path', 'image_path'] as $column) {
+            if (! array_key_exists($column, $this->attributes)) {
+                continue;
+            }
+
+            $value = $this->attributes[$column];
+
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            return ltrim(str_replace('\\', '/', trim($value)), '/');
+        }
+
+        return null;
+    }
+
+    protected function avatarFileIsReachable(string $relativePath): bool
+    {
+        if (Storage::disk('public')->exists($relativePath)) {
+            return true;
+        }
+
+        return is_file(public_path('storage/'.$relativePath));
     }
 
     public function getFeaturedWorksAttribute(): array

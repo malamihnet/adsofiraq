@@ -12,9 +12,13 @@
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-12 md:px-8">
     <div class="grid gap-12 border-b border-archive-border pb-12 lg:grid-cols-[320px_1fr]">
-        <div>
-            <div class="aspect-[4/5] overflow-hidden border border-archive-border bg-archive-light">
-                <img src="{{ $person->photo_url }}" alt="{{ $person->name }}" class="h-full w-full object-cover">
+        <div class="flex flex-col items-center lg:items-start">
+            <div class="h-40 w-40 shrink-0 overflow-hidden rounded-full border border-archive-border bg-archive-light sm:h-48 sm:w-48">
+                <img
+                    src="{{ $person->avatar_url }}"
+                    alt="{{ $person->name }}"
+                    class="h-full w-full object-cover"
+                >
             </div>
         </div>
         <div>

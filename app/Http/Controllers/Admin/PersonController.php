@@ -46,7 +46,10 @@ class PersonController extends Controller
     public function store(AdminPersonRequest $request): RedirectResponse
     {
         $data = $this->personAttributes($request, approve: $request->status === 'approved', admin: $request->user());
-        $data['photo_path'] = $this->photos->store($request->file('photo'));
+
+        if ($upload = $this->resolvePhotoUpload($request)) {
+            $data['photo_path'] = $this->photos->store($upload);
+        }
 
         $person = Person::create($data);
 
@@ -73,8 +76,8 @@ class PersonController extends Controller
         $wasApproved = $person->status === 'approved';
         $data = $this->personAttributes($request, approve: $request->status === 'approved', admin: $request->user(), existing: $person);
 
-        if ($request->hasFile('photo')) {
-            $data['photo_path'] = $this->photos->replace($person->photo_path, $request->file('photo'));
+        if ($upload = $this->resolvePhotoUpload($request)) {
+            $data['photo_path'] = $this->photos->replace($person->photo_path, $upload);
         } elseif ($request->boolean('remove_photo')) {
             $this->photos->delete($person->photo_path);
             $data['photo_path'] = null;
@@ -148,5 +151,18 @@ class PersonController extends Controller
         }
 
         return $data;
+    }
+
+    protected function resolvePhotoUpload(AdminPersonRequest $request): ?\Illuminate\Http\UploadedFile
+    {
+        if ($request->hasFile('photo')) {
+            return $request->file('photo');
+        }
+
+        if ($request->hasFile('avatar')) {
+            return $request->file('avatar');
+        }
+
+        return null;
     }
 }

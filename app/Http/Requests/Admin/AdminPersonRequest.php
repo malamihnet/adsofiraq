@@ -18,11 +18,12 @@ class AdminPersonRequest extends FormRequest
         $person = $this->route('person');
 
         $photoRule = $this->isMethod('post')
-            ? ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048']
-            : ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'];
+            ? ['required', 'file', 'mimes:jpg,jpeg,png,webp,svg', 'max:5120']
+            : ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg', 'max:5120'];
 
         return [
             'photo' => $photoRule,
+            'avatar' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg', 'max:5120'],
             'name' => ['required', 'string', 'max:255'],
             'position' => ['required', 'string', 'max:255'],
             'website_url' => ['nullable', 'url', 'max:255'],

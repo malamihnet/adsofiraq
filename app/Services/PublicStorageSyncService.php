@@ -232,7 +232,29 @@ class PublicStorageSyncService
             'campaign-revisions',
             'agencies/logos',
             'agencies/covers',
+            'people',
+            'people/avatars',
         ];
+    }
+
+    /**
+     * @return array{copied: int, skipped: int, failed: int, target: ?string}
+     */
+    public function syncPersonAvatar(?string $photoPath): array
+    {
+        $stats = $this->emptyStats();
+
+        if ($photoPath === null || trim($photoPath) === '') {
+            return $stats;
+        }
+
+        if ($this->syncRelativePath($photoPath)) {
+            $stats['copied']++;
+        } else {
+            $stats['skipped']++;
+        }
+
+        return $stats;
     }
 
     /**
