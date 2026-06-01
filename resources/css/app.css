@@ -5,19 +5,6 @@
 @layer base {
     html {
         @apply scroll-smooth;
-        background: #000;
-    }
-
-    body {
-        background: #ffffff;
-    }
-
-    main {
-        background: #ffffff;
-    }
-
-    footer {
-        background: #000;
     }
 }
 
@@ -163,14 +150,28 @@
     }
 }
 
-@supports (padding: env(safe-area-inset-top)) {
-    .site-header {
-        padding-top: env(safe-area-inset-top);
-        background: #000;
-    }
+/* iPhone Safari safe-area — outside @layer so Tailwind cannot override */
+html {
+    background: #000 !important;
+}
 
-    footer {
-        padding-bottom: env(safe-area-inset-bottom);
-        background: #000;
-    }
+body {
+    background: #000 !important;
+    min-height: 100dvh;
+}
+
+#app,
+main {
+    background: #fff;
+}
+
+.site-header {
+    background: #000 !important;
+    padding-top: env(safe-area-inset-top, 0px);
+}
+
+footer {
+    background: #000 !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    margin-bottom: 0;
 }

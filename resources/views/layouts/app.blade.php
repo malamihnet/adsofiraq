@@ -4,7 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#000000">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <x-favicon />
@@ -30,7 +32,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-white font-sans text-archive-black antialiased">
+<body class="min-h-screen bg-black font-sans text-archive-black antialiased">
     @include('components.header')
 
     @include('components.unverified-email-banner')
@@ -47,7 +49,7 @@
         </div>
     @endif
 
-    <main class="relative z-0">
+    <main class="relative z-0 bg-white">
         @yield('content')
     </main>
 
