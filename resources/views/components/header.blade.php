@@ -136,20 +136,17 @@ SVG;
             {{-- Mobile menu toggle --}}
             <button
                 type="button"
-                class="inline-flex h-11 w-11 shrink-0 items-center justify-center text-white transition-opacity hover:opacity-80 md:hidden"
+                class="inline-flex items-center justify-center text-white/80 transition-colors hover:text-white md:hidden"
                 @click="open = !open"
                 :aria-expanded="open"
                 aria-controls="site-mobile-nav"
                 aria-label="Menu"
             >
-                <svg x-show="!open" class="h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                    <path d="M4 7h16"/>
-                    <path d="M4 12h16"/>
-                    <path d="M4 17h16"/>
+                <svg x-show="!open" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
-                <svg x-show="open" x-cloak class="h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                    <path d="M6 18L18 6"/>
-                    <path d="M6 6l12 12"/>
+                <svg x-show="open" x-cloak class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
         </div>
