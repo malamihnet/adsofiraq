@@ -42,7 +42,7 @@ SVG;
 @endphp
 
 <header class="site-header border-b border-white/10 bg-black text-white" x-data="{ open: false }">
-    <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 md:min-h-[72px] md:px-8">
+    <div class="site-header__bar mx-auto grid min-h-14 max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 md:min-h-[72px] md:px-8">
         {{-- Left: platform navigation --}}
         <div class="flex items-center justify-start">
             <nav aria-label="Primary" class="hidden items-center gap-5 md:flex">
@@ -68,13 +68,13 @@ SVG;
         {{-- Center: brand logo --}}
         <a
             href="{{ route('home') }}"
-            class="site-header__logo inline-flex shrink-0 items-center justify-self-center brightness-0 invert transition-opacity hover:opacity-80"
+            class="inline-flex shrink-0 items-center justify-self-center brightness-0 invert transition-opacity hover:opacity-80"
             aria-label="Ads of Iraq"
         >
             <img
                 src="{{ $logoUrl }}"
                 alt="Ads of Iraq"
-                class="block w-auto md:h-[52px] md:max-w-[220px]"
+                class="block h-[40px] w-auto max-w-[180px] md:h-[52px] md:max-w-[220px]"
                 decoding="async"
                 fetchpriority="high"
             >
@@ -136,18 +136,18 @@ SVG;
             {{-- Mobile menu toggle --}}
             <button
                 type="button"
-                class="mobile-menu-button inline-flex text-white transition-opacity hover:opacity-80 md:hidden"
+                class="inline-flex h-11 w-11 shrink-0 items-center justify-center text-white transition-opacity hover:opacity-80 md:hidden"
                 @click="open = !open"
                 :aria-expanded="open"
                 aria-controls="site-mobile-nav"
                 aria-label="Menu"
             >
-                <svg x-show="!open" class="mobile-menu-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <svg x-show="!open" class="h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                     <path d="M4 7h16"/>
                     <path d="M4 12h16"/>
                     <path d="M4 17h16"/>
                 </svg>
-                <svg x-show="open" x-cloak class="mobile-menu-icon" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <svg x-show="open" x-cloak class="h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                     <path d="M6 18L18 6"/>
                     <path d="M6 6l12 12"/>
                 </svg>
