@@ -42,7 +42,7 @@ SVG;
 @endphp
 
 <header class="site-header border-b border-white/10 bg-black text-white" x-data="{ open: false }">
-    <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 max-md:py-3 md:min-h-[72px] md:px-8 md:py-0">
+    <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 max-md:min-h-[4.5rem] max-md:py-2.5 md:min-h-[72px] md:px-8 md:py-0">
         {{-- Left: platform navigation --}}
         <div class="flex items-center justify-start">
             <nav aria-label="Primary" class="hidden items-center gap-5 md:flex">
@@ -74,7 +74,7 @@ SVG;
             <img
                 src="{{ $logoUrl }}"
                 alt="Ads of Iraq"
-                class="block h-[44px] w-auto max-w-[180px] md:h-[52px] md:max-w-[220px]"
+                class="block h-9 w-auto max-w-[132px] md:h-[52px] md:max-w-[220px]"
                 decoding="async"
                 fetchpriority="high"
             >
