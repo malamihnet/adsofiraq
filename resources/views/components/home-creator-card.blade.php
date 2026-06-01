@@ -5,29 +5,34 @@
     'verified' => false,
     'subtitle' => null,
     'meta' => null,
-    'imageSize' => 'agency',
+    'type' => 'company',
+    'imageSize' => null,
 ])
 
 @php
-    $avatarClass = match ($imageSize) {
-        'person' => 'h-12 w-12 min-h-12 min-w-12 max-h-12 max-w-12 md:h-16 md:w-16 md:min-h-16 md:min-w-16 md:max-h-16 md:max-w-16',
-        default => 'h-14 w-14 min-h-14 min-w-14 max-h-14 max-w-14 md:h-20 md:w-20 md:min-h-20 md:min-w-20 md:max-h-20 md:max-w-20',
+    $cardType = match (true) {
+        $type === 'person', $imageSize === 'person' => 'person',
+        default => 'company',
     };
+
+    $avatarModifier = $cardType === 'person' ? 'creator-avatar--person' : 'creator-avatar--company';
+
+    $cardClass = $cardType === 'person'
+        ? 'min-h-[150px] md:min-h-[170px]'
+        : 'min-h-[7.5rem] md:min-h-[11rem]';
 @endphp
 
 <a
     href="{{ $href }}"
-    class="group flex h-full min-h-[7.5rem] flex-col items-center rounded-lg border border-archive-border/80 bg-white text-center transition-colors hover:border-archive-black max-md:min-h-[6.5rem] max-md:px-2 max-md:py-3 md:min-h-[11rem] md:border-archive-border/80 md:p-4 md:hover:border-archive-black"
+    class="group flex {{ $cardClass }} flex-col items-center justify-start rounded-lg border border-archive-border/80 bg-white text-center transition-colors hover:border-archive-black max-md:px-2 max-md:py-3 md:border-archive-border/80 md:p-4 md:hover:border-archive-black"
 >
-    <div class="{{ $avatarClass }} mx-auto shrink-0 overflow-hidden rounded-full bg-archive-light">
+    <div class="creator-avatar {{ $avatarModifier }}">
         <img
             src="{{ $imageUrl }}"
             alt=""
-            class="block h-full w-full rounded-full object-cover object-center"
+            class="block size-full max-w-full max-h-full rounded-full object-cover"
             loading="lazy"
             decoding="async"
-            width="80"
-            height="80"
         >
     </div>
 

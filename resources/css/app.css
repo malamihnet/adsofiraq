@@ -127,4 +127,61 @@
     .agency-profile-page .p-2\.5 {
         padding: 0;
     }
+
+    /* Homepage creator cards — fixed avatar dimensions (ignore intrinsic image/SVG size) */
+    .creator-avatar {
+        @apply mx-auto shrink-0 overflow-hidden rounded-full bg-archive-light;
+        display: block;
+        flex: none;
+        box-sizing: border-box;
+    }
+
+    .creator-avatar img {
+        display: block;
+        object-fit: cover;
+        border-radius: 9999px;
+        box-sizing: border-box;
+    }
+
+    .creator-avatar--person,
+    .creator-avatar--person img {
+        width: 64px;
+        height: 64px;
+        min-width: 64px;
+        max-width: 64px;
+        min-height: 64px;
+        max-height: 64px;
+    }
+
+    .creator-avatar--company,
+    .creator-avatar--company img {
+        width: 80px;
+        height: 80px;
+        min-width: 80px;
+        max-width: 80px;
+        min-height: 80px;
+        max-height: 80px;
+    }
+
+    @media (max-width: 767px) {
+        .creator-avatar--person,
+        .creator-avatar--person img {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            max-width: 48px;
+            min-height: 48px;
+            max-height: 48px;
+        }
+
+        .creator-avatar--company,
+        .creator-avatar--company img {
+            width: 56px;
+            height: 56px;
+            min-width: 56px;
+            max-width: 56px;
+            min-height: 56px;
+            max-height: 56px;
+        }
+    }
 }

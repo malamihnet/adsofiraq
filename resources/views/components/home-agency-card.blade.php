@@ -11,7 +11,7 @@
     :name="$agency->name"
     :verified="$agency->is_verified"
     :meta="$meta"
-    image-size="agency"
+    type="company"
 >
     @if($agency->roleLabels() !== [])
         <x-slot:badges>
