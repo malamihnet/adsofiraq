@@ -17,7 +17,7 @@
 
 <a
     href="{{ $href }}"
-    class="group flex h-full flex-col items-center rounded-lg border border-archive-border/80 bg-white text-center transition-colors hover:border-archive-black max-md:px-1.5 max-md:py-2.5 md:flex-row md:items-start md:gap-0 md:rounded-none md:border-0 md:bg-transparent md:px-1 md:py-2.5 md:text-left md:hover:bg-archive-light/50"
+    class="group flex h-full flex-col items-center rounded-lg border border-archive-border/80 bg-white text-center transition-colors hover:border-archive-black max-md:px-1.5 max-md:py-2.5 md:flex-row md:items-start md:gap-6 md:rounded-none md:border-0 md:bg-transparent md:px-1 md:py-2.5 md:text-left md:hover:bg-archive-light/50 lg:gap-7"
 >
     <div
         class="{{ $avatarClass }} shrink-0 overflow-hidden rounded-full border border-archive-border/70 bg-archive-light md:border-0"
@@ -31,7 +31,7 @@
         >
     </div>
 
-    <div class="mt-1.5 w-full min-w-0 max-md:px-0.5 md:mt-0 md:flex-1 md:pl-4">
+    <div class="mt-1.5 w-full min-w-0 max-md:px-0.5 md:mt-0 md:flex-1">
         <div class="flex flex-col gap-0.5 md:gap-1">
             <h3 class="font-display leading-snug text-archive-black line-clamp-2 group-hover:underline max-md:text-[10px] max-md:leading-tight md:text-sm md:font-medium md:leading-snug">
                 <span class="inline-flex items-center gap-1 max-md:justify-center md:justify-start">
