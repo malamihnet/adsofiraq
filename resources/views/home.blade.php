@@ -54,12 +54,12 @@
     <div class="mx-auto max-w-7xl">
         <p class="section-label mb-2">Browse by</p>
         <h2 class="section-title mb-8 md:mb-12">Popular Categories</h2>
-        <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-5">
             @foreach($popularCategories as $category)
                 <a href="{{ route('campaigns.index', ['medium' => $category->slug]) }}"
-                   class="border border-archive-border px-3 py-5 transition-colors hover:border-archive-black sm:px-6 sm:py-8">
-                    <p class="font-display text-sm leading-snug sm:text-lg">{{ $category->name }}</p>
-                    <p class="mt-1.5 text-[11px] text-archive-gray sm:mt-2 sm:text-xs">{{ $category->campaigns_count }} campaigns</p>
+                   class="border border-archive-border px-3 py-4 transition-colors hover:border-archive-black md:px-4 md:py-6">
+                    <p class="font-display text-sm leading-snug md:text-base">{{ $category->name }}</p>
+                    <p class="mt-1 text-[11px] text-archive-gray md:text-xs">{{ $category->campaigns_count }} campaigns</p>
                 </a>
             @endforeach
         </div>
@@ -77,7 +77,7 @@
             </div>
             <a href="{{ route('agencies.index') }}" class="text-sm underline underline-offset-4">View all</a>
         </div>
-        <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div class="grid grid-cols-3 gap-3 md:grid-cols-5 md:gap-5">
             @foreach($featuredAgencies as $agency)
                 <x-home-agency-card :agency="$agency" />
             @endforeach
@@ -96,7 +96,7 @@
             </div>
             <a href="{{ route('rankings.top-production-houses') }}" class="text-sm underline underline-offset-4">View rankings</a>
         </div>
-        <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div class="grid grid-cols-3 gap-3 md:grid-cols-5 md:gap-5">
             @foreach($productionHouses as $agency)
                 <x-home-agency-card :agency="$agency" :campaign-count="$agency->production_house_campaigns_count" />
             @endforeach
@@ -115,7 +115,7 @@
             </div>
             <a href="{{ route('people.index') }}" class="text-sm underline underline-offset-4">View all</a>
         </div>
-        <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div class="grid grid-cols-4 gap-2 md:grid-cols-6 md:gap-5">
             @foreach($featuredPeople as $person)
                 <x-home-person-card :person="$person" />
             @endforeach

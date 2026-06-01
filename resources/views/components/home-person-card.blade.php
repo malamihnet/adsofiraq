@@ -6,4 +6,5 @@
     :name="$person->name"
     :verified="$person->is_verified"
     :subtitle="$person->position"
+    image-size="person"
 />

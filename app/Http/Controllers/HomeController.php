@@ -67,10 +67,9 @@ class HomeController extends Controller
             ->values();
 
         $featuredPeople = Person::public()
-            ->orderByDesc('is_verified')
-            ->orderByDesc('ranking_score')
-            ->orderBy('name')
-            ->take(8)
+            ->orderByDesc('updated_at')
+            ->orderByDesc('created_at')
+            ->take(16)
             ->get();
 
         return view('home', compact(
