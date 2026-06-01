@@ -47,10 +47,17 @@ SVG;
 
     $authUser = auth()->user();
     $displayName = $authUser?->name ?: $authUser?->username;
+
+    $overHero = request()->routeIs('home');
 @endphp
 
 <header
-    class="site-header border-b border-archive-border/50 bg-white/80 text-archive-black backdrop-blur-md max-md:pt-4 md:border-white/10 md:bg-black md:text-white md:backdrop-blur-none md:pt-0"
+    @class([
+        'site-header max-md:pt-4 md:border-white/10 md:bg-black md:text-white md:backdrop-blur-none md:pt-0',
+        $overHero
+            ? 'site-header--over-hero max-md:absolute max-md:inset-x-0 max-md:top-0 max-md:z-[10000] max-md:border-b-0 max-md:bg-transparent max-md:text-white max-md:shadow-none max-md:backdrop-blur-none'
+            : 'max-md:border-archive-border/50 max-md:bg-white/80 max-md:text-archive-black max-md:backdrop-blur-md',
+    ])
     x-data="{ open: false }"
 >
     <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 max-md:pb-2.5 md:min-h-[72px] md:px-8">
@@ -79,7 +86,10 @@ SVG;
         {{-- Center: brand logo --}}
         <a
             href="{{ route('home') }}"
-            class="inline-flex shrink-0 items-center justify-self-center transition-opacity hover:opacity-80 md:brightness-0 md:invert"
+            @class([
+                'inline-flex shrink-0 items-center justify-self-center transition-opacity hover:opacity-80 md:brightness-0 md:invert',
+                $overHero ? 'max-md:brightness-0 max-md:invert' : '',
+            ])
             aria-label="Ads of Iraq"
         >
             <img
@@ -147,7 +157,12 @@ SVG;
             {{-- Mobile menu toggle --}}
             <button
                 type="button"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/70 bg-white/70 text-archive-black shadow-sm backdrop-blur transition-colors hover:border-neutral-300 hover:bg-white md:hidden"
+                @class([
+                    'inline-flex h-10 w-10 items-center justify-center rounded-full border shadow-sm backdrop-blur transition-colors md:hidden',
+                    $overHero
+                        ? 'max-md:border-white/30 max-md:bg-black/35 max-md:text-white hover:max-md:border-white/50 hover:max-md:bg-black/50'
+                        : 'border-neutral-200/70 bg-white/70 text-archive-black hover:border-neutral-300 hover:bg-white',
+                ])
                 @click="open = !open"
                 :aria-expanded="open"
                 aria-controls="site-mobile-nav"
