@@ -16,15 +16,6 @@
         overflow: visible;
     }
 
-    /* Homepage mobile: header floats over hero slider (not a white bar above it) */
-    @media (max-width: 767px) {
-        .site-header--over-hero {
-            position: absolute;
-            background: transparent;
-            border-bottom: none;
-        }
-    }
-
     .site-header__bar,
     .site-header__bar > *,
     .site-header__actions,
