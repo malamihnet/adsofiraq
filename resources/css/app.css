@@ -23,12 +23,6 @@
         overflow: visible;
     }
 
-    @media (max-width: 767px) {
-        .site-header__bar {
-            min-height: 5.5rem;
-        }
-    }
-
     .btn {
         @apply inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium tracking-wide transition-colors duration-200;
     }
