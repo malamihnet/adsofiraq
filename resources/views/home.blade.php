@@ -77,7 +77,7 @@
             </div>
             <a href="{{ route('agencies.index') }}" class="text-sm underline underline-offset-4">View all</a>
         </div>
-        <div class="grid grid-cols-3 gap-3 gap-y-4 md:grid-cols-6 md:gap-4 md:gap-y-5">
+        <div class="home-creator-grid grid grid-cols-3 gap-4 md:grid-cols-6">
             @foreach($featuredAgencies as $agency)
                 <x-home-agency-card :agency="$agency" />
             @endforeach
@@ -96,7 +96,7 @@
             </div>
             <a href="{{ route('rankings.top-production-houses') }}" class="text-sm underline underline-offset-4">View rankings</a>
         </div>
-        <div class="grid grid-cols-3 gap-3 gap-y-4 md:grid-cols-6 md:gap-4 md:gap-y-5">
+        <div class="home-creator-grid grid grid-cols-3 gap-4 md:grid-cols-6">
             @foreach($productionHouses as $agency)
                 <x-home-agency-card :agency="$agency" :campaign-count="$agency->production_house_campaigns_count" />
             @endforeach
@@ -115,7 +115,7 @@
             </div>
             <a href="{{ route('people.index') }}" class="text-sm underline underline-offset-4">View all</a>
         </div>
-        <div class="grid grid-cols-3 gap-3 gap-y-4 md:grid-cols-6 md:gap-4 md:gap-y-5">
+        <div class="home-creator-grid grid grid-cols-3 gap-4 md:grid-cols-6">
             @foreach($featuredPeople as $person)
                 <x-home-person-card :person="$person" />
             @endforeach

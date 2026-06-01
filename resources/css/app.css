@@ -127,4 +127,22 @@
     .agency-profile-page .p-2\.5 {
         padding: 0;
     }
+
+    /* Homepage creator sections — enforce grid rows (3 mobile / 6 desktop) */
+    .home-creator-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    @media (min-width: 768px) {
+        .home-creator-grid {
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+    }
+
+    .home-creator-grid > .contents,
+    .home-creator-grid > a {
+        min-width: 0;
+    }
 }
