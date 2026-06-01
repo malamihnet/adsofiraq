@@ -50,7 +50,7 @@ class HomeController extends Controller
             ->with(['roles'])
             ->withCount(['campaigns' => fn ($q) => $q->approved()])
             ->orderByDesc('campaigns_count')
-            ->take(12)
+            ->take(15)
             ->get();
 
         $productionHouses = Agency::query()
@@ -69,7 +69,7 @@ class HomeController extends Controller
         $featuredPeople = Person::public()
             ->orderByDesc('updated_at')
             ->orderByDesc('created_at')
-            ->take(16)
+            ->take(20)
             ->get();
 
         return view('home', compact(
