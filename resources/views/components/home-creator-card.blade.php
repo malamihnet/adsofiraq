@@ -8,7 +8,7 @@
 
 <a
     href="{{ $href }}"
-    class="group flex h-full w-full min-w-0 flex-col items-center justify-center rounded-2xl border border-archive-border/80 bg-white px-2 py-3 text-center transition-colors hover:border-archive-black max-md:min-h-[4.75rem] md:min-h-[6.5rem] md:px-3 md:py-4"
+    class="group flex h-full w-full min-w-0 flex-col items-center justify-center rounded-2xl border border-archive-border/80 bg-white px-2 py-3 text-center transition-colors hover:border-archive-black md:px-3 md:py-4"
 >
     <h3 class="font-display w-full min-w-0 leading-snug text-archive-black line-clamp-2 group-hover:underline max-md:text-[10px] max-md:leading-tight md:text-sm md:leading-snug">
         <span class="inline-flex items-center justify-center gap-0.5 md:gap-1">
