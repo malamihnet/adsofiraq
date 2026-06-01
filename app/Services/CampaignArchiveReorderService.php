@@ -12,39 +12,37 @@ class CampaignArchiveReorderService
     ) {}
 
     /**
-     * @param  list<int>  $orderedIds  Campaign IDs in display order (drag order).
-     * @param  list<int>  $pinnedIds  Subset that should keep manual archive positions.
+     * Persist the admin reorder list as manual archive positions (1-based).
+     * Every ID in $orderedIds is pinned in that sequence; other manual pins are cleared.
+     *
+     * @param  list<int>  $orderedIds  Campaign IDs in display order (DOM / drag order).
      */
-    public function saveOrder(array $orderedIds, array $pinnedIds): void
+    public function saveOrder(array $orderedIds): void
     {
         $orderedIds = array_values(array_unique(array_map('intval', $orderedIds)));
-        $pinnedLookup = array_fill_keys(array_map('intval', $pinnedIds), true);
 
-        DB::transaction(function () use ($orderedIds, $pinnedLookup) {
+        DB::transaction(function () use ($orderedIds) {
             $position = 0;
 
             foreach ($orderedIds as $id) {
-                if (! isset($pinnedLookup[$id])) {
-                    Campaign::query()
-                        ->where('id', $id)
-                        ->update(['manual_order' => null]);
-
-                    continue;
-                }
-
                 $position++;
                 Campaign::query()
                     ->where('id', $id)
                     ->update(['manual_order' => $position]);
             }
 
-            if ($pinnedLookup !== []) {
-                Campaign::query()
-                    ->approved()
-                    ->whereNotNull('manual_order')
-                    ->whereNotIn('id', array_keys($pinnedLookup))
-                    ->update(['manual_order' => null]);
-            }
+            Campaign::query()
+                ->approved()
+                ->whereNotNull('manual_order')
+                ->when(
+                    $orderedIds !== [],
+                    fn ($q) => $q->whereNotIn('id', $orderedIds),
+                )
+                ->when(
+                    $orderedIds === [],
+                    fn ($q) => $q,
+                )
+                ->update(['manual_order' => null]);
         });
 
         $this->archiveOrdering->clearCache();

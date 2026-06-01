@@ -326,13 +326,12 @@ class CampaignController extends Controller
     public function updateReorder(CampaignArchiveReorderRequest $request): RedirectResponse
     {
         $order = array_map('intval', $request->input('order', []));
-        $pinned = array_map('intval', $request->input('pinned', []));
 
-        $this->archiveReorder->saveOrder($order, $pinned);
+        $this->archiveReorder->saveOrder($order);
 
         return redirect()
             ->route('admin.campaigns.reorder')
-            ->with('success', 'Archive order saved. Manually ordered campaigns appear first on the public archive (Latest sort).');
+            ->with('success', 'Archive order saved.');
     }
 
     public function resetReorder(): RedirectResponse

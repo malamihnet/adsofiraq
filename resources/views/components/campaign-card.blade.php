@@ -13,7 +13,7 @@
 
 <article @class([
     'group',
-    'rounded-2xl border border-neutral-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-300 hover:border-neutral-300/90 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)]' => $isProfile,
+    'rounded-2xl border border-neutral-200/80 bg-white p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-300 hover:border-neutral-300/90 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] sm:p-3' => $isProfile,
 ])>
     <a href="{{ route('campaigns.show', $campaign) }}" class="block">
         <div @class([
@@ -32,12 +32,12 @@
         <div @class([
             'px-1',
             'pt-4 pb-1' => $isProfile,
-            'mt-3.5' => ! $isProfile,
+            'mt-2 sm:mt-3.5' => ! $isProfile,
         ])>
             <h3 @class([
                 'font-display leading-snug text-archive-black',
                 'text-[15px] font-medium line-clamp-2 group-hover:underline' => $isProfile,
-                'text-base sm:text-[17px] inline-flex flex-wrap items-center gap-2' => ! $isProfile,
+                'text-sm sm:text-base md:text-[17px] inline-flex flex-wrap items-center gap-1.5 sm:gap-2' => ! $isProfile,
             ])>
                 @if($isProfile)
                     <span class="flex items-start gap-2">
@@ -57,7 +57,7 @@
                     </p>
                 @endif
             @else
-                <div class="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1 text-[11px] leading-relaxed text-archive-gray">
+                <div class="mt-1 hidden flex-wrap gap-x-2 gap-y-0.5 text-[10px] leading-relaxed text-archive-gray sm:mt-1.5 sm:flex sm:gap-x-2.5 sm:text-[11px]">
                     @foreach($campaign->brands as $brand)
                         <span class="inline-flex items-center gap-1">
                             {{ $brand->name }}
