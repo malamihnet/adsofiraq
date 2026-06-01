@@ -42,7 +42,7 @@ SVG;
 @endphp
 
 <header class="site-header border-b border-white/10 bg-black text-white" x-data="{ open: false }">
-    <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 max-md:min-h-[4.5rem] md:min-h-[72px] md:px-8">
+    <div class="site-header__bar mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 max-md:min-h-[5.5rem] max-md:py-3 md:min-h-[72px] md:py-0 md:px-8">
         {{-- Left: platform navigation --}}
         <div class="flex items-center justify-start">
             <nav aria-label="Primary" class="hidden items-center gap-5 md:flex">
@@ -74,7 +74,7 @@ SVG;
             <img
                 src="{{ $logoUrl }}"
                 alt="Ads of Iraq"
-                class="block h-[40px] w-auto max-w-[180px] md:h-[52px] md:max-w-[220px]"
+                class="block h-11 w-auto max-w-[190px] md:h-[52px] md:max-w-[220px]"
                 decoding="async"
                 fetchpriority="high"
             >
@@ -136,20 +136,26 @@ SVG;
             {{-- Mobile menu toggle --}}
             <button
                 type="button"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-sm transition-all hover:border-white/35 hover:bg-white/15 active:scale-95 md:hidden"
+                class="mobile-menu-toggle inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/[0.12] text-white shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-md transition-all hover:border-white/40 hover:bg-white/20 active:scale-[0.97] md:hidden"
                 @click="open = !open"
                 :aria-expanded="open"
+                :aria-label="open ? 'Close menu' : 'Open menu'"
                 aria-controls="site-mobile-nav"
-                aria-label="Menu"
             >
-                <span x-show="!open" class="flex flex-col items-end justify-center gap-[5px]" aria-hidden="true">
-                    <span class="block h-px w-[18px] rounded-full bg-current"></span>
-                    <span class="block h-px w-[12px] rounded-full bg-current opacity-80"></span>
-                    <span class="block h-px w-[18px] rounded-full bg-current"></span>
+                <span class="relative block h-5 w-5" aria-hidden="true">
+                    <span
+                        class="absolute left-1/2 top-[4px] block h-[2px] w-[20px] -translate-x-1/2 rounded-full bg-current transition-all duration-300 ease-out"
+                        :class="open ? 'top-1/2 -translate-y-1/2 rotate-45' : ''"
+                    ></span>
+                    <span
+                        class="absolute left-1/2 top-1/2 block h-[2px] w-[20px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-current transition-all duration-300 ease-out"
+                        :class="open ? 'scale-x-0 opacity-0' : ''"
+                    ></span>
+                    <span
+                        class="absolute left-1/2 top-[16px] block h-[2px] w-[20px] -translate-x-1/2 rounded-full bg-current transition-all duration-300 ease-out"
+                        :class="open ? 'top-1/2 -translate-y-1/2 -rotate-45' : ''"
+                    ></span>
                 </span>
-                <svg x-show="open" x-cloak class="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
             </button>
         </div>
     </div>

@@ -25,7 +25,7 @@
 
     @media (max-width: 767px) {
         .site-header__bar {
-            min-height: 4.5rem;
+            min-height: 5.5rem;
         }
     }
 
