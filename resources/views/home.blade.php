@@ -115,7 +115,7 @@
             </div>
             <a href="{{ route('people.index') }}" class="text-sm underline underline-offset-4">View all</a>
         </div>
-        <div class="grid grid-cols-5 gap-x-1.5 gap-y-4 md:grid-cols-4 md:gap-x-6 md:gap-y-8">
+        <div class="grid grid-cols-5 gap-x-1.5 gap-y-4 md:grid-cols-3 md:gap-x-8 md:gap-y-6 lg:grid-cols-4">
             @foreach($featuredPeople as $person)
                 <x-home-person-card :person="$person" />
             @endforeach
