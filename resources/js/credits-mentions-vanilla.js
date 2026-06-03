@@ -12,27 +12,14 @@ export function initCreditsMentionsVanilla() {
         root.dataset.mentionsBound = 'true';
         setupCreditsMentionsField(root);
     });
-
-    const orphan = document.querySelector('#credits, textarea[name="credits"]');
-
-    if (orphan && !orphan.closest('.credits-mentions-field[data-mentions-bound="true"]')) {
-        const wrapper = orphan.closest('.credits-mentions-field') || orphan.parentElement;
-
-        if (wrapper && wrapper.dataset.mentionsBound !== 'true') {
-            wrapper.dataset.mentionsBound = 'true';
-            setupCreditsMentionsField(wrapper, orphan);
-        }
-    }
 }
 
 function log(...args) {
     console.log('[mentions]', ...args);
 }
 
-function setupCreditsMentionsField(root, textareaOverride = null) {
-    const textarea = textareaOverride
-        || root.querySelector('#credits')
-        || root.querySelector('textarea[name="credits"]');
+function setupCreditsMentionsField(root) {
+    const textarea = root.querySelector('#credits') || root.querySelector('textarea[name="credits"]');
 
     if (! textarea) {
         log('no textarea found in', root);
@@ -46,25 +33,31 @@ function setupCreditsMentionsField(root, textareaOverride = null) {
     const hiddenInput = root.querySelector('input[name="credits_mentions_json"]')
         || root.querySelector('#credits_mentions_json');
 
-    let mentions = parseMentionsJson(hiddenInput?.value || root.dataset.initialMentions || '[]');
+    let mentions = parseMentionsJson(hiddenInput?.value || '[]');
     let mentionStart = null;
     let query = '';
     let results = [];
     let loading = false;
     let debounceTimer = null;
     let activeIndex = -1;
+    let dropdownOpen = false;
 
-    const wrapper = textarea.closest('.relative') || root.querySelector('.relative') || root;
-    wrapper.classList.add('relative');
+    let dropdown = document.createElement('div');
+    dropdown.setAttribute('data-credits-mentions-dropdown', 'true');
+    dropdown.setAttribute('role', 'listbox');
+    dropdown.className = 'credits-mentions-dropdown';
+    dropdown.style.cssText = [
+        'display:none',
+        'position:fixed',
+        'z-index:99999',
+        'max-height:16rem',
+        'overflow-y:auto',
+        'background:#fff',
+        'border:2px solid #dc2626',
+        'box-shadow:0 8px 24px rgba(0,0,0,0.12)',
+    ].join(';');
 
-    let dropdown = root.querySelector('[data-credits-mentions-dropdown]');
-
-    if (! dropdown) {
-        dropdown = document.createElement('div');
-        dropdown.setAttribute('data-credits-mentions-dropdown', 'true');
-        dropdown.className = 'credits-mentions-dropdown hidden absolute left-0 right-0 top-full z-[9999] mt-1 max-h-64 overflow-y-auto border border-archive-border bg-white shadow-lg';
-        wrapper.appendChild(dropdown);
-    }
+    document.body.appendChild(dropdown);
 
     const syncHidden = () => {
         if (! hiddenInput) {
@@ -91,13 +84,25 @@ function setupCreditsMentionsField(root, textareaOverride = null) {
         hiddenInput.value = JSON.stringify(payload);
     };
 
+    const positionDropdown = () => {
+        const rect = textarea.getBoundingClientRect();
+
+        dropdown.style.top = `${rect.bottom + 4}px`;
+        dropdown.style.left = `${rect.left}px`;
+        dropdown.style.width = `${Math.max(rect.width, 280)}px`;
+    };
+
     const hideDropdown = () => {
-        dropdown.classList.add('hidden');
+        dropdown.style.display = 'none';
+        dropdownOpen = false;
         activeIndex = -1;
     };
 
     const showDropdown = () => {
-        dropdown.classList.remove('hidden');
+        positionDropdown();
+        dropdown.style.display = 'block';
+        dropdownOpen = true;
+        log('dropdown visible');
     };
 
     const roleBeforeCursor = () => {
@@ -134,31 +139,29 @@ function setupCreditsMentionsField(root, textareaOverride = null) {
         dropdown.innerHTML = '';
 
         if (loading) {
-            const loadingEl = document.createElement('p');
-            loadingEl.className = 'px-4 py-3 text-xs text-archive-gray';
-            loadingEl.textContent = 'Searching...';
-            dropdown.appendChild(loadingEl);
+            dropdown.appendChild(createMessage('Searching...'));
             showDropdown();
 
             return;
         }
 
         if (query.trim() === '') {
-            const hint = document.createElement('p');
-            hint.className = 'px-4 py-2 text-xs text-archive-gray';
-            hint.textContent = 'Type a name after @ to search';
-            dropdown.appendChild(hint);
+            dropdown.appendChild(createMessage('Type a name after @ to search'));
         }
 
         results.forEach((person, index) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = `flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-archive-light ${index === activeIndex ? 'bg-archive-light' : ''}`;
+            btn.className = 'flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-neutral-100';
+            if (index === activeIndex) {
+                btn.style.backgroundColor = '#f5f5f5';
+            }
+
             btn.innerHTML = `
-                <img src="${escapeAttr(person.photo_url || '')}" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover bg-archive-light" onerror="this.style.visibility='hidden'">
-                <span class="min-w-0">
-                    <span class="block font-medium">${escapeHtml(person.name)}</span>
-                    <span class="block truncate text-xs text-archive-gray">${escapeHtml(person.position || '')}</span>
+                <img src="${escapeAttr(person.photo_url || '')}" alt="" style="width:36px;height:36px;border-radius:9999px;object-fit:cover;background:#f5f5f5" onerror="this.style.visibility='hidden'">
+                <span style="min-width:0">
+                    <span style="display:block;font-weight:500">${escapeHtml(person.name)}</span>
+                    <span style="display:block;font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(person.position || '')}</span>
                 </span>
             `;
 
@@ -173,20 +176,18 @@ function setupCreditsMentionsField(root, textareaOverride = null) {
         if (query.trim() !== '') {
             const createBtn = document.createElement('button');
             createBtn.type = 'button';
-            createBtn.className = 'block w-full border-t border-archive-border px-4 py-3 text-left text-sm hover:bg-archive-light';
+            createBtn.className = 'block w-full border-t border-neutral-200 px-4 py-3 text-left text-sm hover:bg-neutral-100';
             createBtn.textContent = `Create profile: ${query.trim()}`;
             createBtn.addEventListener('mousedown', (event) => {
                 event.preventDefault();
                 hideDropdown();
-                const name = query.trim();
-
-                if (name) {
-                    window.dispatchEvent(new CustomEvent('credits-mentions:create-person', {
-                        detail: { name, textarea, root },
-                    }));
-                }
+                log('create profile requested:', query.trim());
             });
             dropdown.appendChild(createBtn);
+        }
+
+        if (dropdown.innerHTML === '') {
+            dropdown.appendChild(createMessage('No people found'));
         }
 
         showDropdown();
@@ -222,9 +223,22 @@ function setupCreditsMentionsField(root, textareaOverride = null) {
         log('selected', person.name);
     };
 
+    const buildSearchUrl = (q) => {
+        try {
+            const url = new URL(searchUrl, window.location.origin);
+            url.searchParams.set('q', q);
+
+            return url.toString();
+        } catch (error) {
+            const separator = searchUrl.includes('?') ? '&' : '?';
+
+            return `${searchUrl}${separator}q=${encodeURIComponent(q)}`;
+        }
+    };
+
     const fetchPeople = async () => {
         const q = query;
-        const url = `${searchUrl}${searchUrl.includes('?') ? '&' : '?'}q=${encodeURIComponent(q)}`;
+        const url = buildSearchUrl(q);
 
         log('fetching:', url);
         loading = true;
@@ -304,11 +318,11 @@ function setupCreditsMentionsField(root, textareaOverride = null) {
     });
 
     textarea.addEventListener('keydown', (event) => {
-        if (dropdown.classList.contains('hidden')) {
+        if (! dropdownOpen) {
             return;
         }
 
-        const itemCount = results.length + (query.trim() !== '' ? 1 : 0);
+        const itemCount = results.length;
 
         if (event.key === 'ArrowDown') {
             event.preventDefault();
@@ -326,12 +340,9 @@ function setupCreditsMentionsField(root, textareaOverride = null) {
             return;
         }
 
-        if (event.key === 'Enter' && activeIndex >= 0) {
+        if (event.key === 'Enter' && activeIndex >= 0 && activeIndex < results.length) {
             event.preventDefault();
-
-            if (activeIndex < results.length) {
-                selectPerson(results[activeIndex]);
-            }
+            selectPerson(results[activeIndex]);
 
             return;
         }
@@ -341,10 +352,24 @@ function setupCreditsMentionsField(root, textareaOverride = null) {
         }
     });
 
-    document.addEventListener('click', (event) => {
-        if (! root.contains(event.target)) {
-            hideDropdown();
+    window.addEventListener('scroll', () => {
+        if (dropdownOpen) {
+            positionDropdown();
         }
+    }, true);
+
+    window.addEventListener('resize', () => {
+        if (dropdownOpen) {
+            positionDropdown();
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (root.contains(event.target) || dropdown.contains(event.target)) {
+            return;
+        }
+
+        hideDropdown();
     });
 
     const form = textarea.closest('form');
@@ -357,6 +382,14 @@ function setupCreditsMentionsField(root, textareaOverride = null) {
 
     syncHidden();
     log('ready', searchUrl);
+}
+
+function createMessage(text) {
+    const el = document.createElement('p');
+    el.style.cssText = 'padding:12px 16px;font-size:12px;color:#666;margin:0';
+    el.textContent = text;
+
+    return el;
 }
 
 function parseMentionsJson(raw) {

@@ -44,11 +44,6 @@
             value="{{ htmlspecialchars((string) $mentionsJsonOld, ENT_QUOTES, 'UTF-8') }}"
         >
 
-        <div
-            data-credits-mentions-dropdown="true"
-            class="credits-mentions-dropdown hidden absolute left-0 right-0 top-full z-[9999] mt-1 max-h-64 overflow-y-auto border border-archive-border bg-white shadow-lg"
-            aria-hidden="true"
-        ></div>
     </div>
 
     @error('credits')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
