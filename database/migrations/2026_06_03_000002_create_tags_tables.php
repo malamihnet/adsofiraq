@@ -22,6 +22,7 @@ return new class extends Migration
         Schema::create('campaign_tag', function (Blueprint $table) {
             $table->foreignId('campaign_id')->constrained()->cascadeOnDelete();
             $table->foreignId('tag_id')->constrained()->cascadeOnDelete();
+            $table->timestamps();
 
             $table->primary(['campaign_id', 'tag_id']);
         });
