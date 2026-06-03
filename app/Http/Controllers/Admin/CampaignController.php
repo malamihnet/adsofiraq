@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminCampaignStoreRequest;
-use App\Http\Requests\Admin\InlineCampaignUpdateRequest;
 use App\Http\Requests\Admin\UpdateCampaignHeroRequest;
 use App\Http\Requests\Admin\UpdatePlatformVerificationRequest;
 use App\Models\Agency;
@@ -14,7 +13,7 @@ use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
 use App\Models\User;
-use App\Services\AdminCampaignInlineService;
+use App\Services\CampaignArchiveOrderingService;
 use App\Services\CampaignArchivePlacementService;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
@@ -27,9 +26,7 @@ use App\Services\TaxonomyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CampaignController extends Controller
@@ -41,7 +38,7 @@ class CampaignController extends Controller
         protected PlatformVerificationService $verificationService,
         protected CampaignTaxonomySyncService $taxonomySyncService,
         protected CampaignArchivePlacementService $archivePlacement,
-        protected AdminCampaignInlineService $inlineUpdates,
+        protected CampaignArchiveOrderingService $archiveOrdering,
     ) {}
 
     public function index(Request $request): View
@@ -219,37 +216,109 @@ class CampaignController extends Controller
         return view('admin.campaigns.show', compact('campaign'));
     }
 
-    public function inlineUpdate(InlineCampaignUpdateRequest $request, Campaign $campaign): JsonResponse
+    public function inlineUpdate(Request $request, Campaign $campaign): JsonResponse
     {
         if (! $request->user()?->isAdmin()) {
-            throw new AuthorizationException('Admin access required.');
+            return response()->json(['ok' => false, 'message' => 'Admin access required.'], 403);
+        }
+
+        $field = $request->input('field');
+        $allowedFields = ['status', 'is_hero', 'is_featured', 'is_verified'];
+
+        if (! in_array($field, $allowedFields, true)) {
+            return response()->json(['ok' => false, 'message' => 'Invalid field.'], 422);
         }
 
         try {
-            $field = $request->input('field');
-            $value = $request->input('value');
+            if ($field === 'status') {
+                $status = (string) $request->input('value');
+                $allowedStatuses = ['draft', 'pending', 'approved', 'needs_changes', 'rejected'];
 
-            $campaign = match ($field) {
-                'status' => $this->inlineUpdates->updateStatus($campaign, (string) $value, $request->user()),
-                'is_hero' => $this->inlineUpdates->updateHero($campaign, (bool) $value),
-                'is_verified' => $this->inlineUpdates->updateVerified($campaign, (bool) $value, $request->user()),
-                'is_featured' => $this->inlineUpdates->updateEditorsPick($campaign, (bool) $value),
-                default => throw ValidationException::withMessages([
-                    'field' => 'Unsupported field.',
-                ]),
-            };
+                if (! in_array($status, $allowedStatuses, true)) {
+                    return response()->json(['ok' => false, 'message' => 'Invalid status.'], 422);
+                }
 
-            $responseValue = match ($field) {
-                'status' => $campaign->status,
-                'is_hero' => $campaign->is_hero,
-                'is_verified' => $campaign->is_verified,
-                'is_featured' => $campaign->is_featured,
-                default => $value,
-            };
+                $campaign->status = $status;
+
+                switch ($status) {
+                    case 'approved':
+                        $campaign->is_draft = false;
+                        $campaign->needs_changes = false;
+                        $campaign->published_at = $campaign->published_at ?? now();
+                        break;
+                    case 'draft':
+                        $campaign->is_draft = true;
+                        $campaign->needs_changes = false;
+                        break;
+                    case 'needs_changes':
+                        $campaign->is_draft = false;
+                        $campaign->needs_changes = true;
+                        break;
+                    case 'pending':
+                        $campaign->is_draft = false;
+                        $campaign->needs_changes = false;
+                        break;
+                    case 'rejected':
+                        $campaign->is_draft = false;
+                        break;
+                }
+
+                $campaign->save();
+            } elseif ($field === 'is_verified') {
+                $raw = $request->input('value');
+                $boolValue = is_bool($raw)
+                    ? $raw
+                    : filter_var($raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+                if ($boolValue === null) {
+                    return response()->json(['ok' => false, 'message' => 'Invalid boolean value.'], 422);
+                }
+
+                $this->verificationService->update($campaign, $request->user(), (bool) $boolValue);
+            } else {
+                $raw = $request->input('value');
+                $boolValue = is_bool($raw)
+                    ? $raw
+                    : filter_var($raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+                if ($boolValue === null) {
+                    return response()->json(['ok' => false, 'message' => 'Invalid boolean value.'], 422);
+                }
+
+                if ($boolValue && $campaign->status !== 'approved') {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'Only approved campaigns can use this setting.',
+                    ], 422);
+                }
+
+                $campaign->{$field} = (bool) $boolValue;
+
+                if ($field === 'is_hero' && ! $boolValue) {
+                    $campaign->hero_order = null;
+                }
+
+                $campaign->save();
+            }
+
+            $campaign->refresh();
+
+            $this->archiveOrdering->clearCache();
+            app(RankingScoreService::class)->refreshCampaign($campaign);
+
+            $responseValue = $field === 'status'
+                ? $campaign->status
+                : (bool) $campaign->{$field};
+
+            Log::info('Campaign inline updated', [
+                'campaign_id' => $campaign->id,
+                'field' => $field,
+                'value' => $responseValue,
+            ]);
 
             return response()->json([
-                'success' => true,
                 'ok' => true,
+                'success' => true,
                 'message' => 'Saved.',
                 'campaign_id' => $campaign->id,
                 'field' => $field,
@@ -260,29 +329,17 @@ class CampaignController extends Controller
                     'is_hero' => (bool) $campaign->is_hero,
                     'is_verified' => (bool) $campaign->is_verified,
                     'is_featured' => (bool) $campaign->is_featured,
-                    'workflow_status_label' => $campaign->workflow_status_label,
                 ],
             ]);
-        } catch (ValidationException $exception) {
-            Log::warning('Campaign inline update validation failed', [
-                'campaign_id' => $campaign->id,
-                'field' => $request->input('field'),
-                'errors' => $exception->errors(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => collect($exception->errors())->flatten()->first() ?? 'Validation failed.',
-                'errors' => $exception->errors(),
-            ], 422);
         } catch (\Throwable $exception) {
             Log::error('Campaign inline update failed', [
                 'campaign_id' => $campaign->id,
-                'field' => $request->input('field'),
+                'field' => $field,
                 'error' => $exception->getMessage(),
             ]);
 
             return response()->json([
+                'ok' => false,
                 'success' => false,
                 'message' => 'Could not save: '.$exception->getMessage(),
             ], 500);

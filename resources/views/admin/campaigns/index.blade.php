@@ -41,6 +41,7 @@
                 <th class="px-4 py-3 text-left">Editor's Pick</th>
                 <th class="px-4 py-3 text-left">Archive placement</th>
                 <th class="px-4 py-3 text-left">Verified</th>
+                <th class="px-4 py-3 text-left w-20"></th>
             </tr>
         </thead>
         <tbody>
@@ -58,7 +59,7 @@
                     <td class="px-4 py-3">
                         <select
                             data-inline-field="status"
-                            data-inline-url="{{ route('admin.campaigns.inline', $campaign) }}"
+                            data-inline-url="{{ route('admin.campaigns.inline', ['campaign' => $campaign->id]) }}"
                             data-campaign-id="{{ $campaign->id }}"
                             data-previous-value="{{ $campaign->status }}"
                             class="input-field min-w-[9rem] py-1 text-xs"
@@ -76,7 +77,7 @@
                             <input
                                 type="checkbox"
                                 data-inline-field="is_hero"
-                                data-inline-url="{{ route('admin.campaigns.inline', $campaign) }}"
+                                data-inline-url="{{ route('admin.campaigns.inline', ['campaign' => $campaign->id]) }}"
                                 data-campaign-id="{{ $campaign->id }}"
                                 data-previous-checked="{{ $campaign->is_hero ? '1' : '0' }}"
                                 @checked($campaign->is_hero)
@@ -91,7 +92,7 @@
                             <input
                                 type="checkbox"
                                 data-inline-field="is_featured"
-                                data-inline-url="{{ route('admin.campaigns.inline', $campaign) }}"
+                                data-inline-url="{{ route('admin.campaigns.inline', ['campaign' => $campaign->id]) }}"
                                 data-campaign-id="{{ $campaign->id }}"
                                 data-previous-checked="{{ $campaign->is_featured ? '1' : '0' }}"
                                 @checked($campaign->is_featured)
@@ -115,7 +116,7 @@
                             <input
                                 type="checkbox"
                                 data-inline-field="is_verified"
-                                data-inline-url="{{ route('admin.campaigns.inline', $campaign) }}"
+                                data-inline-url="{{ route('admin.campaigns.inline', ['campaign' => $campaign->id]) }}"
                                 data-campaign-id="{{ $campaign->id }}"
                                 data-previous-checked="{{ $campaign->is_verified ? '1' : '0' }}"
                                 @checked($campaign->is_verified)
@@ -125,10 +126,18 @@
                             <span class="text-xs text-archive-gray">{{ $campaign->is_verified ? 'On' : 'Off' }}</span>
                         </label>
                     </td>
+                    <td class="px-4 py-3">
+                        <span
+                            class="admin-inline-feedback hidden text-xs font-medium text-green-700"
+                            data-inline-feedback="{{ $campaign->id }}"
+                        >Saved</span>
+                    </td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 </div>
 <div class="mt-6">{{ $campaigns->links() }}</div>
+
+@include('admin.campaigns.partials.inline-controls-script')
 @endsection
