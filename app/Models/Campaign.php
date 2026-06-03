@@ -37,6 +37,9 @@ class Campaign extends Model
         'is_hero',
         'hero_order',
         'manual_order',
+        'archive_placement_enabled',
+        'archive_page',
+        'archive_position',
         'is_student',
         'is_nsfw',
         'is_draft',
@@ -63,6 +66,9 @@ class Campaign extends Model
             'is_hero' => 'boolean',
             'hero_order' => 'integer',
             'manual_order' => 'integer',
+            'archive_placement_enabled' => 'boolean',
+            'archive_page' => 'integer',
+            'archive_position' => 'integer',
             'is_student' => 'boolean',
             'is_nsfw' => 'boolean',
             'is_draft' => 'boolean',
@@ -95,16 +101,29 @@ class Campaign extends Model
                     $campaign->is_hero = false;
                     $campaign->hero_order = null;
                     $campaign->manual_order = null;
+                    $campaign->archive_placement_enabled = false;
+                    $campaign->archive_page = null;
+                    $campaign->archive_position = null;
                 }
             }
 
             if ($campaign->status !== 'approved') {
                 $campaign->manual_order = null;
+                $campaign->archive_placement_enabled = false;
+                $campaign->archive_page = null;
+                $campaign->archive_position = null;
             }
         });
 
         static::saved(function (Campaign $campaign) {
-            if ($campaign->wasChanged(['manual_order', 'status', 'approved_at'])) {
+            if ($campaign->wasChanged([
+                'manual_order',
+                'status',
+                'approved_at',
+                'archive_placement_enabled',
+                'archive_page',
+                'archive_position',
+            ])) {
                 app(\App\Services\CampaignArchiveOrderingService::class)->clearCache();
             }
         });
@@ -163,26 +182,38 @@ class Campaign extends Model
             ->orderByDesc('created_at');
     }
 
-    public function scopePinned(Builder $query): Builder
-    {
-        return $query->whereNotNull('manual_order');
-    }
-
-    public function scopeAutomaticArchive(Builder $query): Builder
-    {
-        return $query->whereNull('manual_order');
-    }
-
-    /**
-     * SQL ordering hint only. Full archive slot merge uses CampaignArchiveOrderingService.
-     */
-    public function scopeOrderedForArchive(Builder $query): Builder
+    public function scopeArchivePlaced(Builder $query): Builder
     {
         return $query
-            ->orderByRaw('CASE WHEN manual_order IS NULL THEN 1 ELSE 0 END')
-            ->orderBy('manual_order')
-            ->orderByDesc('approved_at')
-            ->orderByDesc('created_at');
+            ->where('archive_placement_enabled', true)
+            ->whereNotNull('archive_page')
+            ->whereNotNull('archive_position');
+    }
+
+    public function scopeArchiveAutomatic(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->where('archive_placement_enabled', false)
+                ->orWhereNull('archive_page')
+                ->orWhereNull('archive_position');
+        });
+    }
+
+    /** @deprecated Use scopeArchivePlaced() */
+    public function scopePinned(Builder $query): Builder
+    {
+        return $query->archivePlaced();
+    }
+
+    /** @deprecated Use scopeArchiveAutomatic() */
+    public function scopeAutomaticArchive(Builder $query): Builder
+    {
+        return $query->archiveAutomatic();
+    }
+
+    public function scopeOrderedForArchive(Builder $query): Builder
+    {
+        return $query->latestOnPlatform();
     }
 
     public function scopePublic(Builder $query): Builder

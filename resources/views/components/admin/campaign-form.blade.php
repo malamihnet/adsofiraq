@@ -169,10 +169,34 @@
                 <p class="mt-1 text-xs text-archive-gray">Hero order is optional. By default, the latest campaign approved on Ads of Iraq appears first.</p>
             </div>
 
-            <div class="md:col-span-2">
-                <p class="text-sm text-archive-gray">
-                    Archive order is managed on the
-                    <a href="{{ route('admin.campaigns.reorder') }}" class="underline">drag &amp; drop reorder page</a>.
+            <div class="md:col-span-2 border-t border-archive-border pt-6">
+                <h3 class="section-label mb-4">Archive Placement</h3>
+                <input type="hidden" name="archive_placement_enabled" value="0">
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="archive_placement_enabled" value="1" id="admin-archive-placement-enabled"
+                        @checked(old('archive_placement_enabled', $campaign?->archive_placement_enabled)) class="rounded border-archive-border">
+                    Enable custom archive placement
+                </label>
+                <p class="mt-1 text-xs text-archive-gray">If disabled, campaign follows automatic latest archive order.</p>
+                @error('archive_placement_enabled')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+
+                <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="section-label mb-2 block" for="archive_page">Page number</label>
+                        <input type="number" name="archive_page" id="archive_page" min="1"
+                            value="{{ old('archive_page', $campaign?->archive_page) }}" class="input-field max-w-[120px]">
+                        @error('archive_page')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="section-label mb-2 block" for="archive_position">Position on page</label>
+                        <input type="number" name="archive_position" id="archive_position" min="1" max="100"
+                            value="{{ old('archive_position', $campaign?->archive_position) }}" class="input-field max-w-[120px]">
+                        @error('archive_position')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+                <p class="mt-2 text-xs text-archive-gray">
+                    Applies to <code>/campaigns</code> with Latest sort only. Manage all placements on
+                    <a href="{{ route('admin.archive-placements.index') }}" class="underline">Archive Placements</a>.
                 </p>
             </div>
 
@@ -195,11 +219,13 @@
         document.addEventListener('DOMContentLoaded', () => {
             const status = document.getElementById('admin-campaign-status');
             const hero = document.getElementById('admin-campaign-is-hero');
+            const placement = document.getElementById('admin-archive-placement-enabled');
             if (!status) return;
 
             const sync = () => {
                 const approved = status.value === 'approved';
                 if (hero) hero.disabled = !approved;
+                if (placement) placement.disabled = !approved;
             };
 
             status.addEventListener('change', sync);

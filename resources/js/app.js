@@ -5,7 +5,6 @@ import homeHeroSlider from './home-hero-slider';
 import taxonomyMultiselect from './taxonomy-multiselect';
 import campaignVideosManager from './campaign-videos-manager';
 import setupPlyr from './plyr-init';
-import initAdminCampaignReorder from './admin-campaign-reorder';
 import campaignGallery from './campaign-gallery';
 
 window.Alpine = Alpine;
@@ -17,5 +16,4 @@ Alpine.start();
 
 document.addEventListener('DOMContentLoaded', () => {
     setupPlyr();
-    initAdminCampaignReorder();
 });

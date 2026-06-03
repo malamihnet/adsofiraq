@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminCampaignStoreRequest;
-use App\Http\Requests\Admin\CampaignArchiveReorderRequest;
 use App\Http\Requests\Admin\UpdateCampaignHeroRequest;
 use App\Http\Requests\Admin\UpdatePlatformVerificationRequest;
 use App\Models\Agency;
@@ -14,8 +13,7 @@ use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
 use App\Models\User;
-use App\Services\CampaignArchiveOrderingService;
-use App\Services\CampaignArchiveReorderService;
+use App\Services\CampaignArchivePlacementService;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
 use App\Mail\CampaignWorkflowMail;
@@ -36,8 +34,7 @@ class CampaignController extends Controller
         protected CampaignVideoService $videoService,
         protected PlatformVerificationService $verificationService,
         protected CampaignTaxonomySyncService $taxonomySyncService,
-        protected CampaignArchiveOrderingService $archiveOrdering,
-        protected CampaignArchiveReorderService $archiveReorder,
+        protected CampaignArchivePlacementService $archivePlacement,
     ) {}
 
     public function index(Request $request): View
@@ -56,8 +53,10 @@ class CampaignController extends Controller
             });
         }
 
-        if ($request->boolean('pinned')) {
-            $query->pinned()->orderBy('manual_order');
+        if ($request->input('archive_placement') === 'placed') {
+            $query->archivePlaced()->orderBy('archive_page')->orderBy('archive_position');
+        } elseif ($request->input('archive_placement') === 'auto') {
+            $query->archiveAutomatic();
         }
 
         $query->platformVerificationFilter($request->input('verified'));
@@ -199,6 +198,8 @@ class CampaignController extends Controller
             $this->verificationService->update($campaign, $request->user(), true);
         }
 
+        $this->syncArchivePlacementFromRequest($request, $campaign);
+
         return redirect()
             ->route('admin.campaigns.edit', $campaign)
             ->with('success', 'Campaign updated successfully.');
@@ -306,49 +307,6 @@ class CampaignController extends Controller
             ->with('success', 'Campaign deleted.');
     }
 
-    public function reorder(): View
-    {
-        $orderedIds = $this->archiveOrdering->resolveFullArchiveOrderedIds();
-
-        $campaigns = Campaign::query()
-            ->approved()
-            ->with(['brands', 'agencies'])
-            ->whereIn('id', $orderedIds)
-            ->get()
-            ->sortBy(fn (Campaign $campaign) => array_search($campaign->id, $orderedIds, true))
-            ->values();
-
-        return view('admin.campaigns.reorder', [
-            'campaigns' => $campaigns,
-        ]);
-    }
-
-    public function updateReorder(CampaignArchiveReorderRequest $request): RedirectResponse
-    {
-        $order = array_map('intval', $request->input('order', []));
-
-        $this->archiveReorder->saveOrder($order);
-
-        return redirect()
-            ->route('admin.campaigns.reorder')
-            ->with('success', 'Archive order saved. Public archive and homepage Latest Campaigns will use this order.');
-    }
-
-    public function resetReorder(): RedirectResponse
-    {
-        $cleared = $this->archiveReorder->resetAll();
-
-        return redirect()
-            ->route('admin.campaigns.reorder')
-            ->with('success', sprintf(
-                'Reset to automatic ordering. Cleared manual positions for %d campaign(s).',
-                $cleared,
-            ));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
     /**
      * @return array<string, mixed>
      */
@@ -367,6 +325,16 @@ class CampaignController extends Controller
                 ? $this->taxonomySyncService->selectedForForm($campaign)
                 : $this->taxonomySyncService->oldInputSelections(),
         ];
+    }
+
+    protected function syncArchivePlacementFromRequest(AdminCampaignStoreRequest $request, Campaign $campaign): void
+    {
+        $this->archivePlacement->applyToCampaign(
+            $campaign->fresh(),
+            enabled: $request->boolean('archive_placement_enabled'),
+            page: $request->input('archive_page'),
+            position: $request->input('archive_position'),
+        );
     }
 
 }

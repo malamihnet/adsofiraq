@@ -4,6 +4,8 @@ namespace App\Http\Requests\Admin;
 
 use App\Http\Requests\Concerns\ValidatesCampaignTaxonomies;
 use App\Http\Requests\Concerns\ValidatesCampaignVideos;
+use App\Models\Campaign;
+use App\Services\CampaignArchivePlacementService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -61,6 +63,9 @@ class AdminCampaignStoreRequest extends FormRequest
             'editorial_label' => ['nullable', 'string', 'max:64'],
             'ai_summary' => ['nullable', 'string', 'max:2000'],
             'status' => ['required', 'in:draft,pending,approved,rejected,needs_changes'],
+            'archive_placement_enabled' => ['sometimes', 'boolean'],
+            'archive_page' => ['nullable', 'required_if:archive_placement_enabled,1,true', 'integer', 'min:1'],
+            'archive_position' => ['nullable', 'required_if:archive_placement_enabled,1,true', 'integer', 'min:1', 'max:'.CampaignArchivePlacementService::MAX_POSITION],
         ]);
     }
 
@@ -77,6 +82,33 @@ class AdminCampaignStoreRequest extends FormRequest
             }
 
             $this->validateCampaignTaxonomyItems($validator);
+
+            if ($this->boolean('archive_placement_enabled')) {
+                if ($this->input('status') !== 'approved') {
+                    $validator->errors()->add(
+                        'archive_placement_enabled',
+                        'Only approved campaigns can use custom archive placement.',
+                    );
+                }
+
+                $campaignId = $this->route('campaign')?->id ?? 0;
+                $page = (int) $this->input('archive_page');
+                $position = (int) $this->input('archive_position');
+
+                $conflict = Campaign::query()
+                    ->archivePlaced()
+                    ->where('archive_page', $page)
+                    ->where('archive_position', $position)
+                    ->when($campaignId, fn ($q) => $q->where('id', '!=', $campaignId))
+                    ->first();
+
+                if ($conflict) {
+                    $validator->errors()->add(
+                        'archive_position',
+                        sprintf('This archive slot is already used by campaign "%s".', $conflict->title),
+                    );
+                }
+            }
         });
     }
 }

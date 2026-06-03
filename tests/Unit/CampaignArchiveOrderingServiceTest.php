@@ -7,42 +7,52 @@ use PHPUnit\Framework\TestCase;
 
 class CampaignArchiveOrderingServiceTest extends TestCase
 {
-    public function test_merge_block_order_puts_pinned_campaigns_first(): void
+    public function test_build_page_ids_places_campaign_at_exact_slot(): void
     {
         $service = new CampaignArchiveOrderingService;
 
-        $merged = $service->mergeBlockOrder(
-            pinnedIds: [101, 150, 185],
-            automaticIds: range(1, 10),
+        $ids = $service->buildPageIds(
+            placementsByPage: [3 => [5 => 999]],
+            automaticIds: range(1, 30),
+            page: 3,
+            perPage: 24,
         );
 
-        $this->assertSame([101, 150, 185, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], $merged);
+        $this->assertCount(24, $ids);
+        $this->assertSame(999, $ids[4]);
     }
 
-    public function test_merge_without_pinned_returns_automatic_order(): void
+    public function test_build_page_ids_excludes_placed_from_automatic_fill(): void
     {
         $service = new CampaignArchiveOrderingService;
 
-        $merged = $service->mergeBlockOrder([], [10, 20, 30]);
+        $ids = $service->buildPageIds(
+            placementsByPage: [1 => [1 => 50]],
+            automaticIds: [10, 20, 30],
+            page: 1,
+            perPage: 3,
+        );
 
-        $this->assertSame([10, 20, 30], $merged);
+        $this->assertSame([50, 10, 20], $ids);
     }
 
-    public function test_merge_has_no_duplicates(): void
+    public function test_build_page_two_uses_automatic_offset_from_page_one(): void
     {
         $service = new CampaignArchiveOrderingService;
 
-        $merged = $service->mergeBlockOrder([5, 6], [5, 6, 7]);
+        $ids = $service->buildPageIds(
+            placementsByPage: [1 => [1 => 100]],
+            automaticIds: [1, 2, 3, 4, 5],
+            page: 2,
+            perPage: 2,
+        );
 
-        $this->assertSame(count($merged), count(array_unique($merged)));
-        $this->assertSame([5, 6, 7], $merged);
+        $this->assertSame([3, 4], $ids);
     }
 
-    public function test_clear_cache_forgets_archive_and_homepage_keys(): void
+    public function test_clear_cache_keys_defined(): void
     {
-        $service = new CampaignArchiveOrderingService;
-
-        $this->assertSame('archive_campaign_order_ids', CampaignArchiveOrderingService::CACHE_KEY);
-        $this->assertSame('homepage_latest_campaign_ids', CampaignArchiveOrderingService::HOMEPAGE_LATEST_CACHE_KEY);
+        $this->assertSame('archive_placement_map', CampaignArchiveOrderingService::PLACEMENTS_CACHE_KEY);
+        $this->assertSame('archive_automatic_campaign_ids', CampaignArchiveOrderingService::AUTOMATIC_IDS_CACHE_KEY);
     }
 }

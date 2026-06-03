@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
+use App\Http\Controllers\Admin\ArchivePlacementController;
 use App\Http\Controllers\Admin\CampaignController as AdminCampaignController;
 use App\Http\Controllers\Admin\CheckNewCampaignsController;
 use App\Http\Controllers\Admin\ImportAdsOfWorldController;
@@ -160,9 +161,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     // Route::get('/import-ads-of-world/{batch}', [ImportAdsOfWorldController::class, 'show'])->name('import-ads-of-world.show');
 
     Route::get('/campaigns', [AdminCampaignController::class, 'index'])->name('campaigns.index');
-    Route::get('/campaigns/reorder', [AdminCampaignController::class, 'reorder'])->name('campaigns.reorder');
-    Route::post('/campaigns/reorder', [AdminCampaignController::class, 'updateReorder'])->name('campaigns.reorder.update');
-    Route::post('/campaigns/reorder/reset', [AdminCampaignController::class, 'resetReorder'])->name('campaigns.reorder.reset');
+    Route::get('/archive-placements', [ArchivePlacementController::class, 'index'])->name('archive-placements.index');
+    Route::post('/archive-placements', [ArchivePlacementController::class, 'store'])->name('archive-placements.store');
+    Route::delete('/archive-placements/{campaign:id}', [ArchivePlacementController::class, 'destroy'])->name('archive-placements.destroy');
+    Route::post('/archive-placements/clear-all', [ArchivePlacementController::class, 'clearAll'])->name('archive-placements.clear-all');
+    Route::post('/archive-placements/clear-legacy-manual-order', [ArchivePlacementController::class, 'clearLegacyManualOrder'])->name('archive-placements.clear-legacy-manual-order');
     Route::get('/campaigns/create', [AdminCampaignController::class, 'create'])->name('campaigns.create');
     Route::post('/campaigns', [AdminCampaignController::class, 'store'])->name('campaigns.store');
     Route::get('/campaigns/{campaign:id}/edit', [AdminCampaignController::class, 'edit'])->name('campaigns.edit');

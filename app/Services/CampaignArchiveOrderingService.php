@@ -15,10 +15,16 @@ class CampaignArchiveOrderingService
 
     public const HOMEPAGE_LATEST_CACHE_KEY = 'homepage_latest_campaign_ids';
 
+    public const PLACEMENTS_CACHE_KEY = 'archive_placement_map';
+
+    public const AUTOMATIC_IDS_CACHE_KEY = 'archive_automatic_campaign_ids';
+
     public function clearCache(): void
     {
         Cache::forget(self::CACHE_KEY);
         Cache::forget(self::HOMEPAGE_LATEST_CACHE_KEY);
+        Cache::forget(self::PLACEMENTS_CACHE_KEY);
+        Cache::forget(self::AUTOMATIC_IDS_CACHE_KEY);
         Cache::forget('hero_campaigns');
     }
 
@@ -33,7 +39,7 @@ class CampaignArchiveOrderingService
     }
 
     /**
-     * Paginate the public archive with manual positions merged into real slots.
+     * Paginate the public archive with page/position placements merged into slots.
      *
      * @param  array<int, string>  $eagerLoads
      */
@@ -41,20 +47,26 @@ class CampaignArchiveOrderingService
         Builder $baseQuery,
         int $perPage = 24,
         ?int $page = null,
-        bool $useManualOrdering = true,
+        bool $usePlacementOrdering = true,
         array $eagerLoads = [],
     ): LengthAwarePaginator {
         $page = $page ?: (int) request()->input('page', 1);
 
-        if (! $useManualOrdering) {
+        if (! $usePlacementOrdering) {
             return $baseQuery->paginate($perPage)->withQueryString();
         }
 
-        $filteredIds = $this->filterOrderedIdsForQuery($baseQuery);
-        $total = count($filteredIds);
-        $offset = max(0, ($page - 1) * $perPage);
-        $sliceIds = array_slice($filteredIds, $offset, $perPage);
-        $campaigns = $this->loadCampaignsInOrder($sliceIds, $eagerLoads);
+        $matchingIds = (clone $baseQuery)->pluck('campaigns.id')->map(fn ($id) => (int) $id)->all();
+        $matchingLookup = array_fill_keys($matchingIds, true);
+
+        $placementsByPage = $this->filterPlacementsForMatching($matchingLookup);
+        $automaticIds = $this->filterAutomaticIdsForMatching($matchingLookup);
+
+        $placedMatchingCount = $this->countMatchingPlacements($placementsByPage);
+        $total = $placedMatchingCount + count($automaticIds);
+
+        $pageIds = $this->buildPageIds($placementsByPage, $automaticIds, $page, $perPage);
+        $campaigns = $this->loadCampaignsInOrder($pageIds, $eagerLoads);
 
         return new LengthAwarePaginator(
             $campaigns,
@@ -66,20 +78,24 @@ class CampaignArchiveOrderingService
     }
 
     /**
-     * First N public archive campaigns in manual + automatic order.
+     * First N public archive campaigns in automatic latest order (ignores archive placement).
      *
      * @param  array<int, string>  $eagerLoads
      */
-    public function take(Builder $baseQuery, int $limit, array $eagerLoads = []): Collection
+    public function takeAutomaticLatest(Builder $baseQuery, int $limit, array $eagerLoads = []): Collection
     {
         if ($limit < 1) {
             return collect();
         }
 
-        $filteredIds = $this->filterOrderedIdsForQuery($baseQuery);
-        $sliceIds = array_slice($filteredIds, 0, $limit);
+        $ids = (clone $baseQuery)
+            ->latestOnPlatform()
+            ->limit($limit)
+            ->pluck('campaigns.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
-        return $this->loadCampaignsInOrder($sliceIds, $eagerLoads);
+        return $this->loadCampaignsInOrder($ids, $eagerLoads);
     }
 
     /**
@@ -100,50 +116,166 @@ class CampaignArchiveOrderingService
     }
 
     /**
+     * Build ordered IDs for one archive page (1-based page number).
+     *
+     * @param  array<int, array<int, int>>  $placementsByPage  page => [position => campaignId]
+     * @param  list<int>  $automaticIds
      * @return list<int>
      */
-    protected function filterOrderedIdsForQuery(Builder $baseQuery): array
+    public function buildPageIds(array $placementsByPage, array $automaticIds, int $page, int $perPage): array
     {
-        $matchingIds = (clone $baseQuery)->pluck('campaigns.id')->all();
-        $matchingLookup = array_fill_keys($matchingIds, true);
+        if ($page < 1 || $perPage < 1) {
+            return [];
+        }
 
-        $orderedIds = $this->resolveFullArchiveOrderedIds();
+        $autoOffset = 0;
+
+        for ($p = 1; $p < $page; $p++) {
+            $placedOnPage = count($placementsByPage[$p] ?? []);
+            $autoOffset += max(0, $perPage - $placedOnPage);
+        }
+
+        $slots = array_fill(0, $perPage, null);
+        $pagePlacements = $placementsByPage[$page] ?? [];
+
+        foreach ($pagePlacements as $position => $campaignId) {
+            $index = $position - 1;
+            if ($index >= 0 && $index < $perPage) {
+                $slots[$index] = $campaignId;
+            }
+        }
+
+        $emptyIndices = [];
+        foreach ($slots as $index => $campaignId) {
+            if ($campaignId === null) {
+                $emptyIndices[] = $index;
+            }
+        }
+
+        $autoSlice = array_slice($automaticIds, $autoOffset, count($emptyIndices));
+
+        foreach ($emptyIndices as $i => $slotIndex) {
+            if (isset($autoSlice[$i])) {
+                $slots[$slotIndex] = $autoSlice[$i];
+            }
+        }
 
         return array_values(array_filter(
-            $orderedIds,
-            static fn (int $id) => isset($matchingLookup[$id])
+            $slots,
+            static fn ($id) => $id !== null,
         ));
     }
 
     /**
+     * @param  array<int, true>  $matchingLookup
+     * @return array<int, array<int, int>>
+     */
+    protected function filterPlacementsForMatching(array $matchingLookup): array
+    {
+        $map = $this->resolvePlacementMap();
+        $filtered = [];
+
+        foreach ($map as $page => $positions) {
+            foreach ($positions as $position => $campaignId) {
+                if (isset($matchingLookup[$campaignId])) {
+                    $filtered[$page][$position] = $campaignId;
+                }
+            }
+        }
+
+        ksort($filtered);
+
+        return $filtered;
+    }
+
+    /**
+     * @param  array<int, true>  $matchingLookup
      * @return list<int>
      */
-    public function resolveFullArchiveOrderedIds(): array
+    protected function filterAutomaticIdsForMatching(array $matchingLookup): array
     {
-        return Cache::remember(self::CACHE_KEY, now()->addHour(), function () {
-            $pinnedIds = Campaign::query()
-                ->public()
-                ->whereNotNull('manual_order')
-                ->orderBy('manual_order')
-                ->orderByDesc('id')
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
+        return array_values(array_filter(
+            $this->resolveAutomaticArchiveIds(),
+            static fn (int $id) => isset($matchingLookup[$id]),
+        ));
+    }
 
-            $automaticIds = Campaign::query()
-                ->public()
-                ->automaticArchive()
-                ->latestOnPlatform()
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
+    /**
+     * @param  array<int, array<int, int>>  $placementsByPage
+     */
+    protected function countMatchingPlacements(array $placementsByPage): int
+    {
+        $count = 0;
 
-            return $this->mergeBlockOrder($pinnedIds, $automaticIds);
+        foreach ($placementsByPage as $positions) {
+            $count += count($positions);
+        }
+
+        return $count;
+    }
+
+    /**
+     * @return array<int, array<int, int>>  page => [position => campaignId]
+     */
+    public function resolvePlacementMap(): array
+    {
+        return Cache::remember(self::PLACEMENTS_CACHE_KEY, now()->addHour(), function () {
+            $map = [];
+
+            Campaign::query()
+                ->public()
+                ->archivePlaced()
+                ->orderBy('archive_page')
+                ->orderBy('archive_position')
+                ->get(['id', 'archive_page', 'archive_position'])
+                ->each(function (Campaign $campaign) use (&$map) {
+                    $page = (int) $campaign->archive_page;
+                    $position = (int) $campaign->archive_position;
+                    $map[$page][$position] = (int) $campaign->id;
+                });
+
+            return $map;
         });
     }
 
     /**
-     * Manually ordered campaigns first, then automatic campaigns by date.
+     * @return list<int>
+     */
+    public function resolveAutomaticArchiveIds(): array
+    {
+        return Cache::remember(self::AUTOMATIC_IDS_CACHE_KEY, now()->addHour(), function () {
+            $placedIds = Campaign::query()
+                ->public()
+                ->archivePlaced()
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $placedLookup = array_fill_keys($placedIds, true);
+
+            return Campaign::query()
+                ->public()
+                ->latestOnPlatform()
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->reject(static fn (int $id) => isset($placedLookup[$id]))
+                ->values()
+                ->all();
+        });
+    }
+
+    /**
+     * @deprecated No longer used; manual_order archive ordering was removed.
+     *
+     * @return list<int>
+     */
+    public function resolveFullArchiveOrderedIds(): array
+    {
+        return $this->resolveAutomaticArchiveIds();
+    }
+
+    /**
+     * @deprecated
      *
      * @param  list<int>  $pinnedIds
      * @param  list<int>  $automaticIds
@@ -158,19 +290,5 @@ class CampaignArchiveOrderingService
         ));
 
         return array_values(array_unique(array_merge($pinnedIds, $automaticFiltered)));
-    }
-
-    /**
-     * @deprecated Use mergeBlockOrder() for archive ordering.
-     *
-     * @param  array<int, int>  $pinnedByPosition
-     * @param  list<int>  $automaticIds
-     * @return list<int>
-     */
-    public function mergeOrderedIds(array $pinnedByPosition, array $automaticIds): array
-    {
-        ksort($pinnedByPosition);
-
-        return $this->mergeBlockOrder(array_values($pinnedByPosition), $automaticIds);
     }
 }

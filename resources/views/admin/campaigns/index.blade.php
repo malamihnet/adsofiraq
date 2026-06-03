@@ -6,7 +6,7 @@
 <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <h1 class="section-title">Campaign Moderation</h1>
     <div class="flex flex-wrap gap-2">
-        <a href="{{ route('admin.campaigns.reorder') }}" class="btn-outline text-xs">Reorder Archive</a>
+        <a href="{{ route('admin.archive-placements.index') }}" class="btn-outline text-xs">Archive Placements</a>
         <a href="{{ route('admin.campaigns.create') }}" class="btn-primary text-xs">Add Campaign</a>
     </div>
 </div>
@@ -20,10 +20,11 @@
         <option value="rejected" @selected(request('status') === 'rejected')>Rejected</option>
     </select>
     <x-admin.verification-filter />
-    <label class="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="pinned" value="1" @checked(request()->boolean('pinned')) class="rounded border-archive-border">
-        Manually ordered only
-    </label>
+    <select name="archive_placement" class="input-field max-w-xs">
+        <option value="">All archive modes</option>
+        <option value="placed" @selected(request('archive_placement') === 'placed')>Placed in archive</option>
+        <option value="auto" @selected(request('archive_placement') === 'auto')>Auto archive</option>
+    </select>
     <button type="submit" class="btn-primary">Filter</button>
 </form>
 
@@ -36,7 +37,7 @@
                 <th class="px-4 py-3 text-left">Status</th>
                 <th class="px-4 py-3 text-left">Featured</th>
                 <th class="px-4 py-3 text-left">Hero</th>
-                <th class="px-4 py-3 text-left">Archive order</th>
+                <th class="px-4 py-3 text-left">Archive placement</th>
                 <th class="px-4 py-3 text-left">Verified</th>
                 <th class="px-4 py-3 text-left">Actions</th>
             </tr>
@@ -61,12 +62,12 @@
                         @endif
                     </td>
                     <td class="px-4 py-3">
-                        @if($campaign->manual_order)
+                        @if($campaign->archive_placement_enabled && $campaign->archive_page && $campaign->archive_position)
                             <span class="border border-archive-black bg-archive-light px-2 py-0.5 text-xs uppercase tracking-wider">
-                                Manual #{{ $campaign->manual_order }}
+                                Page {{ $campaign->archive_page }} / Pos {{ $campaign->archive_position }}
                             </span>
                         @else
-                            —
+                            Auto
                         @endif
                     </td>
                     <td class="px-4 py-3">
