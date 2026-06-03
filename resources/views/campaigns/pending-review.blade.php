@@ -9,7 +9,9 @@
 
     <div class="border border-archive-border bg-white p-8 text-center">
         <p class="text-lg leading-relaxed text-archive-black">
-            @if(session('pending_review_notice') === 'updated')
+            @if(session('pending_review_notice') === 'not_live_yet')
+                This campaign is not public yet. It is still pending review — please wait until our team approves it.
+            @elseif(session('pending_review_notice') === 'updated')
                 Your campaign has been updated and is pending review. Please wait for our team to review your changes.
             @elseif(session('pending_review_notice') === 'submitted')
                 Your campaign has been submitted successfully and is pending review.

@@ -136,9 +136,15 @@ class CampaignController extends Controller
         ]);
     }
 
-    public function show(Campaign $campaign): View
+    public function show(Campaign $campaign): View|RedirectResponse
     {
         if ($campaign->status !== 'approved') {
+            $user = auth()->user();
+
+            if ($user && $user->can('viewPendingReview', $campaign)) {
+                return $this->redirectToPendingReview($campaign, 'not_live_yet');
+            }
+
             abort(404);
         }
 
