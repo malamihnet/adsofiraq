@@ -31,6 +31,7 @@ use App\Http\Controllers\PersonApplicationController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\ProfileCampaignsController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RankingsController;
 use App\Http\Controllers\UserProfileController;
 use Illuminate\Support\Facades\Route;
 
