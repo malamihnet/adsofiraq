@@ -170,33 +170,34 @@
             </div>
 
             <div class="md:col-span-2 border-t border-archive-border pt-6">
-                <h3 class="section-label mb-4">Archive Placement</h3>
+                <h3 class="section-label mb-4">Archive Delay</h3>
                 <input type="hidden" name="archive_placement_enabled" value="0">
                 <label class="flex items-center gap-2 text-sm">
                     <input type="checkbox" name="archive_placement_enabled" value="1" id="admin-archive-placement-enabled"
                         @checked(old('archive_placement_enabled', $campaign?->archive_placement_enabled)) class="rounded border-archive-border">
-                    Enable custom archive placement
+                    Enable archive delay
                 </label>
                 <p class="mt-1 text-xs text-archive-gray">If disabled, campaign follows automatic latest archive order.</p>
                 @error('archive_placement_enabled')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
 
                 <div class="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="section-label mb-2 block" for="archive_page">Page number</label>
+                        <label class="section-label mb-2 block" for="archive_page">Start page</label>
                         <input type="number" name="archive_page" id="archive_page" min="1"
                             value="{{ old('archive_page', $campaign?->archive_page) }}" class="input-field max-w-[120px]">
                         @error('archive_page')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                     <div>
-                        <label class="section-label mb-2 block" for="archive_position">Position on page</label>
+                        <label class="section-label mb-2 block" for="archive_position">Start position</label>
                         <input type="number" name="archive_position" id="archive_position" min="1" max="100"
                             value="{{ old('archive_position', $campaign?->archive_position) }}" class="input-field max-w-[120px]">
                         @error('archive_position')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                 </div>
                 <p class="mt-2 text-xs text-archive-gray">
-                    Applies to <code>/campaigns</code> with Latest sort only. Manage all placements on
-                    <a href="{{ route('admin.archive-placements.index') }}" class="underline">Archive Placements</a>.
+                    Campaign will not appear before this page/position. Newer campaigns can still push it down naturally.
+                    Applies to <code>/campaigns</code> Latest sort only. Manage delays on
+                    <a href="{{ route('admin.archive-placements.index') }}" class="underline">Archive Delay</a>.
                 </p>
             </div>
 

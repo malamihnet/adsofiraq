@@ -6,7 +6,7 @@
 <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <h1 class="section-title">Campaign Moderation</h1>
     <div class="flex flex-wrap gap-2">
-        <a href="{{ route('admin.archive-placements.index') }}" class="btn-outline text-xs">Archive Placements</a>
+        <a href="{{ route('admin.archive-placements.index') }}" class="btn-outline text-xs">Archive Delay</a>
         <a href="{{ route('admin.campaigns.create') }}" class="btn-primary text-xs">Add Campaign</a>
     </div>
 </div>
@@ -39,7 +39,7 @@
                 <th class="px-4 py-3 text-left">Status</th>
                 <th class="px-4 py-3 text-left">Hero</th>
                 <th class="px-4 py-3 text-left">Editor's Pick</th>
-                <th class="px-4 py-3 text-left">Archive placement</th>
+                <th class="px-4 py-3 text-left">Archive delay</th>
                 <th class="px-4 py-3 text-left">Verified</th>
                 <th class="px-4 py-3 text-left w-20"></th>
             </tr>
@@ -105,7 +105,7 @@
                     <td class="px-4 py-3">
                         @if($campaign->archive_placement_enabled && $campaign->archive_page && $campaign->archive_position)
                             <span class="border border-archive-black bg-archive-light px-2 py-0.5 text-xs uppercase tracking-wider">
-                                Page {{ $campaign->archive_page }} / Pos {{ $campaign->archive_position }}
+                                Start {{ $campaign->archive_page }} / {{ $campaign->archive_position }}
                             </span>
                         @else
                             <span class="text-xs text-archive-gray">Auto</span>

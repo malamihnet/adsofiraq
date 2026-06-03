@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreArchivePlacementRequest;
 use App\Models\Campaign;
+use App\Services\CampaignArchiveOrderingService;
 use App\Services\CampaignArchivePlacementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -13,16 +14,26 @@ class ArchivePlacementController extends Controller
 {
     public function __construct(
         protected CampaignArchivePlacementService $placementService,
+        protected CampaignArchiveOrderingService $archiveOrdering,
     ) {}
 
     public function index(): View
     {
+        $perPage = 24;
+
         $campaigns = Campaign::query()
             ->archivePlaced()
             ->with(['brands', 'agencies'])
             ->orderBy('archive_page')
             ->orderBy('archive_position')
-            ->get();
+            ->get()
+            ->map(function (Campaign $campaign) use ($perPage) {
+                $estimate = $this->archiveOrdering->estimateArchivePosition($campaign->id, $perPage);
+                $campaign->setAttribute('estimated_archive_page', $estimate['page'] ?? null);
+                $campaign->setAttribute('estimated_archive_slot', $estimate['slot'] ?? null);
+
+                return $campaign;
+            });
 
         return view('admin.archive-placements.index', [
             'campaigns' => $campaigns,
@@ -43,7 +54,7 @@ class ArchivePlacementController extends Controller
         return redirect()
             ->route('admin.archive-placements.index')
             ->with('success', sprintf(
-                'Placement saved: %s on archive page %d, position %d.',
+                'Archive delay saved: %s will not appear before page %d, position %d.',
                 $campaign->title,
                 $request->integer('archive_page'),
                 $request->integer('archive_position'),
@@ -56,7 +67,7 @@ class ArchivePlacementController extends Controller
 
         return redirect()
             ->route('admin.archive-placements.index')
-            ->with('success', 'Archive placement removed.');
+            ->with('success', 'Archive delay removed.');
     }
 
     public function clearAll(): RedirectResponse
@@ -65,7 +76,7 @@ class ArchivePlacementController extends Controller
 
         return redirect()
             ->route('admin.archive-placements.index')
-            ->with('success', sprintf('Cleared archive placement for %d campaign(s).', $cleared));
+            ->with('success', sprintf('Cleared archive delay for %d campaign(s).', $cleared));
     }
 
     public function clearLegacyManualOrder(): RedirectResponse

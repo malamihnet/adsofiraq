@@ -83,31 +83,11 @@ class AdminCampaignStoreRequest extends FormRequest
 
             $this->validateCampaignTaxonomyItems($validator);
 
-            if ($this->boolean('archive_placement_enabled')) {
-                if ($this->input('status') !== 'approved') {
-                    $validator->errors()->add(
-                        'archive_placement_enabled',
-                        'Only approved campaigns can use custom archive placement.',
-                    );
-                }
-
-                $campaignId = $this->route('campaign')?->id ?? 0;
-                $page = (int) $this->input('archive_page');
-                $position = (int) $this->input('archive_position');
-
-                $conflict = Campaign::query()
-                    ->archivePlaced()
-                    ->where('archive_page', $page)
-                    ->where('archive_position', $position)
-                    ->when($campaignId, fn ($q) => $q->where('id', '!=', $campaignId))
-                    ->first();
-
-                if ($conflict) {
-                    $validator->errors()->add(
-                        'archive_position',
-                        sprintf('This archive slot is already used by campaign "%s".', $conflict->title),
-                    );
-                }
+            if ($this->boolean('archive_placement_enabled') && $this->input('status') !== 'approved') {
+                $validator->errors()->add(
+                    'archive_placement_enabled',
+                    'Only approved campaigns can use archive delay.',
+                );
             }
         });
     }

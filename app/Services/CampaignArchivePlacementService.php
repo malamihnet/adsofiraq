@@ -25,7 +25,7 @@ class CampaignArchivePlacementService
                 'archive_position' => null,
             ]);
 
-            $this->archiveOrdering->clearCacheAndLog('archive_placement_disabled', [
+            $this->archiveOrdering->clearCacheAndLog('archive_delay_disabled', [
                 'campaign_id' => $campaign->id,
             ]);
 
@@ -34,34 +34,21 @@ class CampaignArchivePlacementService
 
         if ($campaign->status !== 'approved') {
             throw ValidationException::withMessages([
-                'archive_placement_enabled' => 'Only approved campaigns can use custom archive placement.',
-            ]);
-        }
-
-        $page = (int) $page;
-        $position = (int) $position;
-
-        $conflict = $this->findSlotConflict($campaign->id, $page, $position);
-
-        if ($conflict) {
-            throw ValidationException::withMessages([
-                'archive_position' => sprintf(
-                    'This archive slot is already used by campaign "%s".',
-                    $conflict->title,
-                ),
+                'archive_placement_enabled' => 'Only approved campaigns can use archive delay.',
             ]);
         }
 
         $campaign->update([
             'archive_placement_enabled' => true,
-            'archive_page' => $page,
-            'archive_position' => $position,
+            'archive_page' => (int) $page,
+            'archive_position' => (int) $position,
         ]);
 
-        $this->archiveOrdering->clearCacheAndLog('archive_placement_saved', [
+        $this->archiveOrdering->clearCacheAndLog('archive_delay_saved', [
             'campaign_id' => $campaign->id,
-            'archive_page' => $page,
-            'archive_position' => $position,
+            'archive_page' => (int) $page,
+            'archive_position' => (int) $position,
+            'start_index' => CampaignArchiveOrderingService::computeStartIndex((int) $page, (int) $position, 24),
         ]);
     }
 
@@ -73,7 +60,7 @@ class CampaignArchivePlacementService
             'archive_position' => null,
         ]);
 
-        $this->archiveOrdering->clearCacheAndLog('archive_placement_removed', [
+        $this->archiveOrdering->clearCacheAndLog('archive_delay_removed', [
             'campaign_id' => $campaign->id,
         ]);
     }
@@ -92,7 +79,7 @@ class CampaignArchivePlacementService
                 'archive_position' => null,
             ]);
 
-        $this->archiveOrdering->clearCacheAndLog('archive_placements_cleared', [
+        $this->archiveOrdering->clearCacheAndLog('archive_delays_cleared', [
             'count' => $count,
         ]);
 
@@ -112,15 +99,5 @@ class CampaignArchivePlacementService
         ]);
 
         return $count;
-    }
-
-    protected function findSlotConflict(int $campaignId, int $page, int $position): ?Campaign
-    {
-        return Campaign::query()
-            ->where('archive_placement_enabled', true)
-            ->where('archive_page', $page)
-            ->where('archive_position', $position)
-            ->where('id', '!=', $campaignId)
-            ->first();
     }
 }
