@@ -12,38 +12,46 @@ class CampaignArchiveOrderingServiceTest extends TestCase
         $this->assertSame(74, CampaignArchiveOrderingService::computeStartIndex(4, 2, 24));
     }
 
-    public function test_delayed_campaign_starts_at_minimum_index(): void
+    public function test_delayed_campaign_starts_at_minimum_index_when_no_newer_automatic(): void
     {
         $service = new CampaignArchiveOrderingService;
 
-        $automatic = range(1, 80);
+        $automatic = $this->automaticPool(range(2, 80));
         $delayed = [
-            ['id' => 999, 'start_index' => 74, 'approved_at' => 1000, 'sort_id' => 999],
+            ['id' => 900, 'start_index' => 74, 'approved_at' => 8000, 'sort_id' => 900],
         ];
 
         $ordered = $service->mergeDelayedIntoArchiveOrder($automatic, $delayed);
 
-        $this->assertSame(999, $ordered[73]);
-        $this->assertNotContains(999, array_slice($ordered, 0, 73));
+        $this->assertSame(900, $ordered[73]);
+        $this->assertSame(0, $service->countAutomaticNewerThan($automatic, $delayed[0]));
     }
 
     public function test_newer_automatic_campaigns_push_delayed_campaign_down(): void
     {
         $service = new CampaignArchiveOrderingService;
 
-        $baseAutomatic = range(1, 79);
+        $baseAutomatic = $this->automaticPool(range(2, 80));
         $delayed = [
-            ['id' => 900, 'start_index' => 74, 'approved_at' => 500, 'sort_id' => 900],
+            ['id' => 900, 'start_index' => 74, 'approved_at' => 8000, 'sort_id' => 900],
         ];
 
-        $withOneNewer = array_merge([1000], $baseAutomatic);
+        $withOneNewer = array_merge(
+            [['id' => 1, 'approved_at' => 9000, 'sort_id' => 1]],
+            $baseAutomatic,
+        );
         $ordered = $service->mergeDelayedIntoArchiveOrder($withOneNewer, $delayed);
 
+        $this->assertSame(1, $service->countAutomaticNewerThan($withOneNewer, $delayed[0]));
         $this->assertSame(900, $ordered[74]);
 
-        $withTenNewer = array_merge(range(2001, 2010), $baseAutomatic);
+        $withTenNewer = array_merge(
+            $this->automaticPool(range(2001, 2010)),
+            $baseAutomatic,
+        );
         $orderedTen = $service->mergeDelayedIntoArchiveOrder($withTenNewer, $delayed);
 
+        $this->assertSame(10, $service->countAutomaticNewerThan($withTenNewer, $delayed[0]));
         $this->assertSame(900, $orderedTen[83]);
     }
 
@@ -51,7 +59,7 @@ class CampaignArchiveOrderingServiceTest extends TestCase
     {
         $service = new CampaignArchiveOrderingService;
 
-        $automatic = [900, 1, 2, 3, 4, 5];
+        $automatic = $this->automaticPool([900, 1, 2, 3, 4, 5]);
         $delayed = [
             ['id' => 900, 'start_index' => 3, 'approved_at' => 100, 'sort_id' => 900],
         ];
@@ -65,9 +73,9 @@ class CampaignArchiveOrderingServiceTest extends TestCase
     {
         $service = new CampaignArchiveOrderingService;
 
-        $automatic = range(1, 100);
+        $automatic = $this->automaticPool(range(1, 100));
         $delayed = [
-            ['id' => 500, 'start_index' => 74, 'approved_at' => 2000, 'sort_id' => 500],
+            ['id' => 500, 'start_index' => 74, 'approved_at' => 100000, 'sort_id' => 500],
         ];
 
         $ordered = $service->mergeDelayedIntoArchiveOrder($automatic, $delayed);
@@ -80,7 +88,7 @@ class CampaignArchiveOrderingServiceTest extends TestCase
     {
         $service = new CampaignArchiveOrderingService;
 
-        $automatic = range(1, 70);
+        $automatic = $this->automaticPool(range(1, 70));
         $delayed = [
             ['id' => 10, 'start_index' => 74, 'approved_at' => 200, 'sort_id' => 10],
             ['id' => 20, 'start_index' => 74, 'approved_at' => 300, 'sort_id' => 20],
@@ -98,5 +106,18 @@ class CampaignArchiveOrderingServiceTest extends TestCase
         $this->assertSame('archive_delayed_campaigns', CampaignArchiveOrderingService::PLACEMENTS_CACHE_KEY);
         $this->assertSame('archive_automatic_campaign_ids', CampaignArchiveOrderingService::AUTOMATIC_IDS_CACHE_KEY);
         $this->assertSame('homepage_latest_campaign_ids', CampaignArchiveOrderingService::HOMEPAGE_LATEST_CACHE_KEY);
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return list<array{id: int, approved_at: int, sort_id: int}>
+     */
+    private function automaticPool(array $ids): array
+    {
+        return array_map(static fn (int $id) => [
+            'id' => $id,
+            'approved_at' => $id * 100,
+            'sort_id' => $id,
+        ], $ids);
     }
 }

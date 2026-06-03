@@ -116,7 +116,7 @@ class Campaign extends Model
         });
 
         static::saved(function (Campaign $campaign) {
-            if ($campaign->wasChanged([
+            if ($campaign->wasRecentlyCreated || $campaign->wasChanged([
                 'manual_order',
                 'status',
                 'approved_at',

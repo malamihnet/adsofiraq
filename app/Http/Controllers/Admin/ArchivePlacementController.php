@@ -29,6 +29,12 @@ class ArchivePlacementController extends Controller
             ->get()
             ->map(function (Campaign $campaign) use ($perPage) {
                 $estimate = $this->archiveOrdering->estimateArchivePosition($campaign->id, $perPage);
+                $campaign->setAttribute('archive_start_index', $estimate['start_index'] ?? CampaignArchiveOrderingService::computeStartIndex(
+                    (int) $campaign->archive_page,
+                    (int) $campaign->archive_position,
+                    $perPage,
+                ));
+                $campaign->setAttribute('calculated_index', $estimate['index'] ?? null);
                 $campaign->setAttribute('estimated_archive_page', $estimate['page'] ?? null);
                 $campaign->setAttribute('estimated_archive_slot', $estimate['slot'] ?? null);
 

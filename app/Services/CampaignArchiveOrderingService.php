@@ -102,7 +102,7 @@ class CampaignArchiveOrderingService
     /**
      * Estimate 1-based archive position for a delayed campaign (default per page 24).
      *
-     * @return array{position: int, page: int, slot: int}|null
+     * @return array{position: int, page: int, slot: int, index: int, start_index: int}|null
      */
     public function estimateArchivePosition(int $campaignId, int $perPage = 24): ?array
     {
@@ -115,10 +115,14 @@ class CampaignArchiveOrderingService
 
         $position = $index + 1;
 
+        $delayed = collect($this->resolveDelayedCampaigns($perPage))->firstWhere('id', $campaignId);
+
         return [
             'position' => $position,
+            'index' => $position,
             'page' => (int) floor(($position - 1) / $perPage) + 1,
             'slot' => (($position - 1) % $perPage) + 1,
+            'start_index' => $delayed['start_index'] ?? $position,
         ];
     }
 
@@ -130,22 +134,32 @@ class CampaignArchiveOrderingService
         $matchingIds = (clone $baseQuery)->pluck('campaigns.id')->map(fn ($id) => (int) $id)->all();
         $matchingLookup = array_fill_keys($matchingIds, true);
 
-        $automaticIds = $this->filterAutomaticIdsForMatching($matchingLookup);
+        $fullAutomaticPool = $this->resolveAutomaticArchivePool();
+        $automaticPool = array_values(array_filter(
+            $fullAutomaticPool,
+            static fn (array $item) => isset($matchingLookup[$item['id']]),
+        ));
         $delayed = $this->filterDelayedForMatching($matchingLookup, $perPage);
 
-        return $this->mergeDelayedIntoArchiveOrder($automaticIds, $delayed);
+        $orderedIds = $this->mergeDelayedIntoArchiveOrder($automaticPool, $delayed);
+
+        if (config('app.debug') && $delayed !== []) {
+            $this->logDelayedArchivePositions($delayed, $orderedIds, $fullAutomaticPool, $perPage);
+        }
+
+        return $orderedIds;
     }
 
     /**
-     * Insert delayed campaigns at minimum start index; newer automatic items push them down.
+     * Insert delayed campaigns at minimum start index; newer automatic campaigns push them down.
      *
-     * @param  list<int>  $automaticIds
+     * @param  list<array{id: int, approved_at: int, sort_id: int}>  $automaticPool
      * @param  list<array{id: int, start_index: int, approved_at: int, sort_id: int}>  $delayed
      * @return list<int>
      */
-    public function mergeDelayedIntoArchiveOrder(array $automaticIds, array $delayed): array
+    public function mergeDelayedIntoArchiveOrder(array $automaticPool, array $delayed): array
     {
-        $result = $automaticIds;
+        $result = array_column($automaticPool, 'id');
 
         usort($delayed, static function (array $a, array $b): int {
             if ($a['start_index'] !== $b['start_index']) {
@@ -162,11 +176,39 @@ class CampaignArchiveOrderingService
         foreach ($delayed as $item) {
             $id = $item['id'];
             $result = array_values(array_filter($result, static fn (int $existingId) => $existingId !== $id));
-            $insertAt = min(max(0, $item['start_index'] - 1), count($result));
+
+            $newerCount = $this->countAutomaticNewerThan($automaticPool, $item);
+            $insertAt = min(
+                $item['start_index'] - 1 + $newerCount,
+                count($result),
+            );
             array_splice($result, $insertAt, 0, [$id]);
         }
 
         return array_values($result);
+    }
+
+    /**
+     * @param  list<array{id: int, approved_at: int, sort_id: int}>  $automaticPool
+     * @param  array{id: int, start_index: int, approved_at: int, sort_id: int}  $delayed
+     */
+    public function countAutomaticNewerThan(array $automaticPool, array $delayed): int
+    {
+        $count = 0;
+
+        foreach ($automaticPool as $automatic) {
+            if ($automatic['approved_at'] > $delayed['approved_at']) {
+                $count++;
+
+                continue;
+            }
+
+            if ($automatic['approved_at'] === $delayed['approved_at'] && $automatic['sort_id'] > $delayed['sort_id']) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     /**
@@ -224,43 +266,43 @@ class CampaignArchiveOrderingService
      */
     protected function resolveDelayedCampaigns(int $perPage): array
     {
-        $raw = Cache::remember(self::DELAYED_CACHE_KEY, now()->addHour(), function () {
-            return Campaign::query()
-                ->public()
-                ->archivePlaced()
-                ->orderBy('archive_page')
-                ->orderBy('archive_position')
-                ->get(['id', 'archive_page', 'archive_position', 'approved_at'])
-                ->map(fn (Campaign $campaign) => [
-                    'id' => (int) $campaign->id,
-                    'archive_page' => (int) $campaign->archive_page,
-                    'archive_position' => (int) $campaign->archive_position,
-                    'approved_at' => $campaign->approved_at?->getTimestamp() ?? 0,
-                    'sort_id' => (int) $campaign->id,
-                ])
-                ->all();
-        });
-
-        return array_map(static function (array $item) use ($perPage): array {
-            return [
-                'id' => $item['id'],
-                'start_index' => self::computeStartIndex($item['archive_page'], $item['archive_position'], $perPage),
-                'approved_at' => $item['approved_at'],
-                'sort_id' => $item['sort_id'],
-            ];
-        }, $raw);
+        return Campaign::query()
+            ->public()
+            ->archivePlaced()
+            ->orderBy('archive_page')
+            ->orderBy('archive_position')
+            ->get(['id', 'archive_page', 'archive_position', 'approved_at'])
+            ->map(fn (Campaign $campaign) => [
+                'id' => (int) $campaign->id,
+                'start_index' => self::computeStartIndex(
+                    (int) $campaign->archive_page,
+                    (int) $campaign->archive_position,
+                    $perPage,
+                ),
+                'approved_at' => $campaign->approved_at?->getTimestamp() ?? 0,
+                'sort_id' => (int) $campaign->id,
+            ])
+            ->all();
     }
 
     /**
-     * @param  array<int, true>  $matchingLookup
-     * @return list<int>
+     * Latest public campaigns excluding archive-delayed entries (recomputed every request).
+     *
+     * @return list<array{id: int, approved_at: int, sort_id: int}>
      */
-    protected function filterAutomaticIdsForMatching(array $matchingLookup): array
+    public function resolveAutomaticArchivePool(): array
     {
-        return array_values(array_filter(
-            $this->resolveAutomaticArchiveIds(),
-            static fn (int $id) => isset($matchingLookup[$id]),
-        ));
+        return Campaign::query()
+            ->public()
+            ->archiveAutomatic()
+            ->latestOnPlatform()
+            ->get(['id', 'approved_at'])
+            ->map(fn (Campaign $campaign) => [
+                'id' => (int) $campaign->id,
+                'approved_at' => $campaign->approved_at?->getTimestamp() ?? 0,
+                'sort_id' => (int) $campaign->id,
+            ])
+            ->all();
     }
 
     /**
@@ -268,25 +310,7 @@ class CampaignArchiveOrderingService
      */
     public function resolveAutomaticArchiveIds(): array
     {
-        return Cache::remember(self::AUTOMATIC_IDS_CACHE_KEY, now()->addHour(), function () {
-            $delayedIds = Campaign::query()
-                ->public()
-                ->archivePlaced()
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
-
-            $delayedLookup = array_fill_keys($delayedIds, true);
-
-            return Campaign::query()
-                ->public()
-                ->latestOnPlatform()
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->reject(static fn (int $id) => isset($delayedLookup[$id]))
-                ->values()
-                ->all();
-        });
+        return array_column($this->resolveAutomaticArchivePool(), 'id');
     }
 
     /**
@@ -295,6 +319,37 @@ class CampaignArchiveOrderingService
     public function resolveFullArchiveOrderedIds(): array
     {
         return $this->resolveOrderedIdsForQuery(Campaign::public(), 24);
+    }
+
+    /**
+     * @param  list<array{id: int, start_index: int, approved_at: int, sort_id: int}>  $delayed
+     * @param  list<int>  $orderedIds
+     * @param  list<array{id: int, approved_at: int, sort_id: int}>  $fullAutomaticPool
+     */
+    protected function logDelayedArchivePositions(
+        array $delayed,
+        array $orderedIds,
+        array $fullAutomaticPool,
+        int $perPage,
+    ): void {
+        foreach ($delayed as $item) {
+            $index = array_search($item['id'], $orderedIds, true);
+
+            if ($index === false) {
+                continue;
+            }
+
+            $position = $index + 1;
+
+            Log::info('archive_delay_position', [
+                'campaign_id' => $item['id'],
+                'archive_start_index' => $item['start_index'],
+                'newer_automatic_count' => $this->countAutomaticNewerThan($fullAutomaticPool, $item),
+                'final_calculated_index' => $position,
+                'final_calculated_page' => (int) floor(($position - 1) / $perPage) + 1,
+                'final_calculated_position' => (($position - 1) % $perPage) + 1,
+            ]);
+        }
     }
 
     /**

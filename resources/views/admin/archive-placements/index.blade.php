@@ -7,7 +7,7 @@
     <div>
         <h1 class="section-title">Archive Delay</h1>
         <p class="mt-2 max-w-2xl text-sm text-archive-gray">
-            Campaigns will not appear before their start page/position on <code>/campaigns</code> (Latest sort). Newer approved campaigns can push them down naturally — positions are not fixed slots.
+            Campaigns will not appear before their start page/position on <code>/campaigns</code> (Latest sort). Newer approved campaigns push delayed items down on each request (not stored as fixed slots). Refresh this page after approving new campaigns to verify calculated positions.
         </p>
     </div>
     <div class="flex flex-wrap gap-2">
@@ -57,7 +57,10 @@
                 <th class="px-4 py-3 text-left">Campaign</th>
                 <th class="px-4 py-3 text-left">Start Page</th>
                 <th class="px-4 py-3 text-left">Start Position</th>
-                <th class="px-4 py-3 text-left">Est. Page / Pos</th>
+                <th class="px-4 py-3 text-left">Start Index</th>
+                <th class="px-4 py-3 text-left">Current Index</th>
+                <th class="px-4 py-3 text-left">Current Page</th>
+                <th class="px-4 py-3 text-left">Current Position</th>
                 <th class="px-4 py-3 text-left">Actions</th>
             </tr>
         </thead>
@@ -70,13 +73,10 @@
                     </td>
                     <td class="px-4 py-3">{{ $campaign->archive_page }}</td>
                     <td class="px-4 py-3">{{ $campaign->archive_position }}</td>
-                    <td class="px-4 py-3 text-archive-gray">
-                        @if($campaign->estimated_archive_page && $campaign->estimated_archive_slot)
-                            {{ $campaign->estimated_archive_page }} / {{ $campaign->estimated_archive_slot }}
-                        @else
-                            —
-                        @endif
-                    </td>
+                    <td class="px-4 py-3 font-mono text-xs">{{ $campaign->archive_start_index ?? '—' }}</td>
+                    <td class="px-4 py-3 font-mono text-xs">{{ $campaign->calculated_index ?? '—' }}</td>
+                    <td class="px-4 py-3">{{ $campaign->estimated_archive_page ?? '—' }}</td>
+                    <td class="px-4 py-3">{{ $campaign->estimated_archive_slot ?? '—' }}</td>
                     <td class="px-4 py-3">
                         <a href="{{ route('admin.campaigns.edit', $campaign) }}" class="underline">Edit</a>
                         <form method="POST" action="{{ route('admin.archive-placements.destroy', $campaign) }}" class="inline" onsubmit="return confirm('Remove this archive delay?');">
@@ -88,7 +88,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="px-4 py-12 text-center text-archive-gray">No archive delays configured yet.</td>
+                    <td colspan="8" class="px-4 py-12 text-center text-archive-gray">No archive delays configured yet.</td>
                 </tr>
             @endforelse
         </tbody>
