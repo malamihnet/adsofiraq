@@ -7,14 +7,13 @@ use App\Http\Requests\StorePositionRequest;
 use App\Models\Position;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class PositionApiController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         $query = trim((string) $request->query('q', ''));
-        $hasCategory = Schema::hasColumn('positions', 'category');
+        $hasCategory = Position::hasCategoryColumn();
 
         $builder = Position::query()
             ->when($query !== '', function ($q) use ($query, $hasCategory) {
@@ -27,11 +26,7 @@ class PositionApiController extends Controller
                 });
             });
 
-        if ($hasCategory) {
-            $builder->ordered();
-        } else {
-            $builder->orderBy('sort_order')->orderBy('name');
-        }
+        $builder->ordered();
 
         $columns = $hasCategory
             ? ['id', 'name', 'slug', 'category', 'sort_order']
@@ -55,20 +50,25 @@ class PositionApiController extends Controller
 
     public function store(StorePositionRequest $request): JsonResponse
     {
-        $position = Position::create([
+        $attributes = [
             'name' => $request->name,
             'slug' => Position::generateUniqueSlug($request->name),
-            'category' => $request->input('category', PositionCategory::Other->value),
             'sort_order' => (int) (Position::query()->max('sort_order') ?? 0) + 1,
-        ]);
+        ];
+
+        if (Position::hasCategoryColumn()) {
+            $attributes['category'] = $request->input('category', PositionCategory::Other->value);
+        }
+
+        $position = Position::create($attributes);
 
         return response()->json([
             'data' => [
                 'id' => $position->id,
                 'name' => $position->name,
                 'slug' => $position->slug,
-                'category' => $position->category,
-                'category_label' => $position->categoryLabel(),
+                'category' => Position::hasCategoryColumn() ? $position->category : PositionCategory::Other->value,
+                'category_label' => Position::hasCategoryColumn() ? $position->categoryLabel() : PositionCategory::Other->label(),
             ],
         ], 201);
     }

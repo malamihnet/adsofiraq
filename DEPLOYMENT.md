@@ -29,6 +29,27 @@ git push origin main
 ```bash
 php artisan migrate --force
 php artisan db:seed --class=PositionSeeder
+```
+
+**Positions `category` column missing** (`Unknown column 'category' in ORDER BY`):
+
+- `sort_order` is created in `2026_06_04_000001_create_positions_table.php`
+- `category` is added in `2026_06_05_000001_add_category_to_positions_table.php`
+
+Check status: `php artisan migrate:status | grep position`
+
+If migrate cannot run, add only `category` manually (matches the migration; `sort_order` should already exist):
+
+```sql
+ALTER TABLE positions
+ADD COLUMN category VARCHAR(64) NOT NULL DEFAULT 'other' AFTER slug,
+ADD INDEX positions_category_index (category);
+```
+
+Then:
+
+```bash
+php artisan db:seed --class=PositionSeeder
 php artisan optimize:clear
 php artisan config:clear
 php artisan route:clear

@@ -3,6 +3,14 @@
 @section('title', 'Positions — Admin')
 
 @section('content')
+@if(empty($categoryColumnReady))
+    <div class="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <strong>Positions schema outdated.</strong> Run <code class="text-archive-black">php artisan migrate --force</code> on the server
+        (migration <code class="text-archive-black">2026_06_05_000001_add_category_to_positions_table</code>).
+        Until then, listing uses name order only.
+    </div>
+@endif
+
 <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
     <h1 class="section-title">Positions</h1>
     <a href="{{ route('admin.positions.create') }}" class="btn-primary text-xs">Add position</a>

@@ -17,7 +17,7 @@ class PositionController extends Controller
         $positions = Position::query()
             ->search($request->input('search'))
             ->when(
-                $request->filled('category'),
+                $request->filled('category') && Position::hasCategoryColumn(),
                 fn ($query) => $query->where('category', $request->input('category')),
             )
             ->ordered()
@@ -32,6 +32,7 @@ class PositionController extends Controller
         return view('admin.positions.index', [
             'positions' => $positions,
             'categories' => PositionCategory::options(),
+            'categoryColumnReady' => Position::hasCategoryColumn(),
         ]);
     }
 
@@ -44,12 +45,17 @@ class PositionController extends Controller
 
     public function store(AdminPositionRequest $request): RedirectResponse
     {
-        $position = Position::create([
+        $attributes = [
             'name' => $request->name,
             'slug' => Position::generateUniqueSlug($request->name),
-            'category' => $request->category,
             'sort_order' => $request->integer('sort_order', (int) (Position::query()->max('sort_order') ?? 0) + 1),
-        ]);
+        ];
+
+        if (Position::hasCategoryColumn()) {
+            $attributes['category'] = $request->category;
+        }
+
+        $position = Position::create($attributes);
 
         return redirect()->route('admin.positions.index')
             ->with('success', "Position \"{$position->name}\" created.");
@@ -65,11 +71,16 @@ class PositionController extends Controller
 
     public function update(AdminPositionRequest $request, Position $position): RedirectResponse
     {
-        $position->update([
+        $attributes = [
             'name' => $request->name,
-            'category' => $request->category,
             'sort_order' => $request->integer('sort_order', $position->sort_order),
-        ]);
+        ];
+
+        if (Position::hasCategoryColumn()) {
+            $attributes['category'] = $request->category;
+        }
+
+        $position->update($attributes);
 
         return redirect()->route('admin.positions.index')
             ->with('success', "Position \"{$position->name}\" updated.");

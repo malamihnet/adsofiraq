@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class Position extends Model
 {
+    protected static ?bool $hasCategoryColumn = null;
+
     protected $fillable = [
         'name',
         'slug',
@@ -32,10 +35,20 @@ class Position extends Model
                 $position->slug = static::generateUniqueSlug($position->name);
             }
 
-            if (empty($position->category)) {
+            if (static::hasCategoryColumn() && empty($position->category)) {
                 $position->category = PositionCategory::Other->value;
             }
         });
+    }
+
+    public static function hasCategoryColumn(): bool
+    {
+        if (static::$hasCategoryColumn === null) {
+            static::$hasCategoryColumn = Schema::hasTable('positions')
+                && Schema::hasColumn('positions', 'category');
+        }
+
+        return static::$hasCategoryColumn;
     }
 
     public static function generateUniqueSlug(string $name): string
@@ -85,10 +98,18 @@ class Position extends Model
 
     public function scopeOrdered(Builder $query): Builder
     {
-        return $query
-            ->orderBy('category')
-            ->orderBy('sort_order')
-            ->orderBy('name');
+        if (static::hasCategoryColumn()) {
+            return $query
+                ->orderBy('category')
+                ->orderBy('sort_order')
+                ->orderBy('name');
+        }
+
+        if (Schema::hasColumn('positions', 'sort_order')) {
+            return $query->orderBy('sort_order')->orderBy('name');
+        }
+
+        return $query->orderBy('name');
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder
@@ -101,8 +122,11 @@ class Position extends Model
 
         return $query->where(function (Builder $builder) use ($term) {
             $builder->where('name', 'like', '%'.$term.'%')
-                ->orWhere('slug', 'like', '%'.$term.'%')
-                ->orWhere('category', 'like', '%'.$term.'%');
+                ->orWhere('slug', 'like', '%'.$term.'%');
+
+            if (static::hasCategoryColumn()) {
+                $builder->orWhere('category', 'like', '%'.$term.'%');
+            }
         });
     }
 }

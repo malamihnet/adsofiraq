@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\PositionCategory;
+use App\Models\Position;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,7 +20,12 @@ class AdminPositionRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string', Rule::in(array_column(PositionCategory::cases(), 'value'))],
+            'category' => [
+                Rule::requiredIf(fn () => Position::hasCategoryColumn()),
+                'nullable',
+                'string',
+                Rule::in(array_column(PositionCategory::cases(), 'value')),
+            ],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:99999'],
         ];
     }

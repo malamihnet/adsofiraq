@@ -22,7 +22,7 @@
     $positionsEmbed = ['data' => [], 'categories' => PositionCategory::options()];
     if (auth()->check() && Schema::hasTable('positions')) {
         try {
-            $hasCategory = Schema::hasColumn('positions', 'category');
+            $hasCategory = Position::hasCategoryColumn();
             $query = Position::query();
             $positionsEmbed['data'] = ($hasCategory ? $query->ordered() : $query->orderBy('sort_order')->orderBy('name'))
                 ->limit(500)
