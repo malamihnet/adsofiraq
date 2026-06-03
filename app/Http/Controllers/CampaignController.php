@@ -81,17 +81,17 @@ class CampaignController extends Controller
         }
 
         $sort = $request->get('sort', 'latest');
-        $useManualOrdering = $sort === 'latest';
+        $usePlacementOrdering = $sort === 'latest';
 
         if ($sort === 'views') {
             $query->orderByDesc('views_count');
-            $useManualOrdering = false;
+            $usePlacementOrdering = false;
         } elseif ($sort === 'bookmarks') {
             $query->orderByDesc('bookmarks_count');
-            $useManualOrdering = false;
+            $usePlacementOrdering = false;
         } elseif ($sort === 'oldest') {
             $query->orderBy('approved_at')->orderBy('id');
-            $useManualOrdering = false;
+            $usePlacementOrdering = false;
         }
 
         $eagerLoads = ['brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries'];
@@ -101,7 +101,7 @@ class CampaignController extends Controller
         $campaigns = $this->archiveOrdering->paginate(
             $query,
             perPage: $perPage,
-            useManualOrdering: $useManualOrdering,
+            usePlacementOrdering: $usePlacementOrdering,
             eagerLoads: $eagerLoads,
         );
 
