@@ -205,6 +205,11 @@ function setupCreditsMentionsField(textarea, root) {
 
         hideDropdown();
 
+        window.__creditsMentionDraft = {
+            mentionStart,
+            selectionEnd: textarea.selectionStart,
+        };
+
         modal.open({
             name,
             storeUrl: peopleStoreUrl,

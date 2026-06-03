@@ -96,10 +96,267 @@
                 <button type="button" data-credits-mention-modal-close class="rounded border border-archive-border px-4 py-2 text-sm hover:bg-neutral-50">
                     Cancel
                 </button>
-                <button type="button" id="credits-mention-create-save" class="btn-primary text-xs">
+                <button
+                    type="button"
+                    id="credits-mention-create-save"
+                    data-create-person-save
+                    class="btn-primary text-xs"
+                >
                     Save
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+@push('scripts')
+<script>
+(function () {
+    if (window.__creditsMentionInlineSaveBound) {
+        return;
+    }
+    window.__creditsMentionInlineSaveBound = true;
+
+    function csrfToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    }
+
+    function showModalError(message) {
+        const box = document.getElementById('credits-mention-create-error');
+        if (!box) {
+            alert(message);
+            return;
+        }
+        box.textContent = message;
+        box.classList.remove('hidden');
+        box.scrollIntoView({ block: 'nearest' });
+    }
+
+    function clearModalMessages() {
+        const error = document.getElementById('credits-mention-create-error');
+        const success = document.getElementById('credits-mention-create-success');
+        if (error) {
+            error.textContent = '';
+            error.classList.add('hidden');
+        }
+        if (success) {
+            success.textContent = '';
+            success.classList.add('hidden');
+        }
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('credits-mention-create-modal');
+        if (!modal) {
+            return;
+        }
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function showToast(message) {
+        const existing = document.getElementById('credits-mention-inline-toast');
+        if (existing) {
+            existing.remove();
+        }
+        const toast = document.createElement('div');
+        toast.id = 'credits-mention-inline-toast';
+        toast.setAttribute('role', 'status');
+        toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:100002;padding:10px 18px;background:#171717;color:#fff;font-size:13px;border-radius:8px;';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(function () { toast.remove(); }, 3200);
+    }
+
+    function insertPersonIntoCredits(person) {
+        const textarea = document.getElementById('credits') || document.querySelector('textarea[name="credits"]');
+        const hidden = document.getElementById('credits_mentions_json') || document.querySelector('input[name="credits_mentions_json"]');
+        if (!textarea || !person?.name) {
+            return;
+        }
+
+        const draft = window.__creditsMentionDraft || {};
+        let start = typeof draft.mentionStart === 'number' ? draft.mentionStart : null;
+        let end = typeof draft.selectionEnd === 'number' ? draft.selectionEnd : textarea.selectionStart;
+
+        if (start === null) {
+            const cursor = textarea.selectionStart ?? textarea.value.length;
+            const before = textarea.value.slice(0, cursor);
+            const match = before.match(/@([^\n@]*)$/);
+            if (match) {
+                start = cursor - match[0].length;
+            } else {
+                start = cursor;
+            }
+            end = cursor;
+        }
+
+        const token = '@' + person.name;
+        const beforeText = textarea.value.slice(0, start);
+        const afterText = textarea.value.slice(end);
+        textarea.value = beforeText + token + ' ' + afterText;
+
+        let mentions = [];
+        if (hidden?.value) {
+            try {
+                mentions = JSON.parse(hidden.value);
+            } catch (e) {
+                mentions = [];
+            }
+        }
+        if (!Array.isArray(mentions)) {
+            mentions = [];
+        }
+        if (!mentions.some(function (m) { return m.person_id === person.id; })) {
+            mentions.push({
+                person_id: person.id,
+                name: person.name,
+                role: person.position || 'Credit',
+            });
+        }
+        if (hidden) {
+            hidden.value = JSON.stringify(mentions);
+        }
+
+        const pos = beforeText.length + token.length + 1;
+        textarea.focus();
+        textarea.setSelectionRange(pos, pos);
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+        window.__creditsMentionDraft = null;
+    }
+
+    async function saveCreatePerson() {
+        const modal = document.getElementById('credits-mention-create-modal');
+        const nameInput = document.getElementById('credits-mention-create-name');
+        const positionSelect = document.getElementById('credits-mention-create-position');
+        const photoInput = document.getElementById('credits-mention-create-photo');
+        const saveBtn = document.querySelector('[data-create-person-save]');
+
+        const endpoint = modal?.dataset.peopleStoreUrl || '{{ $peopleStoreUrl }}';
+        const isAdmin = modal?.dataset.isAdmin === '1';
+        const token = csrfToken();
+
+        const name = nameInput?.value?.trim();
+        const positionId = positionSelect?.value;
+
+        if (!endpoint) {
+            showModalError('Missing create profile URL.');
+            return;
+        }
+        if (!token) {
+            showModalError('CSRF token missing. Reload the page.');
+            return;
+        }
+        if (!name) {
+            showModalError('Full name is required.');
+            return;
+        }
+        if (!positionId) {
+            showModalError('Please select a position.');
+            return;
+        }
+
+        clearModalMessages();
+        if (saveBtn) {
+            saveBtn.disabled = true;
+        }
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('position_id', positionId);
+        if (isAdmin) {
+            formData.append('approve', '1');
+        }
+        if (photoInput?.files?.[0]) {
+            formData.append('photo', photoInput.files[0]);
+        }
+
+        const payloadPreview = {
+            name: name,
+            position_id: positionId,
+            approve: isAdmin ? '1' : null,
+            photo: photoInput?.files?.[0]?.name || null,
+        };
+
+        console.log('[create-person-inline] save clicked');
+        console.log('[create-person-inline] payload', payloadPreview);
+        console.log('[create-person-inline] endpoint', endpoint);
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': token,
+                },
+                credentials: 'same-origin',
+                body: formData,
+            });
+
+            const responseText = await response.text();
+            console.log('[create-person-inline] response status', response.status);
+            console.log('[create-person-inline] response body', responseText);
+
+            let json = {};
+            if (responseText) {
+                try {
+                    json = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error('Server returned non-JSON (' + response.status + '). ' + responseText.slice(0, 300));
+                }
+            }
+
+            if (!response.ok) {
+                let message = json.message || ('Request failed (' + response.status + ')');
+                if (json.errors && typeof json.errors === 'object') {
+                    message = Object.entries(json.errors)
+                        .map(function (entry) {
+                            return entry[0] + ': ' + [].concat(entry[1]).join(', ');
+                        })
+                        .join('\n') || message;
+                }
+                throw new Error(message);
+            }
+
+            const person = json.person || json.data;
+            if (!person?.id) {
+                throw new Error('Server response missing person id.');
+            }
+
+            const success = document.getElementById('credits-mention-create-success');
+            if (success) {
+                success.textContent = 'Profile saved.';
+                success.classList.remove('hidden');
+            }
+
+            insertPersonIntoCredits(person);
+            closeModal();
+            showToast('Profile created and added to credits.');
+        } catch (error) {
+            const message = error?.message || 'Could not create profile';
+            showModalError(message);
+            console.log('[create-person-inline] error', message);
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+            }
+        }
+    }
+
+    document.addEventListener('click', function (e) {
+        const button = e.target.closest('[data-create-person-save]');
+        if (!button) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        saveCreatePerson();
+    }, true);
+})();
+</script>
+@endpush
