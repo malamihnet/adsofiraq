@@ -259,9 +259,7 @@ class CampaignController extends Controller
 
             Log::info('Campaign created', ['campaign_id' => $campaign->id, 'user_id' => $request->user()->id]);
 
-            return redirect()
-                ->route('campaigns.pending-review', $campaign->fresh())
-                ->with('success', 'Your campaign has been submitted successfully and is pending review.');
+            return redirect()->route('campaigns.pending-review', $campaign->fresh());
         } catch (\Throwable $e) {
             report($e);
 
@@ -344,9 +342,7 @@ class CampaignController extends Controller
                 'revision_payload' => $payload,
             ]);
 
-            return redirect()
-                ->route('campaigns.pending-review', $campaign)
-                ->with('success', 'Your campaign update has been submitted for review. The currently published version remains live until approval.');
+            return redirect()->route('campaigns.pending-review', $campaign);
         }
 
         $data = [
@@ -400,9 +396,7 @@ class CampaignController extends Controller
         $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
 
         if (! $request->user()->isAdmin()) {
-            return redirect()
-                ->route('campaigns.pending-review', $campaign)
-                ->with('success', 'Your campaign has been updated and is pending review.');
+            return redirect()->route('campaigns.pending-review', $campaign);
         }
 
         return redirect()->route('campaigns.show', $campaign)

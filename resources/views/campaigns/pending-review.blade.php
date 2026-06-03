@@ -8,12 +8,6 @@
     <h1 class="section-title mb-6 text-center">Pending review</h1>
 
     <div class="border border-archive-border bg-white p-8 text-center">
-        @if(session('success'))
-            <p class="mb-6 border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-                {{ session('success') }}
-            </p>
-        @endif
-
         <p class="text-lg leading-relaxed text-archive-black">
             @if($campaign->status === 'approved' && $campaign->pendingRevision)
                 Your campaign update has been submitted for review. The currently published version remains live until approval.
