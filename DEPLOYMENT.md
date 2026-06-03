@@ -24,7 +24,7 @@ git push origin main
 - [ ] `public/build` committed: yes
 - [ ] pushed to GitHub: yes
 
-**After `git pull` on production**, confirm the deployed hashes match `public/build/manifest.json` (View Source → script `src` for `app-*.js` and `credits-mentions-vanilla-*.js`). If the page still references older filenames, run `php artisan optimize:clear` and hard-refresh; stale `public/build` on the server means mentions JS never runs.
+**After `git pull` on production**, confirm the deployed hash matches `public/build/manifest.json` (View Source → `app-*.js` from `resources/js/app.js`). Credits mentions are bundled inside that file. If the page still references an older filename, run `php artisan optimize:clear` and hard-refresh.
 
 Do **not** commit: `node_modules/`, `.env`, `storage/logs/`, temporary HTML/debug files under `storage/app/`.
 

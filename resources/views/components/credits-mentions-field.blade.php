@@ -19,13 +19,8 @@
     if (is_readable($manifestPath)) {
         $viteManifest = json_decode((string) file_get_contents($manifestPath), true);
     }
-    $mentionsJsBuild = $viteManifest['resources/js/credits-mentions-vanilla.js']['file'] ?? 'missing from manifest';
     $appJsBuild = $viteManifest['resources/js/app.js']['file'] ?? 'missing from manifest';
 @endphp
-
-@push('scripts')
-    @vite(['resources/js/credits-mentions-vanilla.js'])
-@endpush
 
 <div
     class="credits-mentions-field"
@@ -68,8 +63,7 @@
             <p>Textarea found: <span data-debug-textarea>no</span></p>
             <p>Last query: <span data-debug-query>—</span></p>
             <p>Results count: <span data-debug-results>0</span></p>
-            <p>Expected app.js build: <code>{{ $appJsBuild }}</code></p>
-            <p>Expected mentions.js build: <code>{{ $mentionsJsBuild }}</code></p>
+            <p>Expected app.js build: <code>{{ $appJsBuild }}</code> (mentions bundled in app.js)</p>
             <p>Load marker in DOM: <span data-debug-marker>no</span></p>
             <button
                 type="button"
