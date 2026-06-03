@@ -57,14 +57,16 @@ class CampaignRevisionApplier
 
     protected function applyPeopleCredits(Campaign $campaign, array $payload): void
     {
-        if (! array_key_exists('credit_mentions', $payload) && ! array_key_exists('people_credits', $payload)) {
+        $mentionsRaw = $payload['credits_mentions_json'] ?? $payload['credit_mentions'] ?? null;
+
+        if ($mentionsRaw === null && ! array_key_exists('people_credits', $payload)) {
             return;
         }
 
         $credits = (string) ($payload['credits'] ?? $campaign->credits ?? '');
 
-        if (array_key_exists('credit_mentions', $payload)) {
-            $mentions = $this->creditsMentions->decodeMentionsInput($payload['credit_mentions']);
+        if ($mentionsRaw !== null) {
+            $mentions = $this->creditsMentions->decodeMentionsInput($mentionsRaw);
             $this->creditsMentions->syncFromCredits($campaign, $credits, $mentions);
 
             return;

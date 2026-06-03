@@ -88,7 +88,7 @@ class CampaignController extends Controller
             'title' => $request->title,
             'published_at' => $request->published_at ?? ($status === 'approved' ? now() : null),
             'description' => $request->description,
-            'credits' => $request->credits,
+            'credits' => $this->normalizeCreditsInput($request),
             'status' => $status,
             'is_featured' => $request->boolean('is_featured'),
             'is_student' => $request->boolean('is_student'),
@@ -159,7 +159,7 @@ class CampaignController extends Controller
             'title' => $request->title,
             'published_at' => $request->published_at ?? ($status === 'approved' ? ($campaign->published_at ?? now()) : null),
             'description' => $request->description,
-            'credits' => $request->credits,
+            'credits' => $this->normalizeCreditsInput($request, $campaign),
             'status' => $status,
             'is_featured' => $request->boolean('is_featured'),
             'is_student' => $request->boolean('is_student'),
@@ -474,9 +474,11 @@ class CampaignController extends Controller
      */
     protected function creditMentionsForForm(?Campaign $campaign): array
     {
-        if (old('credit_mentions') !== null) {
+        $oldMentions = old('credits_mentions_json', old('credit_mentions'));
+
+        if ($oldMentions !== null) {
             return $this->creditsMentions->hydrateMentionsForForm(
-                $this->creditsMentions->decodeMentionsInput(old('credit_mentions')),
+                $this->creditsMentions->decodeMentionsInput($oldMentions),
             );
         }
 
@@ -487,8 +489,24 @@ class CampaignController extends Controller
 
     protected function syncCreditMentions(Campaign $campaign, Request $request): void
     {
-        $mentions = $this->creditsMentions->decodeMentionsInput($request->input('credit_mentions'));
-        $this->creditsMentions->syncFromCredits($campaign, $request->input('credits'), $mentions);
+        $mentions = $this->creditsMentions->decodeMentionsInput(
+            $this->creditsMentions->mentionsInputFromRequest($request),
+        );
+
+        $this->creditsMentions->syncFromCredits(
+            $campaign,
+            $this->normalizeCreditsInput($request, $campaign),
+            $mentions,
+        );
+    }
+
+    protected function normalizeCreditsInput(Request $request, ?Campaign $campaign = null): ?string
+    {
+        if ($request->exists('credits')) {
+            return $request->input('credits');
+        }
+
+        return $campaign?->credits;
     }
 
     protected function syncArchivePlacementFromRequest(AdminCampaignStoreRequest $request, Campaign $campaign): void

@@ -67,7 +67,7 @@
 
         <div class="md:col-span-2">
             <x-credits-mentions-field
-                :credits="old('credits', $campaign?->credits)"
+                :credits="old('credits', $campaign?->credits ?? '')"
                 :mentions="$creditMentions ?? []"
             />
         </div>

@@ -54,6 +54,7 @@ class UpdateCampaignRequest extends FormRequest
             'is_featured' => ['sometimes', 'boolean'],
             'admin_notes' => ['nullable', 'string'],
             'credit_mentions' => ['nullable', 'string', 'max:65535'],
+            'credits_mentions_json' => ['nullable', 'string', 'max:65535'],
         ]);
     }
 

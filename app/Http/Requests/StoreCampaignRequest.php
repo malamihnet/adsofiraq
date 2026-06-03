@@ -56,6 +56,7 @@ class StoreCampaignRequest extends FormRequest
             'is_student' => ['sometimes', 'boolean'],
             'is_nsfw' => ['sometimes', 'boolean'],
             'credit_mentions' => ['nullable', 'string', 'max:65535'],
+            'credits_mentions_json' => ['nullable', 'string', 'max:65535'],
         ]);
     }
 

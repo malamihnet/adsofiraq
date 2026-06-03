@@ -142,6 +142,11 @@ Route::middleware(['auth', 'verified', 'noindex'])->group(function () {
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin', 'noindex'])->group(function () {
+    Route::get('/api/people/search', [PersonCreditApiController::class, 'search'])->name('api.people.search');
+    Route::post('/api/people', [PersonCreditApiController::class, 'store'])->name('api.people.store');
+    Route::get('/api/positions', [PositionApiController::class, 'index'])->name('api.positions.index');
+    Route::post('/api/positions', [PositionApiController::class, 'store'])->name('api.positions.store');
+
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/seo-report', [SeoReportController::class, 'index'])->name('seo-report.index');
 

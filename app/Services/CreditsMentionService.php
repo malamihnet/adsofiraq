@@ -53,33 +53,19 @@ class CreditsMentionService
         return $mentions;
     }
 
+    public function mentionsInputFromRequest(\Illuminate\Http\Request $request): mixed
+    {
+        return $request->input('credits_mentions_json', $request->input('credit_mentions'));
+    }
+
     /**
+     * Sync pivot from hidden JSON only. Plain-text credits without @ never clear existing links.
+     *
      * @param  array<int, array{person_id: int, role: string, name: string}>  $clientMentions
-     * @return array<int, array{person_id: int, role: string}>
      */
     public function resolveMentionsForSync(string $credits, array $clientMentions): array
     {
-        $credits = (string) $credits;
-        $byPersonId = [];
-
-        foreach ($this->parseRoleMentionsFromCredits($credits) as $row) {
-            if (! isset($byPersonId[$row['person_id']])) {
-                $byPersonId[$row['person_id']] = $row;
-            }
-        }
-
-        foreach ($this->filterMentionsInCredits($credits, $clientMentions) as $mention) {
-            $personId = $mention['person_id'];
-
-            if (! isset($byPersonId[$personId])) {
-                $byPersonId[$personId] = [
-                    'person_id' => $personId,
-                    'role' => $mention['role'],
-                ];
-            }
-        }
-
-        return array_values($byPersonId);
+        return $this->filterMentionsInCredits((string) $credits, $clientMentions);
     }
 
     /**
@@ -160,9 +146,17 @@ class CreditsMentionService
      */
     public function syncFromCredits(Campaign $campaign, ?string $credits, array $mentions): void
     {
-        $resolved = $this->resolveMentionsForSync((string) ($credits ?? ''), $mentions);
+        $credits = (string) ($credits ?? '');
+        $resolved = $this->resolveMentionsForSync($credits, $mentions);
 
-        $this->peopleCredits->sync($campaign, $resolved);
+        if ($resolved === []) {
+            return;
+        }
+
+        $this->peopleCredits->sync($campaign, array_map(fn (array $row) => [
+            'person_id' => $row['person_id'],
+            'role' => $row['role'],
+        ], $resolved));
     }
 
     /**

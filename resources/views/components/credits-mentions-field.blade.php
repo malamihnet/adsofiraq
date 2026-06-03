@@ -5,28 +5,41 @@
 
 @php
     $initialMentions = collect($mentions)->values()->all();
-    $creditsValue = old('credits', $credits);
-    $mentionsValue = old('credit_mentions');
-    if ($mentionsValue === null) {
-        $mentionsValue = json_encode($initialMentions);
+    $creditsValue = (string) old('credits', $credits ?? '');
+    $mentionsJsonOld = old('credits_mentions_json', old('credit_mentions'));
+    if ($mentionsJsonOld === null) {
+        $mentionsJsonOld = json_encode($initialMentions);
     }
+    $peopleSearchUrl = auth()->check() && auth()->user()->isAdmin()
+        ? route('admin.api.people.search')
+        : route('api.people.search');
+    $positionsUrl = auth()->check() && auth()->user()->isAdmin()
+        ? route('admin.api.positions.index')
+        : route('api.positions.index');
+    $createPersonUrl = auth()->check() && auth()->user()->isAdmin()
+        ? route('admin.api.people.store')
+        : route('api.people.store');
+    $createPositionUrl = auth()->check() && auth()->user()->isAdmin()
+        ? route('admin.api.positions.store')
+        : route('api.positions.store');
 @endphp
 
 <div
     class="credits-mentions-field"
     x-data="creditsMentions({
         initialMentions: @js($initialMentions),
-        creditsText: @js($creditsValue),
-        peopleSearchUrl: @js(route('api.people.search')),
-        positionsUrl: @js(route('api.positions.index')),
-        createPersonUrl: @js(route('api.people.store')),
-        createPositionUrl: @js(route('api.positions.store')),
+        creditsText: '',
+        peopleSearchUrl: @js($peopleSearchUrl),
+        positionsUrl: @js($positionsUrl),
+        createPersonUrl: @js($createPersonUrl),
+        createPositionUrl: @js($createPositionUrl),
         csrfToken: @js(csrf_token()),
+        debug: @js(config('app.debug')),
     })"
     x-init="init()"
     @click.away="open = false"
 >
-    <label class="section-label mb-2 block">Credits</label>
+    <label class="section-label mb-2 block" for="credits">Credits</label>
     <p class="mb-2 text-xs text-archive-gray">
         Type <code class="text-archive-black">@</code> to tag people and link their profiles. Example:
         <span class="text-archive-black">Director: @Mustafa Amer</span>
@@ -35,24 +48,28 @@
 
     <div class="relative">
         <textarea
+            id="credits"
+            data-mentions-enabled="true"
             x-ref="creditsTextarea"
             name="credits"
             rows="6"
-            class="input-field font-mono text-sm"
-            placeholder="Director: @Mustafa Amer&#10;Editor: @Ali Hassan"
-            x-model="text"
+            class="input-field text-sm"
+            placeholder="Director: Mustafa Amer&#10;Editor: @Ali Hassan"
             @input="onCreditsInput($event)"
             @keydown="onCreditsKeydown($event)"
+            @keyup="onCreditsKeyup($event)"
             @click="detectMentionQuery($refs.creditsTextarea)"
-        ></textarea>
+        >{{ $creditsValue }}</textarea>
 
-        <input type="hidden" name="credit_mentions" :value="mentionsJson">
+        <input type="hidden" name="credits_mentions_json" :value="mentionsJson">
 
         <div
-            x-show="open && (results.length > 0 || canSearch)"
+            x-show="showDropdown"
             x-cloak
             class="absolute left-0 right-0 top-full z-40 mt-1 max-h-64 overflow-y-auto border border-archive-border bg-white shadow-lg"
         >
+            <p x-show="!canSearch && !loading" class="px-4 py-2 text-xs text-archive-gray">Type a name after @ to search</p>
+
             <template x-for="(item, index) in dropdownItems" :key="item.type === 'person' ? `p-${item.person.id}` : 'create'">
                 <button
                     type="button"
@@ -74,16 +91,17 @@
                 x-show="canSearch && !loading"
                 @mousedown.prevent="openCreateModal()"
                 class="block w-full border-t border-archive-border px-4 py-3 text-left text-sm hover:bg-archive-light"
-                :class="activeIndex === dropdownItems.length - 1 && dropdownItems.length > 0 ? 'bg-archive-light' : ''"
             >
                 Create profile: <span class="font-medium" x-text="query.trim()"></span>
             </button>
 
             <p x-show="loading" class="px-4 py-3 text-xs text-archive-gray">Searching...</p>
+            <p x-show="searchError" class="px-4 py-3 text-xs text-red-600" x-text="searchError"></p>
         </div>
     </div>
 
     @error('credits')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+    @error('credits_mentions_json')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     @error('credit_mentions')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
 
     <div

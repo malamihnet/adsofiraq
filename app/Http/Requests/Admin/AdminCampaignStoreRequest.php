@@ -67,6 +67,7 @@ class AdminCampaignStoreRequest extends FormRequest
             'archive_page' => ['nullable', 'required_if:archive_placement_enabled,1,true', 'integer', 'min:1'],
             'archive_position' => ['nullable', 'required_if:archive_placement_enabled,1,true', 'integer', 'min:1', 'max:'.CampaignArchivePlacementService::MAX_POSITION],
             'credit_mentions' => ['nullable', 'string', 'max:65535'],
+            'credits_mentions_json' => ['nullable', 'string', 'max:65535'],
         ]);
     }
 

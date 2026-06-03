@@ -6,7 +6,14 @@ export default function creditsMentions({
     createPersonUrl,
     createPositionUrl,
     csrfToken,
+    debug = false,
 }) {
+    const log = (...args) => {
+        if (debug) {
+            console.log('[credits-mentions]', ...args);
+        }
+    };
+
     const hydrateMentions = () => (initialMentions || []).map((item) => ({
         person_id: item.person_id,
         name: item.name || '',
@@ -17,7 +24,7 @@ export default function creditsMentions({
     }));
 
     return {
-        text: creditsText || '',
+        text: '',
         mentions: hydrateMentions(),
         peopleSearchUrl,
         positionsUrl,
@@ -28,6 +35,7 @@ export default function creditsMentions({
         results: [],
         open: false,
         loading: false,
+        searchError: '',
         activeIndex: -1,
         mentionStart: null,
         modalOpen: false,
@@ -69,7 +77,34 @@ export default function creditsMentions({
             return this.query.trim().length >= 1;
         },
 
+        get showDropdown() {
+            return this.open;
+        },
+
         init() {
+            const textarea = this.$refs.creditsTextarea;
+
+            if (textarea) {
+                this.text = textarea.value || creditsText || '';
+                textarea.value = this.text;
+
+                const form = textarea.closest('form');
+
+                if (form) {
+                    form.addEventListener('submit', () => {
+                        textarea.value = this.text;
+                    });
+                }
+            } else {
+                this.text = creditsText || '';
+            }
+
+            log('init', {
+                textLength: this.text.length,
+                mentions: this.mentions.length,
+                peopleSearchUrl: this.peopleSearchUrl,
+            });
+
             this.loadPositions();
         },
 
@@ -79,12 +114,15 @@ export default function creditsMentions({
             try {
                 const response = await fetch(this.positionsUrl, {
                     headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
                 });
 
                 if (response.ok) {
                     const payload = await response.json();
                     this.positions = payload.data || [];
                 }
+            } catch (error) {
+                log('positions load failed', error);
             } finally {
                 this.positionsLoading = false;
             }
@@ -94,6 +132,10 @@ export default function creditsMentions({
             this.text = event.target.value;
             this.detectMentionQuery(event.target);
             this.pruneMentions();
+        },
+
+        onCreditsKeyup(event) {
+            this.detectMentionQuery(event.target);
         },
 
         onCreditsKeydown(event) {
@@ -156,12 +198,14 @@ export default function creditsMentions({
                 this.open = false;
                 this.query = '';
                 this.mentionStart = null;
+                this.searchError = '';
 
                 return;
             }
 
             this.mentionStart = cursor - match[0].length;
             this.query = match[1];
+            log('mention query', this.query);
             this.searchPeople();
         },
 
@@ -170,29 +214,44 @@ export default function creditsMentions({
 
             if (!q) {
                 this.results = [];
-                this.open = false;
+                this.open = true;
+                this.searchError = '';
+                this.activeIndex = this.canSearch ? -1 : -1;
 
                 return;
             }
 
             this.loading = true;
+            this.searchError = '';
             this.activeIndex = 0;
 
+            const url = `${this.peopleSearchUrl}?q=${encodeURIComponent(q)}`;
+            log('search', url);
+
             try {
-                const response = await fetch(`${this.peopleSearchUrl}?q=${encodeURIComponent(q)}`, {
-                    headers: { Accept: 'application/json' },
+                const response = await fetch(url, {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
                 });
 
+                log('search status', response.status);
+
                 if (!response.ok) {
-                    throw new Error('Search failed');
+                    throw new Error(`Search failed (${response.status})`);
                 }
 
                 const payload = await response.json();
                 this.results = payload.data || [];
                 this.open = true;
+                log('search results', this.results.length);
             } catch (error) {
                 this.results = [];
                 this.open = true;
+                this.searchError = error.message || 'Could not load people.';
+                console.error('[credits-mentions] search failed', error);
             } finally {
                 this.loading = false;
             }
@@ -208,6 +267,7 @@ export default function creditsMentions({
             const after = this.text.slice(end);
 
             this.text = `${before}${token} ${after}`;
+            textarea.value = this.text;
 
             const existing = this.mentions.find((m) => m.person_id === person.id);
 
@@ -239,7 +299,7 @@ export default function creditsMentions({
             const cursor = textarea.selectionStart;
             const lineStart = this.text.lastIndexOf('\n', cursor - 1) + 1;
             const line = this.text.slice(lineStart, cursor);
-            const match = line.match(/^\s*([^:@\n]{2,40})\s*:\s*@?[^@]*$/);
+            const match = line.match(/^\s*([^:@\n]{2,60})\s*:\s*@?[^@]*$/);
 
             return match ? match[1].trim() : '';
         },
@@ -263,7 +323,7 @@ export default function creditsMentions({
         },
 
         openCreateModal() {
-            this.modalName = this.query.trim() || this.query;
+            this.modalName = this.query.trim();
             this.modalPositionId = this.positions[0]?.id ? String(this.positions[0].id) : '';
             this.modalPhoto = null;
             this.modalError = '';
@@ -313,7 +373,9 @@ export default function creditsMentions({
                     headers: {
                         Accept: 'application/json',
                         'X-CSRF-TOKEN': this.csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
                     },
+                    credentials: 'same-origin',
                     body,
                 });
 
@@ -365,7 +427,9 @@ export default function creditsMentions({
                     headers: {
                         Accept: 'application/json',
                         'X-CSRF-TOKEN': this.csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
                     },
+                    credentials: 'same-origin',
                     body,
                 });
 

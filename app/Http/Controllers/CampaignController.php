@@ -254,7 +254,7 @@ class CampaignController extends Controller
                 'title' => $request->title,
                 'published_at' => $request->published_at,
                 'description' => $request->description ?? '',
-                'credits' => $request->credits,
+                'credits' => $this->normalizeCreditsInput($request),
                 'status' => 'pending',
                 'is_student' => $request->boolean('is_student'),
                 'is_nsfw' => $request->boolean('is_nsfw'),
@@ -343,7 +343,7 @@ class CampaignController extends Controller
                 'title' => $request->title,
                 'published_at' => $request->published_at,
                 'description' => $request->description,
-                'credits' => $request->credits,
+                'credits' => $this->normalizeCreditsInput($request, $campaign),
                 'is_student' => $request->boolean('is_student'),
                 'is_nsfw' => $request->boolean('is_nsfw'),
                 'submission_notes' => $request->submission_notes,
@@ -355,7 +355,7 @@ class CampaignController extends Controller
                     'medium_types' => $request->input('medium_types', []),
                     'countries' => $request->input('countries', []),
                 ],
-                'credit_mentions' => $request->input('credit_mentions'),
+                'credits_mentions_json' => $request->input('credits_mentions_json', $request->input('credit_mentions')),
                 'thumbnail_path' => null,
                 'assets_paths' => [],
                 'videos' => [],
@@ -382,7 +382,7 @@ class CampaignController extends Controller
             'title' => $request->title,
             'published_at' => $request->published_at,
             'description' => $request->description,
-            'credits' => $request->credits,
+            'credits' => $this->normalizeCreditsInput($request, $campaign),
             'is_student' => $request->boolean('is_student'),
             'is_nsfw' => $request->boolean('is_nsfw'),
             'submission_notes' => $request->submission_notes,
@@ -473,9 +473,11 @@ class CampaignController extends Controller
      */
     protected function creditMentionsForForm(?Campaign $campaign): array
     {
-        if (old('credit_mentions') !== null) {
+        $oldMentions = old('credits_mentions_json', old('credit_mentions'));
+
+        if ($oldMentions !== null) {
             return $this->creditsMentions->hydrateMentionsForForm(
-                $this->creditsMentions->decodeMentionsInput(old('credit_mentions')),
+                $this->creditsMentions->decodeMentionsInput($oldMentions),
             );
         }
 
@@ -486,8 +488,24 @@ class CampaignController extends Controller
 
     protected function syncCreditMentions(Campaign $campaign, Request $request): void
     {
-        $mentions = $this->creditsMentions->decodeMentionsInput($request->input('credit_mentions'));
-        $this->creditsMentions->syncFromCredits($campaign, $request->input('credits'), $mentions);
+        $mentions = $this->creditsMentions->decodeMentionsInput(
+            $this->creditsMentions->mentionsInputFromRequest($request),
+        );
+
+        $this->creditsMentions->syncFromCredits(
+            $campaign,
+            $this->normalizeCreditsInput($request, $campaign),
+            $mentions,
+        );
+    }
+
+    protected function normalizeCreditsInput(Request $request, ?Campaign $campaign = null): ?string
+    {
+        if ($request->exists('credits')) {
+            return $request->input('credits');
+        }
+
+        return $campaign?->credits;
     }
 
   /**
