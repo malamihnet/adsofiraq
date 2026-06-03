@@ -14,68 +14,6 @@ function createPersonLog(...args) {
     console.log('[create-person]', ...args);
 }
 
-function openCreatePersonModalGlobal(name) {
-    const trimmed = (name || '').trim();
-
-    if (! trimmed) {
-        return;
-    }
-
-    const ctx = window.__creditsMentionActive;
-    const modal = getCreatePersonModal();
-
-    if (! modal) {
-        showToast('Sign in to create a person profile.');
-        log('create profile blocked: modal not found');
-
-        return;
-    }
-
-    if (ctx) {
-        window.__creditsMentionDraft = {
-            mentionStart: ctx.mentionStart,
-            selectionEnd: ctx.selectionEnd,
-        };
-    }
-
-    modal.open({
-        name: trimmed,
-        storeUrl: ctx?.peopleStoreUrl || modal.defaultStoreUrl,
-        isAdmin: ctx?.isAdmin ?? modal.isAdmin,
-        onSaved: (person) => {
-            ctx?.onPersonSelected?.(person);
-            showToast('Profile created and added to credits.');
-        },
-    });
-
-    ctx?.hideDropdown?.();
-}
-
-function registerMentionCreateProfileClick() {
-    if (window.__mentionCreateProfileClickBound) {
-        return;
-    }
-
-    window.__mentionCreateProfileClickBound = true;
-
-    document.addEventListener('click', (event) => {
-        const btn = event.target.closest('[data-mention-create-profile]');
-
-        if (! btn) {
-            return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        console.log('[mentions] create profile clicked', btn.dataset.name);
-        openCreatePersonModalGlobal(btn.dataset.name || '');
-    }, true);
-}
-
-window.openCreatePersonModal = openCreatePersonModalGlobal;
-registerMentionCreateProfileClick();
-
 export function initCreditsMentions() {
     window.__creditsMentionsScriptLoaded = true;
 
@@ -139,6 +77,10 @@ function setupCreditsMentionsField(textarea, root) {
         || textarea.closest('[data-people-store-url]')?.dataset.peopleStoreUrl
         || '/api/people';
 
+    const positionsUrl = root?.dataset.positionsUrl
+        || textarea.closest('[data-positions-url]')?.dataset.positionsUrl
+        || '/api/positions';
+
     const isAdmin = (root?.dataset.isAdmin || textarea.closest('[data-is-admin]')?.dataset.isAdmin) === '1';
 
     const hiddenInput = (root || textarea.closest('.credits-mentions-field'))?.querySelector('input[name="credits_mentions_json"]')
@@ -153,6 +95,7 @@ function setupCreditsMentionsField(textarea, root) {
     let debounceTimer = null;
     let activeIndex = -1;
     let dropdownOpen = false;
+    let creatingPerson = false;
 
     const dropdown = document.createElement('div');
     dropdown.setAttribute('data-credits-mentions-dropdown', 'true');
@@ -214,6 +157,7 @@ function setupCreditsMentionsField(textarea, root) {
         results = [];
         loading = false;
         activeIndex = -1;
+        creatingPerson = false;
 
         if (debounceTimer) {
             clearTimeout(debounceTimer);
@@ -236,9 +180,9 @@ function setupCreditsMentionsField(textarea, root) {
         updateActiveContext();
     };
 
-    const hasCreateRow = () => query.trim() !== '';
+    const showInlineCreateForm = () => query.trim() !== '' && results.length === 0 && ! loading;
 
-    const navigableCount = () => results.length + (hasCreateRow() ? 1 : 0);
+    const navigableCount = () => results.length;
 
     const roleBeforeCursor = () => {
         const cursor = textarea.selectionStart;
@@ -266,6 +210,12 @@ function setupCreditsMentionsField(textarea, root) {
     };
 
     const renderDropdown = () => {
+        if (creatingPerson) {
+            showDropdown();
+
+            return;
+        }
+
         dropdown.innerHTML = '';
 
         if (loading) {
@@ -294,19 +244,26 @@ function setupCreditsMentionsField(textarea, root) {
             ));
         });
 
-        if (hasCreateRow()) {
-            const createIndex = results.length;
-            dropdown.appendChild(createCreateRow(
-                query.trim(),
-                activeIndex === createIndex,
-                () => {
-                    activeIndex = createIndex;
-                    renderDropdown();
+        if (showInlineCreateForm()) {
+            dropdown.style.maxHeight = '420px';
+            dropdown.appendChild(createInlineCreateForm({
+                name: query.trim(),
+                positionsUrl,
+                peopleStoreUrl,
+                isAdmin,
+                onSuccess: (person) => {
+                    selectPerson(person);
+                    showToast('Profile created and added to credits.');
                 },
-            ));
+                onCreatingChange: (isCreating) => {
+                    creatingPerson = isCreating;
+                },
+            }));
+        } else {
+            dropdown.style.maxHeight = '280px';
         }
 
-        if (results.length === 0 && ! hasCreateRow()) {
+        if (results.length === 0 && ! showInlineCreateForm()) {
             dropdown.appendChild(createMessage('No people found'));
         }
 
@@ -389,7 +346,7 @@ function setupCreditsMentionsField(textarea, root) {
             results = [];
         } finally {
             loading = false;
-            activeIndex = results.length > 0 ? 0 : (hasCreateRow() ? 0 : -1);
+            activeIndex = results.length > 0 ? 0 : -1;
             renderDropdown();
         }
     };
@@ -458,12 +415,6 @@ function setupCreditsMentionsField(textarea, root) {
 
             if (activeIndex >= 0 && activeIndex < results.length) {
                 selectPerson(results[activeIndex]);
-
-                return;
-            }
-
-            if (activeIndex === results.length && hasCreateRow()) {
-                openCreatePersonModalGlobal(query.trim());
             }
 
             return;
@@ -496,12 +447,6 @@ function setupCreditsMentionsField(textarea, root) {
         }
 
         if (textarea.contains(event.target)) {
-            return;
-        }
-
-        const modalEl = document.getElementById('credits-mention-create-modal');
-
-        if (modalEl?.contains(event.target)) {
             return;
         }
 
@@ -544,6 +489,196 @@ function createMessage(text) {
     return el;
 }
 
+function createInlineCreateForm({ name, positionsUrl, peopleStoreUrl, isAdmin, onSuccess, onCreatingChange }) {
+    const wrap = document.createElement('div');
+    wrap.setAttribute('data-mention-inline-create', 'true');
+    wrap.style.cssText = 'padding:12px 14px;border-top:1px solid #f0f0f0;';
+
+    const title = document.createElement('p');
+    title.style.cssText = 'margin:0 0 10px;font-size:13px;font-weight:600;color:#171717';
+    title.textContent = 'Create new profile';
+    wrap.appendChild(title);
+
+    const nameLabel = document.createElement('label');
+    nameLabel.style.cssText = 'display:block;margin-bottom:4px;font-size:11px;font-weight:500;color:#525252';
+    nameLabel.textContent = 'Full name';
+    wrap.appendChild(nameLabel);
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = name;
+    nameInput.autocomplete = 'name';
+    nameInput.style.cssText = inlineFieldStyle();
+    wrap.appendChild(nameInput);
+
+    const positionLabel = document.createElement('label');
+    positionLabel.style.cssText = 'display:block;margin:10px 0 4px;font-size:11px;font-weight:500;color:#525252';
+    positionLabel.textContent = 'Position';
+    wrap.appendChild(positionLabel);
+
+    const positionSelect = document.createElement('select');
+    positionSelect.style.cssText = inlineFieldStyle();
+    positionSelect.innerHTML = '<option value="">Loading…</option>';
+    wrap.appendChild(positionSelect);
+
+    const photoLabel = document.createElement('label');
+    photoLabel.style.cssText = 'display:block;margin:10px 0 4px;font-size:11px;font-weight:500;color:#525252';
+    photoLabel.textContent = 'Profile image (optional)';
+    wrap.appendChild(photoLabel);
+
+    const photoInput = document.createElement('input');
+    photoInput.type = 'file';
+    photoInput.accept = '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp';
+    photoInput.style.cssText = inlineFieldStyle();
+    wrap.appendChild(photoInput);
+
+    const errorEl = document.createElement('div');
+    errorEl.setAttribute('role', 'alert');
+    errorEl.style.cssText = 'display:none;margin-top:10px;padding:8px 10px;border-radius:8px;border:1px solid #fca5a5;background:#fef2f2;font-size:12px;color:#991b1b;white-space:pre-wrap';
+    wrap.appendChild(errorEl);
+
+    const createBtn = document.createElement('button');
+    createBtn.type = 'button';
+    createBtn.textContent = 'Create';
+    createBtn.style.cssText = 'margin-top:12px;width:100%;padding:8px 12px;border:none;border-radius:8px;background:#171717;color:#fff;font-size:13px;font-weight:500;cursor:pointer';
+    wrap.appendChild(createBtn);
+
+    const showError = (message) => {
+        errorEl.textContent = message;
+        errorEl.style.display = message ? 'block' : 'none';
+    };
+
+    loadPositionsForSelect(positionSelect, positionsUrl).catch(() => {
+        positionSelect.innerHTML = '<option value="">Failed to load positions</option>';
+    });
+
+    createBtn.addEventListener('mousedown', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const personName = nameInput.value.trim();
+        const positionId = positionSelect.value;
+        const endpoint = peopleStoreUrl;
+        const token = csrfToken();
+
+        showError('');
+
+        if (! endpoint) {
+            showError('Create profile URL is missing. Reload the page and try again.');
+
+            return;
+        }
+
+        if (! token) {
+            showError('CSRF token missing. Reload the page and try again.');
+
+            return;
+        }
+
+        if (! personName) {
+            showError('Full name is required.');
+
+            return;
+        }
+
+        if (! positionId) {
+            showError('Please select a position from the list.');
+
+            return;
+        }
+
+        createBtn.disabled = true;
+        createBtn.textContent = 'Creating…';
+        onCreatingChange?.(true);
+
+        const formData = new FormData();
+        formData.append('name', personName);
+        formData.append('position_id', positionId);
+
+        if (isAdmin) {
+            formData.append('approve', '1');
+        }
+
+        if (photoInput.files?.[0]) {
+            formData.append('photo', photoInput.files[0]);
+        }
+
+        createPersonLog('inline create', { name: personName, position_id: positionId, endpoint });
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': token,
+                },
+                credentials: 'same-origin',
+                body: formData,
+            });
+
+            const responseText = await response.text();
+            let json = {};
+
+            if (responseText !== '') {
+                try {
+                    json = JSON.parse(responseText);
+                } catch {
+                    throw new Error(`Server returned non-JSON (${response.status}). ${responseText.slice(0, 300)}`);
+                }
+            }
+
+            if (! response.ok) {
+                let message = json.message || `Request failed (${response.status})`;
+
+                if (json.errors && typeof json.errors === 'object') {
+                    const fieldMessages = Object.entries(json.errors)
+                        .map(([field, messages]) => `${field}: ${[].concat(messages).join(', ')}`)
+                        .join('\n');
+
+                    message = fieldMessages || message;
+                }
+
+                throw new Error(message);
+            }
+
+            const person = json.person || json.data;
+
+            if (! person?.id) {
+                throw new Error('Server response missing person id.');
+            }
+
+            createPersonLog('inline person created', person);
+            onCreatingChange?.(false);
+            onSuccess?.(person);
+        } catch (error) {
+            const message = error?.message || 'Could not create profile';
+            showError(message);
+            createPersonLog('inline create failed', message);
+            createBtn.disabled = false;
+            createBtn.textContent = 'Create';
+            onCreatingChange?.(false);
+        }
+    });
+
+    return wrap;
+}
+
+function inlineFieldStyle() {
+    return [
+        'display:block',
+        'width:100%',
+        'box-sizing:border-box',
+        'padding:7px 10px',
+        'border:1px solid #e5e5e5',
+        'border-radius:8px',
+        'font-size:13px',
+        'font-family:inherit',
+        'background:#fff',
+        'color:#171717',
+    ].join(';');
+}
+
 function createResultRow(person, isActive, onSelect, onHover) {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -568,27 +703,6 @@ function createResultRow(person, isActive, onSelect, onHover) {
         event.stopPropagation();
         onSelect();
     });
-
-    return btn;
-}
-
-function createCreateRow(name, isActive, onHover) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.setAttribute('role', 'option');
-    btn.setAttribute('data-mention-create-profile', 'true');
-    btn.dataset.name = name;
-    btn.style.cssText = `${rowButtonStyle(isActive)}border-top:1px solid #f0f0f0;margin-top:2px;pointer-events:auto;cursor:pointer`;
-
-    btn.innerHTML = `
-        <span style="width:32px;height:32px;border-radius:50%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:#525252;flex-shrink:0;line-height:1;pointer-events:none">+</span>
-        <span style="min-width:0;flex:1;pointer-events:none">
-            <span style="display:block;font-size:13px;color:#737373">Create profile</span>
-            <span style="display:block;font-size:14px;font-weight:600;color:#171717;margin-top:1px">${escapeHtml(name)}</span>
-        </span>
-    `;
-
-    btn.addEventListener('mouseenter', onHover);
 
     return btn;
 }
@@ -634,6 +748,95 @@ const POSITION_CATEGORY_ORDER = [
     'brand_client',
     'other',
 ];
+
+function renderPositionSelectOptions(select, allPositions, categoryLabels, filter = '') {
+    if (! select) {
+        return;
+    }
+
+    const previous = select.value;
+    const needle = filter.toLowerCase();
+    const filtered = allPositions.filter((position) => {
+        if (needle === '') {
+            return true;
+        }
+
+        return position.name.toLowerCase().includes(needle)
+            || (position.category_label || '').toLowerCase().includes(needle);
+    });
+
+    select.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = filtered.length === 0
+        ? (needle ? 'No positions match your search' : 'Select position')
+        : 'Select position';
+    select.appendChild(placeholder);
+
+    const grouped = {};
+
+    filtered.forEach((position) => {
+        const key = position.category || 'other';
+
+        if (! grouped[key]) {
+            grouped[key] = [];
+        }
+
+        grouped[key].push(position);
+    });
+
+    POSITION_CATEGORY_ORDER.forEach((categoryKey) => {
+        const items = grouped[categoryKey];
+
+        if (! items?.length) {
+            return;
+        }
+
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = categoryLabels[categoryKey]
+            || items[0].category_label
+            || categoryKey;
+
+        items.forEach((position) => {
+            const option = document.createElement('option');
+            option.value = String(position.id);
+            option.textContent = position.name;
+            optgroup.appendChild(option);
+        });
+
+        select.appendChild(optgroup);
+    });
+
+    if (previous && [...select.options].some((option) => option.value === previous)) {
+        select.value = previous;
+    }
+}
+
+async function loadPositionsForSelect(select, positionsUrl) {
+    if (! select) {
+        return null;
+    }
+
+    select.innerHTML = '<option value="">Loading…</option>';
+
+    const response = await fetch(positionsUrl, {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+    });
+
+    if (! response.ok) {
+        throw new Error('Could not load positions');
+    }
+
+    const json = await response.json();
+    const allPositions = json.data || [];
+    const categoryLabels = json.categories || {};
+
+    renderPositionSelectOptions(select, allPositions, categoryLabels);
+
+    return { allPositions, categoryLabels };
+}
 
 let createPersonModalInstance = null;
 
@@ -778,90 +981,30 @@ class CreatePersonModal {
             return;
         }
 
-        this.positionSelect.innerHTML = '<option value="">Loading…</option>';
-
         try {
-            const response = await fetch(this.positionsUrl, {
-                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                credentials: 'same-origin',
-            });
+            const loaded = await loadPositionsForSelect(this.positionSelect, this.positionsUrl);
 
-            if (! response.ok) {
-                throw new Error('Could not load positions');
+            if (loaded) {
+                this.allPositions = loaded.allPositions;
+                this.categoryLabels = loaded.categoryLabels;
+                this.positionsLoaded = true;
+
+                if (this.positionSearch?.value?.trim()) {
+                    this.renderPositionOptions(this.positionSearch.value.trim());
+                }
             }
-
-            const json = await response.json();
-            this.allPositions = json.data || [];
-            this.categoryLabels = json.categories || {};
-            this.positionsLoaded = true;
-            this.renderPositionOptions(this.positionSearch?.value?.trim() || '');
         } catch {
             this.positionSelect.innerHTML = '<option value="">Failed to load positions</option>';
         }
     }
 
     renderPositionOptions(filter = '') {
-        if (! this.positionSelect) {
-            return;
-        }
-
-        const previous = this.positionSelect.value;
-        const needle = filter.toLowerCase();
-        const filtered = this.allPositions.filter((position) => {
-            if (needle === '') {
-                return true;
-            }
-
-            return position.name.toLowerCase().includes(needle)
-                || (position.category_label || '').toLowerCase().includes(needle);
-        });
-
-        this.positionSelect.innerHTML = '';
-
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = filtered.length === 0
-            ? (needle ? 'No positions match your search' : 'Select position')
-            : 'Select position';
-        this.positionSelect.appendChild(placeholder);
-
-        const grouped = {};
-
-        filtered.forEach((position) => {
-            const key = position.category || 'other';
-
-            if (! grouped[key]) {
-                grouped[key] = [];
-            }
-
-            grouped[key].push(position);
-        });
-
-        POSITION_CATEGORY_ORDER.forEach((categoryKey) => {
-            const items = grouped[categoryKey];
-
-            if (! items?.length) {
-                return;
-            }
-
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = this.categoryLabels[categoryKey]
-                || items[0].category_label
-                || categoryKey;
-
-            items.forEach((position) => {
-                const option = document.createElement('option');
-                option.value = String(position.id);
-                option.textContent = position.name;
-                optgroup.appendChild(option);
-            });
-
-            this.positionSelect.appendChild(optgroup);
-        });
-
-        if (previous && [...this.positionSelect.options].some((option) => option.value === previous)) {
-            this.positionSelect.value = previous;
-        }
+        renderPositionSelectOptions(
+            this.positionSelect,
+            this.allPositions,
+            this.categoryLabels,
+            filter,
+        );
     }
 
     async addPosition() {

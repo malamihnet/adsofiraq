@@ -13,6 +13,7 @@
     $isAdmin = auth()->check() && auth()->user()->isAdmin();
     $peopleSearchUrl = $isAdmin ? route('admin.api.people.search') : route('api.people.search');
     $peopleStoreUrl = $isAdmin ? route('admin.api.people.store') : route('api.people.store');
+    $positionsUrl = $isAdmin ? route('admin.api.positions.index') : route('api.positions.index');
 @endphp
 
 <div
@@ -20,6 +21,7 @@
     data-mentions-bound="false"
     data-people-search-url="{{ $peopleSearchUrl }}"
     data-people-store-url="{{ $peopleStoreUrl }}"
+    data-positions-url="{{ $positionsUrl }}"
     data-is-admin="{{ $isAdmin ? '1' : '0' }}"
     data-mentions-debug="{{ config('app.debug') ? '1' : '0' }}"
 >
@@ -52,11 +54,3 @@
     @error('credits_mentions_json')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     @error('credit_mentions')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
 </div>
-
-@auth
-    @push('modals')
-        @once('credits-mention-create-person-modal')
-            <x-credits-mention-create-person-modal />
-        @endonce
-    @endpush
-@endauth
