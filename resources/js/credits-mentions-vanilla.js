@@ -81,6 +81,8 @@ function setupCreditsMentionsField(textarea, root) {
         || textarea.closest('[data-positions-url]')?.dataset.positionsUrl
         || '/api/positions';
 
+    const embeddedPositions = parsePositionsEmbed(root || textarea.closest('.credits-mentions-field'));
+
     const isAdmin = (root?.dataset.isAdmin || textarea.closest('[data-is-admin]')?.dataset.isAdmin) === '1';
 
     const hiddenInput = (root || textarea.closest('.credits-mentions-field'))?.querySelector('input[name="credits_mentions_json"]')
@@ -249,6 +251,7 @@ function setupCreditsMentionsField(textarea, root) {
             dropdown.appendChild(createInlineCreateForm({
                 name: query.trim(),
                 positionsUrl,
+                embeddedPositions,
                 peopleStoreUrl,
                 isAdmin,
                 onSuccess: (person) => {
@@ -489,7 +492,40 @@ function createMessage(text) {
     return el;
 }
 
-function createInlineCreateForm({ name, positionsUrl, peopleStoreUrl, isAdmin, onSuccess, onCreatingChange }) {
+let positionsCatalogCache = null;
+
+function parsePositionsEmbed(root) {
+    const raw = root?.dataset?.positionsJson;
+
+    if (! raw) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+
+        if (Array.isArray(parsed)) {
+            return { data: parsed, categories: {} };
+        }
+
+        return {
+            data: parsed.data || [],
+            categories: parsed.categories || {},
+        };
+    } catch {
+        return null;
+    }
+}
+
+function resolveApiUrl(path) {
+    try {
+        return new URL(path, window.location.origin).toString();
+    } catch {
+        return path;
+    }
+}
+
+function createInlineCreateForm({ name, positionsUrl, embeddedPositions, peopleStoreUrl, isAdmin, onSuccess, onCreatingChange }) {
     const wrap = document.createElement('div');
     wrap.setAttribute('data-mention-inline-create', 'true');
     wrap.style.cssText = 'padding:12px 14px;border-top:1px solid #f0f0f0;';
@@ -548,8 +584,9 @@ function createInlineCreateForm({ name, positionsUrl, peopleStoreUrl, isAdmin, o
         errorEl.style.display = message ? 'block' : 'none';
     };
 
-    loadPositionsForSelect(positionSelect, positionsUrl).catch(() => {
+    loadPositionsForSelect(positionSelect, positionsUrl, embeddedPositions).catch(() => {
         positionSelect.innerHTML = '<option value="">Failed to load positions</option>';
+        showError('Could not load positions. Reload the page or run migrations and PositionSeeder on the server.');
     });
 
     createBtn.addEventListener('mousedown', async (event) => {
@@ -813,29 +850,56 @@ function renderPositionSelectOptions(select, allPositions, categoryLabels, filte
     }
 }
 
-async function loadPositionsForSelect(select, positionsUrl) {
+async function loadPositionsForSelect(select, positionsUrl, embedded = null) {
     if (! select) {
         return null;
     }
 
+    const applyCatalog = (catalog) => {
+        const data = catalog?.data || [];
+        const categories = catalog?.categories || {};
+
+        if (data.length === 0) {
+            select.innerHTML = '<option value="">No positions in catalog</option>';
+
+            return { data, categories };
+        }
+
+        renderPositionSelectOptions(select, data, categories);
+
+        return { data, categories };
+    };
+
+    if (embedded?.data?.length) {
+        positionsCatalogCache = embedded;
+
+        return applyCatalog(embedded);
+    }
+
+    if (positionsCatalogCache?.data?.length) {
+        return applyCatalog(positionsCatalogCache);
+    }
+
     select.innerHTML = '<option value="">Loading…</option>';
 
-    const response = await fetch(positionsUrl, {
+    const response = await fetch(resolveApiUrl(positionsUrl), {
         headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         credentials: 'same-origin',
     });
 
     if (! response.ok) {
-        throw new Error('Could not load positions');
+        throw new Error(`Could not load positions (${response.status})`);
     }
 
     const json = await response.json();
-    const allPositions = json.data || [];
-    const categoryLabels = json.categories || {};
+    const catalog = {
+        data: json.data || [],
+        categories: json.categories || {},
+    };
 
-    renderPositionSelectOptions(select, allPositions, categoryLabels);
+    positionsCatalogCache = catalog;
 
-    return { allPositions, categoryLabels };
+    return applyCatalog(catalog);
 }
 
 let createPersonModalInstance = null;

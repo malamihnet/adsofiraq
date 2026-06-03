@@ -4,6 +4,10 @@
 ])
 
 @php
+    use App\Enums\PositionCategory;
+    use App\Models\Position;
+    use Illuminate\Support\Facades\Schema;
+
     $initialMentions = collect($mentions)->values()->all();
     $creditsValue = (string) old('credits', $credits ?? '');
     $mentionsJsonOld = old('credits_mentions_json', old('credit_mentions'));
@@ -14,6 +18,28 @@
     $peopleSearchUrl = $isAdmin ? route('admin.api.people.search') : route('api.people.search');
     $peopleStoreUrl = $isAdmin ? route('admin.api.people.store') : route('api.people.store');
     $positionsUrl = $isAdmin ? route('admin.api.positions.index') : route('api.positions.index');
+
+    $positionsEmbed = ['data' => [], 'categories' => PositionCategory::options()];
+    if (auth()->check() && Schema::hasTable('positions')) {
+        try {
+            $hasCategory = Schema::hasColumn('positions', 'category');
+            $query = Position::query();
+            $positionsEmbed['data'] = ($hasCategory ? $query->ordered() : $query->orderBy('sort_order')->orderBy('name'))
+                ->limit(500)
+                ->get($hasCategory ? ['id', 'name', 'slug', 'category', 'sort_order'] : ['id', 'name', 'slug', 'sort_order'])
+                ->map(fn (Position $position) => [
+                    'id' => $position->id,
+                    'name' => $position->name,
+                    'slug' => $position->slug,
+                    'category' => $hasCategory ? $position->category : PositionCategory::Other->value,
+                    'category_label' => $hasCategory ? $position->categoryLabel() : PositionCategory::Other->label(),
+                ])
+                ->values()
+                ->all();
+        } catch (\Throwable) {
+            $positionsEmbed = ['data' => [], 'categories' => PositionCategory::options()];
+        }
+    }
 @endphp
 
 <div
@@ -22,6 +48,7 @@
     data-people-search-url="{{ $peopleSearchUrl }}"
     data-people-store-url="{{ $peopleStoreUrl }}"
     data-positions-url="{{ $positionsUrl }}"
+    data-positions-json="{{ e(json_encode($positionsEmbed, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)) }}"
     data-is-admin="{{ $isAdmin ? '1' : '0' }}"
     data-mentions-debug="{{ config('app.debug') ? '1' : '0' }}"
 >
