@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Person;
+use App\Services\SeoService;
 use App\Services\StructuredDataService;
 use Illuminate\View\View;
 
@@ -10,6 +11,7 @@ class PersonController extends Controller
 {
     public function __construct(
         protected StructuredDataService $structuredData,
+        protected SeoService $seo,
     ) {}
 
     public function index(): View
@@ -38,6 +40,8 @@ class PersonController extends Controller
             $this->structuredData->person($person, $canonicalUrl),
         ];
 
-        return view('people.show', compact('person', 'canonicalUrl', 'schema'));
+        $seo = $this->seo->forPerson($person, $canonicalUrl);
+
+        return view('people.show', compact('person', 'canonicalUrl', 'schema', 'seo'));
     }
 }

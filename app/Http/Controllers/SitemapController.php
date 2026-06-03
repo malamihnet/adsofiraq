@@ -2,72 +2,69 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Agency;
-use App\Models\Award;
-use App\Models\Brand;
-use App\Models\Campaign;
-use App\Models\Person;
+use App\Services\SitemapService;
 use Illuminate\Http\Response;
 
 class SitemapController extends Controller
 {
+    public function __construct(
+        protected SitemapService $sitemaps,
+    ) {}
+
     public function index(): Response
     {
-        $urls = collect([
-            ['loc' => url('/'), 'priority' => '1.0'],
-            ['loc' => route('campaigns.index'), 'priority' => '0.9'],
-            ['loc' => route('agencies.index'), 'priority' => '0.8'],
-            ['loc' => route('brands.index'), 'priority' => '0.8'],
-            ['loc' => route('people.index'), 'priority' => '0.8'],
-            ['loc' => route('rankings.index'), 'priority' => '0.7'],
-            ['loc' => route('made-by-iraq.index'), 'priority' => '0.8'],
-            ['loc' => route('awards.index'), 'priority' => '0.7'],
+        return $this->xml('sitemap.index', [
+            'sitemaps' => $this->sitemaps->indexEntries(),
         ]);
+    }
 
-        Campaign::public()->select(['slug', 'updated_at'])->orderByDesc('updated_at')->chunk(200, function ($chunk) use ($urls) {
-            foreach ($chunk as $campaign) {
-                $urls->push([
-                    'loc' => route('campaigns.show', $campaign->slug),
-                    'lastmod' => $campaign->updated_at?->toAtomString(),
-                    'priority' => '0.8',
-                ]);
-            }
-        });
+    public function campaigns(): Response
+    {
+        return $this->urlset($this->sitemaps->campaigns());
+    }
 
-        foreach (Agency::orderBy('name')->get(['slug', 'updated_at']) as $agency) {
-            $urls->push([
-                'loc' => route('agency.show', $agency->slug),
-                'lastmod' => $agency->updated_at?->toAtomString(),
-                'priority' => '0.7',
-            ]);
-        }
+    public function agencies(): Response
+    {
+        return $this->urlset($this->sitemaps->agencies());
+    }
 
-        foreach (Brand::orderBy('name')->get(['slug', 'updated_at']) as $brand) {
-            $urls->push([
-                'loc' => route('brand.show', $brand->slug),
-                'lastmod' => $brand->updated_at?->toAtomString(),
-                'priority' => '0.7',
-            ]);
-        }
+    public function productionHouses(): Response
+    {
+        return $this->urlset($this->sitemaps->productionHouses());
+    }
 
-        Person::public()->orderBy('name')->get(['slug', 'updated_at'])->each(function (Person $person) use ($urls) {
-            $urls->push([
-                'loc' => route('person.show', $person->slug),
-                'lastmod' => $person->updated_at?->toAtomString(),
-                'priority' => '0.6',
-            ]);
-        });
+    public function brands(): Response
+    {
+        return $this->urlset($this->sitemaps->brands());
+    }
 
-        Award::published()->get(['slug', 'updated_at'])->each(function (Award $award) use ($urls) {
-            $urls->push([
-                'loc' => route('awards.show', $award->slug),
-                'lastmod' => $award->updated_at?->toAtomString(),
-                'priority' => '0.6',
-            ]);
-        });
+    public function people(): Response
+    {
+        return $this->urlset($this->sitemaps->people());
+    }
 
-        $xml = view('sitemap.xml', ['urls' => $urls])->render();
+    public function categories(): Response
+    {
+        return $this->urlset($this->sitemaps->categories());
+    }
 
-        return response($xml, 200, ['Content-Type' => 'application/xml']);
+    public function pages(): Response
+    {
+        return $this->urlset($this->sitemaps->staticPages());
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, array<string, string>>|list<array<string, string>>  $urls
+     */
+    protected function urlset($urls): Response
+    {
+        return $this->xml('sitemap.urlset', ['urls' => $urls]);
+    }
+
+    protected function xml(string $view, array $data): Response
+    {
+        return response()
+            ->view($view, $data)
+            ->header('Content-Type', 'application/xml');
     }
 }

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', $person->seo_title)
-@section('meta_description', $person->seo_description)
+@section('title', $seo['title'])
+@section('meta_description', $seo['description'])
 @section('og_image', $person->photo_url)
 
 @push('meta')

@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /bookmarks
+Disallow: /following
+Disallow: /campaigns/create
+Disallow: /password
+Disallow: /email
+
+Sitemap: https://adsofiraq.com/sitemap.xml

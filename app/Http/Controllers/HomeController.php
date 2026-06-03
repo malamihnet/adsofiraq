@@ -7,12 +7,16 @@ use App\Models\Campaign;
 use App\Models\MediumType;
 use App\Models\Person;
 use App\Services\CampaignArchiveOrderingService;
+use App\Services\SeoService;
+use App\Services\StructuredDataService;
 use Illuminate\View\View;
 
 class HomeController extends Controller
 {
     public function __construct(
         protected CampaignArchiveOrderingService $archiveOrdering,
+        protected SeoService $seo,
+        protected StructuredDataService $structuredData,
     ) {}
 
     public function index(): View
@@ -71,6 +75,12 @@ class HomeController extends Controller
             ->take(18)
             ->get();
 
+        $seo = $this->seo->forHomepage();
+        $schema = [
+            $this->structuredData->website(),
+            $this->structuredData->siteOrganization(),
+        ];
+
         return view('home', compact(
             'heroCampaigns',
             'editorsPickCampaigns',
@@ -79,6 +89,8 @@ class HomeController extends Controller
             'featuredAgencies',
             'productionHouses',
             'featuredPeople',
+            'seo',
+            'schema',
         ));
     }
 }

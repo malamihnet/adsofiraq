@@ -10,6 +10,7 @@
 <img
     src="{{ $src }}"
     alt="{{ $alt }}"
+    decoding="async"
     {{ $attributes }}
     onerror="this.onerror=null;this.src='{{ $placeholder }}';"
 >

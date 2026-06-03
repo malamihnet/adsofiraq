@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ImportCampaignController;
 use App\Http\Controllers\Admin\CampaignResetController;
 use App\Http\Controllers\Admin\MediaMaintenanceController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\SeoReportController;
 use App\Http\Controllers\Admin\CampaignRevisionController as AdminCampaignRevisionController;
 use App\Http\Controllers\Admin\TaxonomyController;
 use App\Http\Controllers\Admin\UserController;
@@ -81,6 +82,13 @@ Route::get('/awards', [AwardsController::class, 'index'])->name('awards.index');
 Route::get('/awards/{award:slug}', [AwardsController::class, 'show'])->name('awards.show');
 
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemap-campaigns.xml', [SitemapController::class, 'campaigns'])->name('sitemap.campaigns');
+Route::get('/sitemap-agencies.xml', [SitemapController::class, 'agencies'])->name('sitemap.agencies');
+Route::get('/sitemap-production-houses.xml', [SitemapController::class, 'productionHouses'])->name('sitemap.production-houses');
+Route::get('/sitemap-brands.xml', [SitemapController::class, 'brands'])->name('sitemap.brands');
+Route::get('/sitemap-people.xml', [SitemapController::class, 'people'])->name('sitemap.people');
+Route::get('/sitemap-categories.xml', [SitemapController::class, 'categories'])->name('sitemap.categories');
+Route::get('/sitemap-pages.xml', [SitemapController::class, 'pages'])->name('sitemap.pages');
 
 Route::get('/users/{user:username}', [UserProfileController::class, 'show'])->name('users.show');
 
@@ -109,6 +117,7 @@ Route::middleware(['auth', 'verified', 'noindex'])->group(function () {
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin', 'noindex'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/seo-report', [SeoReportController::class, 'index'])->name('seo-report.index');
 
     Route::get('/import-campaign', [ImportCampaignController::class, 'create'])->name('import-campaign.create');
     Route::post('/import-campaign/debug-parse', [ImportCampaignController::class, 'debugParse'])->name('import-campaign.debug-parse');

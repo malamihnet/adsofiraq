@@ -3,6 +3,7 @@
     <p class="section-label mb-4">Admin</p>
     <nav class="space-y-1 text-sm">
         <a href="{{ route('admin.dashboard') }}" class="block py-2 hover:underline">Dashboard</a>
+        <a href="{{ route('admin.seo-report.index') }}" class="block py-2 pl-4 text-archive-gray hover:underline">SEO Report</a>
         <a href="{{ route('admin.campaigns.index') }}" class="block py-2 hover:underline">Campaigns</a>
         <a href="{{ route('admin.archive-placements.index') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Archive Delay</a>
         <a href="{{ route('admin.campaigns.create') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Add Campaign</a>

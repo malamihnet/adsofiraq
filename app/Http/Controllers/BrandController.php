@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Brand;
+use App\Services\SeoService;
 use App\Services\StructuredDataService;
 use Illuminate\View\View;
 
@@ -10,6 +11,7 @@ class BrandController extends Controller
 {
     public function __construct(
         protected StructuredDataService $structuredData,
+        protected SeoService $seo,
     ) {}
 
     public function index(): View
@@ -40,12 +42,15 @@ class BrandController extends Controller
             $this->structuredData->organizationBrand($brand, $canonicalUrl),
         ];
 
+        $seo = $this->seo->forBrand($brand, $canonicalUrl);
+
         return view('brands.show', compact(
             'brand',
             'campaigns',
             'stats',
             'canonicalUrl',
             'schema',
+            'seo',
         ));
     }
 }

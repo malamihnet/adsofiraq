@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Campaigns — Ads of Iraq')
+@section('title', 'Campaigns | Ads Of Iraq')
 
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-12 md:px-8">

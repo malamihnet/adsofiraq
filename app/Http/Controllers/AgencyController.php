@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agency;
+use App\Services\SeoService;
 use App\Services\StructuredDataService;
 use Illuminate\View\View;
 
@@ -10,6 +11,7 @@ class AgencyController extends Controller
 {
     public function __construct(
         protected StructuredDataService $structuredData,
+        protected SeoService $seo,
     ) {}
 
     public function index(): View
@@ -49,6 +51,8 @@ class AgencyController extends Controller
             $this->structuredData->organizationAgency($agency, $canonicalUrl),
         ];
 
+        $seo = $this->seo->forAgency($agency, $canonicalUrl);
+
         return view('agencies.show', compact(
             'agency',
             'campaigns',
@@ -57,6 +61,7 @@ class AgencyController extends Controller
             'parentLabel',
             'parentUrl',
             'schema',
+            'seo',
         ));
     }
 }

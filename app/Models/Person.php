@@ -52,7 +52,7 @@ class Person extends Model
 
     public function getSeoTitleAttribute(): string
     {
-        return $this->meta_title ?: ($this->name.' — Ads of Iraq');
+        return $this->meta_title ?: ($this->name.' | Ads of Iraq');
     }
 
     protected static function booted(): void

@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Models\Campaign;
 use App\Policies\CampaignPolicy;
+use App\View\Composers\SeoLayoutComposer;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,5 +22,7 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.archive');
         \Illuminate\Pagination\Paginator::defaultSimpleView('vendor.pagination.archive');
+
+        View::composer('layouts.app', SeoLayoutComposer::class);
     }
 }

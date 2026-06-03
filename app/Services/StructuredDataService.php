@@ -10,6 +10,45 @@ use Illuminate\Support\Collection;
 
 class StructuredDataService
 {
+    public function __construct(
+        protected SeoService $seo,
+    ) {}
+
+    public function website(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => config('seo.site_name', 'Ads Of Iraq'),
+            'url' => url('/'),
+            'description' => $this->seo->withArabicContext(
+                'Iraqi advertising archive for campaigns, agencies, production houses, brands, and creative professionals.',
+                'global',
+            ),
+            'inLanguage' => ['en', 'ar'],
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => route('campaigns.index', ['search' => '{search_term_string}']),
+                'query-input' => 'required name=search_term_string',
+            ],
+        ];
+    }
+
+    public function siteOrganization(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'Organization',
+            'name' => config('seo.site_name', 'Ads Of Iraq'),
+            'url' => url('/'),
+            'description' => $this->seo->withArabicContext(
+                'Independent archive documenting Iraqi advertising, film, design, and creative culture.',
+                'global',
+            ),
+            'logo' => url(config('seo.default_og_image', '/favicon-96x96.png')),
+        ];
+    }
+
     /**
      * @param  list<array{name: string, url: string}>  $items
      */
@@ -42,7 +81,14 @@ class StructuredDataService
                 default => $agency->name,
             },
             'url' => $url,
-            'description' => $agency->seo_description,
+            'description' => $this->seo->withArabicContext(
+                $agency->meta_description ?: sprintf(
+                    'Explore campaigns, creative work, and profile information for %s on %s.',
+                    $agency->name,
+                    config('seo.site_name', 'Ads Of Iraq'),
+                ),
+                $agency->isProductionHouse() && ! $agency->isAgency() ? 'production_houses' : 'agencies',
+            ),
         ];
 
         if ($isProductionHouse) {
@@ -72,7 +118,13 @@ class StructuredDataService
             '@type' => 'Organization',
             'name' => $brand->name,
             'url' => $url,
-            'description' => $brand->seo_description,
+            'description' => $this->seo->withArabicContext(
+                $brand->meta_description ?: sprintf(
+                    'Discover advertising campaigns and creative projects from %s.',
+                    $brand->name,
+                ),
+                'brands',
+            ),
         ];
 
         if ($brand->hasLogo()) {
@@ -90,7 +142,13 @@ class StructuredDataService
             'name' => $person->name,
             'url' => $url,
             'jobTitle' => $person->position,
-            'description' => $person->seo_description,
+            'description' => $this->seo->withArabicContext(
+                $person->meta_description ?: sprintf(
+                    'Explore creative work, campaigns, and professional profile of %s.',
+                    $person->name,
+                ),
+                'people',
+            ),
             'image' => $person->photo_url,
             'sameAs' => array_values(array_filter([
                 $person->website_url,
@@ -119,7 +177,7 @@ class StructuredDataService
             '@type' => 'CreativeWork',
             'name' => $campaign->title,
             'url' => $url,
-            'description' => $campaign->seo_description,
+            'description' => $this->seo->forCampaign($campaign)['description'],
             'datePublished' => $campaign->published_at?->toDateString(),
             'image' => $images ?: ($campaign->thumbnail_url ? [$campaign->thumbnail_url] : []),
             'keywords' => $campaign->industries->pluck('name')

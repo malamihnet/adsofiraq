@@ -13,6 +13,7 @@ use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
 use App\Services\CampaignArchiveOrderingService;
+use App\Services\SeoService;
 use App\Services\CampaignInternalLinksService;
 use App\Services\StructuredDataService;
 use App\Services\CampaignRevisionUploadService;
@@ -180,6 +181,8 @@ class CampaignController extends Controller
         $isBookmarked = $user ? $campaign->isBookmarkedBy($user) : false;
         $isWatched = $user ? $campaign->isWatchedBy($user) : false;
 
+        $seo = $this->seo->forCampaign($campaign, $canonicalUrl);
+
         return view('campaigns.show', compact(
             'campaign',
             'relatedGroups',
@@ -187,6 +190,7 @@ class CampaignController extends Controller
             'isWatched',
             'canonicalUrl',
             'schema',
+            'seo',
         ));
     }
 

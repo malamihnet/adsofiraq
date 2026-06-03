@@ -1,6 +1,18 @@
 @extends('layouts.app')
 
-@section('title', 'Ads of Iraq — The Archive of Iraqi Advertising')
+@section('title', $seo['title'])
+@section('meta_description', $seo['description'])
+
+@push('meta')
+    <link rel="canonical" href="{{ url('/') }}">
+    <x-structured-data :graphs="$schema" />
+@endpush
+
+@push('head')
+    @if($heroCampaigns->first()?->thumbnail_url)
+        <link rel="preload" as="image" href="{{ $heroCampaigns->first()->thumbnail_url }}" fetchpriority="high">
+    @endif
+@endpush
 
 @section('content')
 @include('components.home.hero-slider', ['campaigns' => $heroCampaigns])

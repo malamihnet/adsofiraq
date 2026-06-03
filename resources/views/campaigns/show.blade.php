@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', $campaign->title . ' — Ads of Iraq')
-@section('meta_description', $campaign->seo_description)
+@section('title', $seo['title'])
+@section('meta_description', $seo['description'])
 @if($campaign->thumbnail_url)
     @section('og_image', $campaign->thumbnail_url)
 @endif

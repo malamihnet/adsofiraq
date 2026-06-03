@@ -233,11 +233,11 @@ class Agency extends Model
         }
 
         if ($isProductionHouse) {
-            return $this->name.' Production House | Ads of Iraq';
+            return $this->name.' | Production House | '.config('seo.site_name', 'Ads Of Iraq');
         }
 
         if ($isAgency) {
-            return $this->name.' Agency | Ads of Iraq';
+            return $this->name.' | Agency Profile | '.config('seo.site_name', 'Ads Of Iraq');
         }
 
         $labels = $this->roleLabels();
@@ -246,7 +246,7 @@ class Agency extends Model
             return $this->name.' '.($labels[0]).' | Ads of Iraq';
         }
 
-        return $this->name.' — Ads of Iraq';
+        return $this->name.' | Ads of Iraq';
     }
 
     public function getRouteKeyName(): string

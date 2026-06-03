@@ -48,7 +48,7 @@ trait HasAuthorityProfile
 
     public function getSeoTitleAttribute(): string
     {
-        return $this->meta_title ?: ($this->name.' — Ads of Iraq');
+        return $this->meta_title ?: ($this->name.' | Ads of Iraq');
     }
 
     public function getSeoDescriptionAttribute(): string
@@ -60,7 +60,7 @@ trait HasAuthorityProfile
         $count = $this->approved_campaigns_count ?? $this->approvedCampaignStatsQuery()->value('campaigns');
 
         return sprintf(
-            'Explore %d approved advertising campaigns by %s on Ads of Iraq — Iraq’s curated archive of creative work.',
+            'Explore %d approved advertising campaigns by %s on Ads of Iraq, Iraq\'s curated archive of creative work.',
             (int) $count,
             $this->name,
         );

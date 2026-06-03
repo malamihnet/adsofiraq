@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', $agency->seo_title)
-@section('meta_description', $agency->seo_description)
+@section('title', $seo['title'])
+@section('meta_description', $seo['description'])
 @if($agency->hasLogo())
     @section('og_image', $agency->logo_url)
 @endif
