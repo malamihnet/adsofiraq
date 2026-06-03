@@ -14,6 +14,68 @@ function createPersonLog(...args) {
     console.log('[create-person]', ...args);
 }
 
+function openCreatePersonModalGlobal(name) {
+    const trimmed = (name || '').trim();
+
+    if (! trimmed) {
+        return;
+    }
+
+    const ctx = window.__creditsMentionActive;
+    const modal = getCreatePersonModal();
+
+    if (! modal) {
+        showToast('Sign in to create a person profile.');
+        log('create profile blocked: modal not found');
+
+        return;
+    }
+
+    if (ctx) {
+        window.__creditsMentionDraft = {
+            mentionStart: ctx.mentionStart,
+            selectionEnd: ctx.selectionEnd,
+        };
+    }
+
+    modal.open({
+        name: trimmed,
+        storeUrl: ctx?.peopleStoreUrl || modal.defaultStoreUrl,
+        isAdmin: ctx?.isAdmin ?? modal.isAdmin,
+        onSaved: (person) => {
+            ctx?.onPersonSelected?.(person);
+            showToast('Profile created and added to credits.');
+        },
+    });
+
+    ctx?.hideDropdown?.();
+}
+
+function registerMentionCreateProfileClick() {
+    if (window.__mentionCreateProfileClickBound) {
+        return;
+    }
+
+    window.__mentionCreateProfileClickBound = true;
+
+    document.addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-mention-create-profile]');
+
+        if (! btn) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        console.log('[mentions] create profile clicked', btn.dataset.name);
+        openCreatePersonModalGlobal(btn.dataset.name || '');
+    }, true);
+}
+
+window.openCreatePersonModal = openCreatePersonModalGlobal;
+registerMentionCreateProfileClick();
+
 export function initCreditsMentions() {
     window.__creditsMentionsScriptLoaded = true;
 
@@ -94,10 +156,24 @@ function setupCreditsMentionsField(textarea, root) {
 
     const dropdown = document.createElement('div');
     dropdown.setAttribute('data-credits-mentions-dropdown', 'true');
+    dropdown.setAttribute('data-mention-dropdown', 'true');
     dropdown.setAttribute('role', 'listbox');
     dropdown.className = 'credits-mentions-dropdown';
     applyDropdownBaseStyles(dropdown);
     document.body.appendChild(dropdown);
+
+    const updateActiveContext = () => {
+        window.__creditsMentionActive = {
+            textarea,
+            mentionStart,
+            selectionEnd: textarea.selectionStart,
+            query,
+            peopleStoreUrl,
+            isAdmin,
+            hideDropdown,
+            onPersonSelected: (person) => selectPerson(person),
+        };
+    };
 
     const syncHidden = () => {
         if (! hiddenInput) {
@@ -157,6 +233,7 @@ function setupCreditsMentionsField(textarea, root) {
         positionDropdown();
         dropdown.style.setProperty('display', 'block', 'important');
         dropdownOpen = true;
+        updateActiveContext();
     };
 
     const hasCreateRow = () => query.trim() !== '';
@@ -186,39 +263,6 @@ function setupCreditsMentionsField(textarea, root) {
         log('input detected', query);
 
         return true;
-    };
-
-    const openCreateProfile = () => {
-        const name = query.trim();
-        const modal = getCreatePersonModal();
-
-        if (! name) {
-            return;
-        }
-
-        if (! modal) {
-            showToast('Sign in to create a person profile.');
-            log('create profile blocked: modal not found');
-
-            return;
-        }
-
-        hideDropdown();
-
-        window.__creditsMentionDraft = {
-            mentionStart,
-            selectionEnd: textarea.selectionStart,
-        };
-
-        modal.open({
-            name,
-            storeUrl: peopleStoreUrl,
-            isAdmin,
-            onSaved: (person) => {
-                selectPerson(person);
-                showToast('Profile created and added to credits.');
-            },
-        });
     };
 
     const renderDropdown = () => {
@@ -255,7 +299,6 @@ function setupCreditsMentionsField(textarea, root) {
             dropdown.appendChild(createCreateRow(
                 query.trim(),
                 activeIndex === createIndex,
-                openCreateProfile,
                 () => {
                     activeIndex = createIndex;
                     renderDropdown();
@@ -420,7 +463,7 @@ function setupCreditsMentionsField(textarea, root) {
             }
 
             if (activeIndex === results.length && hasCreateRow()) {
-                openCreateProfile();
+                openCreatePersonModalGlobal(query.trim());
             }
 
             return;
@@ -443,14 +486,22 @@ function setupCreditsMentionsField(textarea, root) {
         }
     });
 
-    document.addEventListener('mousedown', (event) => {
+    document.addEventListener('click', (event) => {
+        if (! dropdownOpen) {
+            return;
+        }
+
+        if (event.target.closest('[data-mention-dropdown]')) {
+            return;
+        }
+
+        if (textarea.contains(event.target)) {
+            return;
+        }
+
         const modalEl = document.getElementById('credits-mention-create-modal');
 
-        if (
-            dropdown.contains(event.target)
-            || textarea.contains(event.target)
-            || modalEl?.contains(event.target)
-        ) {
+        if (modalEl?.contains(event.target)) {
             return;
         }
 
@@ -471,7 +522,8 @@ function applyDropdownBaseStyles(dropdown) {
     dropdown.style.cssText = [
         'display:none',
         'position:fixed',
-        'z-index:99999',
+        'z-index:999999',
+        'pointer-events:auto',
         'max-height:280px',
         'overflow-y:auto',
         'overflow-x:hidden',
@@ -496,7 +548,7 @@ function createResultRow(person, isActive, onSelect, onHover) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.setAttribute('role', 'option');
-    btn.style.cssText = rowButtonStyle(isActive);
+    btn.style.cssText = `${rowButtonStyle(isActive)}pointer-events:auto;cursor:pointer`;
 
     const avatar = person.photo_url
         ? `<img src="${escapeAttr(person.photo_url)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:#f5f5f5;flex-shrink:0" onerror="this.style.visibility='hidden'">`
@@ -511,10 +563,6 @@ function createResultRow(person, isActive, onSelect, onHover) {
     `;
 
     btn.addEventListener('mouseenter', onHover);
-    btn.addEventListener('mousedown', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-    });
     btn.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -524,30 +572,23 @@ function createResultRow(person, isActive, onSelect, onHover) {
     return btn;
 }
 
-function createCreateRow(name, isActive, onSelect, onHover) {
+function createCreateRow(name, isActive, onHover) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.setAttribute('role', 'option');
-    btn.style.cssText = `${rowButtonStyle(isActive)}border-top:1px solid #f0f0f0;margin-top:2px`;
+    btn.setAttribute('data-mention-create-profile', 'true');
+    btn.dataset.name = name;
+    btn.style.cssText = `${rowButtonStyle(isActive)}border-top:1px solid #f0f0f0;margin-top:2px;pointer-events:auto;cursor:pointer`;
 
     btn.innerHTML = `
-        <span style="width:32px;height:32px;border-radius:50%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:#525252;flex-shrink:0;line-height:1">+</span>
-        <span style="min-width:0;flex:1">
+        <span style="width:32px;height:32px;border-radius:50%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:#525252;flex-shrink:0;line-height:1;pointer-events:none">+</span>
+        <span style="min-width:0;flex:1;pointer-events:none">
             <span style="display:block;font-size:13px;color:#737373">Create profile</span>
             <span style="display:block;font-size:14px;font-weight:600;color:#171717;margin-top:1px">${escapeHtml(name)}</span>
         </span>
     `;
 
     btn.addEventListener('mouseenter', onHover);
-    btn.addEventListener('mousedown', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-    });
-    btn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onSelect();
-    });
 
     return btn;
 }

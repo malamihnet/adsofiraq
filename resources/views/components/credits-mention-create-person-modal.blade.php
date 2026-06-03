@@ -112,6 +112,36 @@
 @push('scripts')
 <script>
 (function () {
+    if (!window.__mentionCreateProfileInlineBound) {
+        window.__mentionCreateProfileInlineBound = true;
+
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-mention-create-profile]');
+            if (!btn) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            console.log('[mentions] create profile clicked', btn.dataset.name);
+
+            if (typeof window.openCreatePersonModal === 'function') {
+                window.openCreatePersonModal(btn.dataset.name || '');
+                return;
+            }
+
+            var modal = document.getElementById('credits-mention-create-modal');
+            var nameInput = document.getElementById('credits-mention-create-name');
+            if (modal && nameInput) {
+                nameInput.value = btn.dataset.name || '';
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                modal.setAttribute('aria-hidden', 'false');
+            }
+        }, true);
+    }
+
     if (window.__creditsMentionInlineSaveBound) {
         return;
     }
