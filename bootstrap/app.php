@@ -39,6 +39,21 @@ return Application::configure(basePath: dirname(__DIR__))
                 return redirect()->route('verification.notice')
                     ->with('error', 'Invalid or expired verification link.');
             }
+
+            if ($request->routeIs(
+                'campaigns.show',
+                'campaigns.pending-review',
+                'campaigns.edit',
+                'campaigns.update',
+                'campaigns.bookmark.store',
+                'campaigns.bookmark.destroy',
+                'campaigns.watch.store',
+                'campaigns.watch.destroy',
+            )) {
+                return response()->view('campaigns.access-denied', [
+                    'campaign' => $request->route('campaign'),
+                ], 403);
+            }
         });
 
         $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, \Illuminate\Http\Request $request) {

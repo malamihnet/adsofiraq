@@ -22,6 +22,7 @@ use App\Services\CampaignVideoService;
 use App\Services\TaxonomyService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
@@ -143,6 +144,10 @@ class CampaignController extends Controller
 
             if ($user && $user->can('viewPendingReview', $campaign)) {
                 return $this->redirectToPendingReview($campaign, 'not_live_yet');
+            }
+
+            if ($user) {
+                return $this->campaignAccessDenied($campaign);
             }
 
             abort(404);
