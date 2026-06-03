@@ -5,12 +5,18 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-64aDSouG.js",
+    "file": "assets/app-D9oaci9v.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "css": [
       "assets/app-BoANmIBg.css"
     ]
+  },
+  "resources/js/credits-mentions-vanilla.js": {
+    "file": "assets/credits-mentions-vanilla-rf6izrTg.js",
+    "name": "credits-mentions-vanilla",
+    "src": "resources/js/credits-mentions-vanilla.js",
+    "isEntry": true
   }
 }

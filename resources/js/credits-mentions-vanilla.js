@@ -1,4 +1,7 @@
+console.log('CREDITS MENTIONS FILE LOADED');
 console.log('[mentions] script loaded');
+
+insertMentionsLoadMarker();
 
 /**
  * Vanilla JS credits @mention autocomplete (does not depend on Alpine).
@@ -29,7 +32,10 @@ export function initCreditsMentions() {
     });
 
     document.querySelectorAll('[data-mentions-debug]').forEach((panel) => {
-        setDebug(panel, { jsLoaded: true });
+        setDebug(panel, {
+            jsLoaded: true,
+            markerFound: Boolean(document.getElementById('mentions-script-loaded')),
+        });
     });
 }
 
@@ -106,6 +112,14 @@ function setDebug(panel, state) {
             el.textContent = String(state.resultsCount);
         }
     }
+
+    if (state.markerFound !== undefined) {
+        const el = panel.querySelector('[data-debug-marker]');
+
+        if (el) {
+            el.textContent = state.markerFound ? 'yes' : 'no';
+        }
+    }
 }
 
 function setupCreditsMentionsField(textarea, root) {
@@ -131,7 +145,13 @@ function setupCreditsMentionsField(textarea, root) {
         || document.querySelector('#credits_mentions_json')
         || document.querySelector('input[name="credits_mentions_json"]');
 
-    setDebug(debugPanel, { jsLoaded: true, textareaFound: true, lastQuery: '—', resultsCount: 0 });
+    setDebug(debugPanel, {
+        jsLoaded: true,
+        textareaFound: true,
+        lastQuery: '—',
+        resultsCount: 0,
+        markerFound: Boolean(document.getElementById('mentions-script-loaded')),
+    });
 
     log('bound to textarea', textarea.id || textarea.name);
 
@@ -551,3 +571,34 @@ function escapeHtml(value) {
 function escapeAttr(value) {
     return escapeHtml(value).replace(/'/g, '&#39;');
 }
+
+function insertMentionsLoadMarker() {
+    const place = () => {
+        if (document.getElementById('mentions-script-loaded')) {
+            return;
+        }
+
+        document.body?.insertAdjacentHTML(
+            'beforeend',
+            '<div id="mentions-script-loaded" style="position:fixed;bottom:8px;right:8px;z-index:999999;padding:6px 10px;background:#dc2626;color:#fff;font:12px/1.2 monospace;border-radius:4px;pointer-events:none">mentions script loaded</div>',
+        );
+    };
+
+    if (document.body) {
+        place();
+    } else {
+        document.addEventListener('DOMContentLoaded', place);
+    }
+}
+
+function bootCreditsMentions() {
+    initCreditsMentions();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootCreditsMentions);
+} else {
+    bootCreditsMentions();
+}
+
+document.addEventListener('DOMContentLoaded', bootCreditsMentions);

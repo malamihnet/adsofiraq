@@ -1,4 +1,5 @@
 import './bootstrap';
+import './credits-mentions-vanilla';
 import 'plyr/dist/plyr.css';
 import Alpine from 'alpinejs';
 import homeHeroSlider from './home-hero-slider';
@@ -13,13 +14,17 @@ Alpine.data('homeHeroSlider', homeHeroSlider);
 Alpine.data('taxonomyMultiselect', taxonomyMultiselect);
 Alpine.data('campaignVideosManager', campaignVideosManager);
 Alpine.data('campaignGallery', campaignGallery);
-Alpine.start();
 
 function bootPageScripts() {
     setupPlyr();
     initCreditsMentions();
 }
 
+try {
+    Alpine.start();
+} catch (error) {
+    console.error('[app] Alpine.start() failed; credits mentions still load separately.', error);
+}
+
 bootPageScripts();
 document.addEventListener('DOMContentLoaded', bootPageScripts);
-

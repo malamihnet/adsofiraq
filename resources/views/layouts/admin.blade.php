@@ -9,6 +9,7 @@
     <x-favicon />
 
     <title>@yield('title', 'Admin — Ads of Iraq')</title>
+    @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-white font-sans text-archive-black">

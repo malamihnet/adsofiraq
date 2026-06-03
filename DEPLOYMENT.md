@@ -24,6 +24,8 @@ git push origin main
 - [ ] `public/build` committed: yes
 - [ ] pushed to GitHub: yes
 
+**After `git pull` on production**, confirm the deployed hashes match `public/build/manifest.json` (View Source → script `src` for `app-*.js` and `credits-mentions-vanilla-*.js`). If the page still references older filenames, run `php artisan optimize:clear` and hard-refresh; stale `public/build` on the server means mentions JS never runs.
+
 Do **not** commit: `node_modules/`, `.env`, `storage/logs/`, temporary HTML/debug files under `storage/app/`.
 
 ## Pre-deployment Checklist
