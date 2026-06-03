@@ -41,6 +41,7 @@ Route::get('/terms-policies', [PageController::class, 'termsPolicies'])->name('p
 Route::get('/editorial-standards', [PageController::class, 'editorialStandards'])->name('pages.editorial-standards');
 
 Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
+Route::get('/featured', [CampaignController::class, 'editorsPick'])->name('featured.index');
 
 Route::middleware(['auth', 'verified', 'noindex'])->group(function () {
     Route::get('/campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
@@ -168,6 +169,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::post('/archive-placements/clear-legacy-manual-order', [ArchivePlacementController::class, 'clearLegacyManualOrder'])->name('archive-placements.clear-legacy-manual-order');
     Route::get('/campaigns/create', [AdminCampaignController::class, 'create'])->name('campaigns.create');
     Route::post('/campaigns', [AdminCampaignController::class, 'store'])->name('campaigns.store');
+    Route::patch('/campaigns/{campaign:id}/inline', [AdminCampaignController::class, 'inlineUpdate'])->name('campaigns.inline');
     Route::get('/campaigns/{campaign:id}/edit', [AdminCampaignController::class, 'edit'])->name('campaigns.edit');
     Route::put('/campaigns/{campaign:id}', [AdminCampaignController::class, 'update'])->name('campaigns.update');
     Route::get('/campaigns/{campaign}', [AdminCampaignController::class, 'show'])->name('campaigns.show');

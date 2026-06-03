@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminCampaignStoreRequest;
+use App\Http\Requests\Admin\InlineCampaignUpdateRequest;
 use App\Http\Requests\Admin\UpdateCampaignHeroRequest;
 use App\Http\Requests\Admin\UpdatePlatformVerificationRequest;
 use App\Models\Agency;
@@ -13,6 +14,7 @@ use App\Models\Country;
 use App\Models\Industry;
 use App\Models\MediumType;
 use App\Models\User;
+use App\Services\AdminCampaignInlineService;
 use App\Services\CampaignArchivePlacementService;
 use App\Services\CampaignTaxonomySyncService;
 use App\Services\CampaignUploadService;
@@ -22,8 +24,10 @@ use App\Services\RankingScoreService;
 use Illuminate\Support\Facades\Mail;
 use App\Services\PlatformVerificationService;
 use App\Services\TaxonomyService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CampaignController extends Controller
@@ -35,6 +39,7 @@ class CampaignController extends Controller
         protected PlatformVerificationService $verificationService,
         protected CampaignTaxonomySyncService $taxonomySyncService,
         protected CampaignArchivePlacementService $archivePlacement,
+        protected AdminCampaignInlineService $inlineUpdates,
     ) {}
 
     public function index(Request $request): View
@@ -212,6 +217,42 @@ class CampaignController extends Controller
         return view('admin.campaigns.show', compact('campaign'));
     }
 
+    public function inlineUpdate(InlineCampaignUpdateRequest $request, Campaign $campaign): JsonResponse
+    {
+        $this->authorize('moderate', $campaign);
+
+        try {
+            $field = $request->input('field');
+            $value = $request->input('value');
+
+            $campaign = match ($field) {
+                'status' => $this->inlineUpdates->updateStatus($campaign, (string) $value, $request->user()),
+                'is_hero' => $this->inlineUpdates->updateHero($campaign, (bool) $value),
+                'is_verified' => $this->inlineUpdates->updateVerified($campaign, (bool) $value, $request->user()),
+                'is_featured' => $this->inlineUpdates->updateEditorsPick($campaign, (bool) $value),
+                default => $campaign,
+            };
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Saved.',
+                'campaign' => [
+                    'id' => $campaign->id,
+                    'status' => $campaign->status,
+                    'is_hero' => $campaign->is_hero,
+                    'is_verified' => $campaign->is_verified,
+                    'is_featured' => $campaign->is_featured,
+                    'workflow_status_label' => $campaign->workflow_status_label,
+                ],
+            ]);
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'message' => collect($exception->errors())->flatten()->first() ?? 'Validation failed.',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
+    }
+
     public function approve(Campaign $campaign): RedirectResponse
     {
         $this->authorize('moderate', $campaign);
@@ -260,7 +301,7 @@ class CampaignController extends Controller
 
         app(RankingScoreService::class)->refreshCampaign($campaign->fresh());
 
-        $message = $campaign->is_featured ? 'Campaign marked as featured.' : 'Campaign removed from featured.';
+        $message = $campaign->is_featured ? "Campaign added to Editor's Pick." : "Campaign removed from Editor's Pick.";
 
         return back()->with('success', $message);
     }

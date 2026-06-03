@@ -161,6 +161,12 @@ class Campaign extends Model
         return $query->where('is_featured', true);
     }
 
+    /** Editor's Pick (curated homepage section; stored as is_featured). */
+    public function scopeEditorsPick(Builder $query): Builder
+    {
+        return $query->featured();
+    }
+
     public function scopeHero(Builder $query): Builder
     {
         return $query->where('is_hero', true);
@@ -247,7 +253,7 @@ class Campaign extends Model
 
         return match ($this->status) {
             'pending' => 'Under Review',
-            'approved' => $this->is_featured ? 'Featured' : 'Approved',
+            'approved' => $this->is_featured ? "Editor's Pick" : 'Approved',
             'rejected' => 'Rejected',
             'draft' => 'Draft',
             default => ucfirst(str_replace('_', ' ', $this->status)),

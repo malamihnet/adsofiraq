@@ -6,6 +6,7 @@ import taxonomyMultiselect from './taxonomy-multiselect';
 import campaignVideosManager from './campaign-videos-manager';
 import setupPlyr from './plyr-init';
 import campaignGallery from './campaign-gallery';
+import initAdminCampaignInline from './admin-campaign-inline';
 
 window.Alpine = Alpine;
 Alpine.data('homeHeroSlider', homeHeroSlider);
@@ -16,4 +17,5 @@ Alpine.start();
 
 document.addEventListener('DOMContentLoaded', () => {
     setupPlyr();
+    initAdminCampaignInline();
 });

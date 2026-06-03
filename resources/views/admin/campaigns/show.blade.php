@@ -10,7 +10,7 @@
     </h1>
     <x-status-badge :status="$campaign->status" />
     @if($campaign->is_featured)
-        <span class="text-xs uppercase tracking-wider">Featured</span>
+        <span class="text-xs uppercase tracking-wider">Editor's Pick</span>
     @endif
     @if($campaign->is_hero)
         <span class="border border-archive-black px-2 py-0.5 text-xs uppercase tracking-wider">Hero</span>
@@ -24,7 +24,7 @@
     @if($campaign->status !== 'rejected')
         <form method="POST" action="{{ route('admin.campaigns.reject', $campaign) }}">@csrf<button class="btn-outline text-xs">Reject</button></form>
     @endif
-    <form method="POST" action="{{ route('admin.campaigns.feature', $campaign) }}">@csrf<button class="btn-outline text-xs">{{ $campaign->is_featured ? 'Unfeature' : 'Feature' }}</button></form>
+    <form method="POST" action="{{ route('admin.campaigns.feature', $campaign) }}">@csrf<button class="btn-outline text-xs">{{ $campaign->is_featured ? "Remove Editor's Pick" : "Add Editor's Pick" }}</button></form>
     <a href="{{ route('admin.campaigns.edit', $campaign) }}" class="btn-outline text-xs">Edit</a>
     <form method="POST" action="{{ route('admin.campaigns.destroy', $campaign) }}" onsubmit="return confirm('Delete this campaign?')">
         @csrf @method('DELETE')

@@ -122,6 +122,20 @@ class CampaignController extends Controller
         ]);
     }
 
+    public function editorsPick(): View
+    {
+        $campaigns = Campaign::public()
+            ->editorsPick()
+            ->with(['brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries'])
+            ->latestOnPlatform()
+            ->paginate(24)
+            ->withQueryString();
+
+        return view('campaigns.editors-pick', [
+            'campaigns' => $campaigns,
+        ]);
+    }
+
     public function show(Campaign $campaign): View
     {
         if ($campaign->status !== 'approved') {

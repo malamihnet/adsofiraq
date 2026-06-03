@@ -5,18 +5,18 @@
 @section('content')
 @include('components.home.hero-slider', ['campaigns' => $heroCampaigns])
 
-@if($featuredCampaigns->count())
+@if($editorsPickCampaigns->count())
 <section class="px-4 py-12 md:px-8 md:py-20">
     <div class="mx-auto max-w-7xl">
         <div class="mb-8 flex items-end justify-between md:mb-12">
             <div>
                 <p class="section-label mb-2">Curated</p>
-                <h2 class="section-title">Featured Campaigns</h2>
+                <h2 class="section-title">Editor's Pick</h2>
             </div>
-            <a href="{{ route('campaigns.index') }}" class="text-sm underline underline-offset-4">View all</a>
+            <a href="{{ route('featured.index') }}" class="text-sm underline underline-offset-4">View all</a>
         </div>
         <x-campaign-grid
-            :campaigns="$featuredCampaigns"
+            :campaigns="$editorsPickCampaigns"
             grid-class="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-3"
         />
     </div>

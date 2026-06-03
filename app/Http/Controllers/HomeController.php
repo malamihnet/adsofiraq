@@ -19,10 +19,10 @@ class HomeController extends Controller
             ->take(6)
             ->get();
 
-        $featuredCampaigns = Campaign::public()
-            ->featured()
+        $editorsPickCampaigns = Campaign::public()
+            ->editorsPick()
             ->with(['brands', 'agencies', 'mediumTypes'])
-            ->latest('published_at')
+            ->latestOnPlatform()
             ->take(6)
             ->get();
 
@@ -67,7 +67,7 @@ class HomeController extends Controller
 
         return view('home', compact(
             'heroCampaigns',
-            'featuredCampaigns',
+            'editorsPickCampaigns',
             'latestCampaigns',
             'popularCategories',
             'featuredAgencies',

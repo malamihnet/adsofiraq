@@ -125,7 +125,7 @@
             <div class="flex flex-col gap-3">
                 <label class="flex items-center gap-2 text-sm">
                     <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $campaign?->is_featured)) class="rounded border-archive-border">
-                    Featured campaign
+                    Editor's Pick (homepage curated section &amp; <a href="{{ route('featured.index') }}" class="underline" target="_blank" rel="noopener">/featured</a>)
                 </label>
                 <label class="flex items-center gap-2 text-sm">
                     <input type="checkbox" name="is_made_by_iraq" value="1" @checked(old('is_made_by_iraq', $campaign?->is_made_by_iraq)) class="rounded border-archive-border">
