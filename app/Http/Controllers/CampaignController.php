@@ -107,9 +107,17 @@ class CampaignController extends Controller
             eagerLoads: $eagerLoads,
         );
 
+        $schema = [
+            $this->structuredData->breadcrumb([
+                ['name' => 'Home', 'url' => url('/')],
+                ['name' => 'Campaigns', 'url' => route('campaigns.index')],
+            ]),
+        ];
+
         return view('campaigns.index', [
             'campaigns' => $campaigns,
             'perPage' => $perPage,
+            'schema' => $schema,
             'brands' => Brand::orderBy('name')->get(),
             'agencies' => Agency::orderBy('name')->get(),
             'industries' => Industry::orderBy('name')->get(),

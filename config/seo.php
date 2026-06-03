@@ -3,7 +3,23 @@
 return [
     'site_name' => 'Ads Of Iraq',
     'site_tagline' => 'Iraqi Advertising Archive',
-    'default_og_image' => '/favicon-96x96.png',
+    'site_url' => env('APP_URL', 'https://adsofiraq.com'),
+
+    'default_og_image' => '/web-app-manifest-512x512.png',
+
+    'organization' => [
+        'logo_path' => '/web-app-manifest-512x512.png',
+        'logo_width' => 512,
+        'logo_height' => 512,
+        'same_as' => array_values(array_filter([
+            env('SEO_FACEBOOK_URL'),
+            env('SEO_INSTAGRAM_URL'),
+            env('SEO_LINKEDIN_URL'),
+            env('SEO_TWITTER_URL'),
+            env('SEO_YOUTUBE_URL'),
+        ])),
+    ],
+
     'twitter_site' => '@adsofiraq',
 
     'arabic_keywords' => [
@@ -60,5 +76,14 @@ return [
         'people' => 'sitemap-people.xml',
         'categories' => 'sitemap-categories.xml',
         'pages' => 'sitemap-pages.xml',
+    ],
+
+    'favicon_urls' => [
+        '/favicon.ico',
+        '/favicon-16x16.png',
+        '/favicon-32x32.png',
+        '/favicon-96x96.png',
+        '/apple-touch-icon.png',
+        '/site.webmanifest',
     ],
 ];

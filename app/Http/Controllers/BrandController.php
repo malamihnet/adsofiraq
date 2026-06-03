@@ -20,7 +20,14 @@ class BrandController extends Controller
             ->orderByDesc('ranking_score')
             ->paginate(48);
 
-        return view('brands.index', compact('brands'));
+        $schema = [
+            $this->structuredData->breadcrumb([
+                ['name' => 'Home', 'url' => url('/')],
+                ['name' => 'Brands', 'url' => route('brands.index')],
+            ]),
+        ];
+
+        return view('brands.index', compact('brands', 'schema'));
     }
 
     public function show(Brand $brand): View

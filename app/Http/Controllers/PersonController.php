@@ -21,7 +21,14 @@ class PersonController extends Controller
             ->orderBy('name')
             ->paginate(16);
 
-        return view('people.index', compact('people'));
+        $schema = [
+            $this->structuredData->breadcrumb([
+                ['name' => 'Home', 'url' => url('/')],
+                ['name' => 'People', 'url' => route('people.index')],
+            ]),
+        ];
+
+        return view('people.index', compact('people', 'schema'));
     }
 
     public function show(Person $person): View

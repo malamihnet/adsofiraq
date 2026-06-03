@@ -228,17 +228,11 @@ class Agency extends Model
         $isAgency = $this->isAgency();
         $isProductionHouse = $this->isProductionHouse();
 
-        if ($isAgency && $isProductionHouse) {
-            return $this->name.' Creative Agency & Production House | Ads of Iraq';
-        }
-
-        if ($isProductionHouse) {
+        if ($isProductionHouse && ! $isAgency) {
             return $this->name.' | Production House | '.config('seo.site_name', 'Ads Of Iraq');
         }
 
-        if ($isAgency) {
-            return $this->name.' | Agency Profile | '.config('seo.site_name', 'Ads Of Iraq');
-        }
+        return $this->name.' | Agency Profile | '.config('seo.site_name', 'Ads Of Iraq');
 
         $labels = $this->roleLabels();
 

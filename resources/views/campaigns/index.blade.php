@@ -1,9 +1,19 @@
 @extends('layouts.app')
 
 @section('title', 'Campaigns | Ads Of Iraq')
+@section('meta_description', 'Browse Iraqi advertising campaigns on Ads Of Iraq. Explore creative work, films, and campaigns from agencies and production houses across Iraq.')
+
+@push('meta')
+    <link rel="canonical" href="{{ route('campaigns.index') }}">
+    <x-structured-data :graphs="$schema" />
+@endpush
 
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-12 md:px-8">
+    <x-breadcrumbs :items="[
+        ['name' => 'Home', 'url' => url('/')],
+        ['name' => 'Campaigns', 'url' => null],
+    ]" />
     <div class="mb-12">
         <p class="section-label mb-2">Archive</p>
         <h1 class="section-title">Campaigns</h1>

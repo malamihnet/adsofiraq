@@ -67,14 +67,22 @@
         </dl>
     </section>
 
+    <section class="border border-archive-border p-6">
+        <h2 class="section-label mb-4">Favicon URLs</h2>
+        <ul class="space-y-2 text-sm">
+            @foreach($faviconUrls as $url)
+                <li><a href="{{ $url }}" class="underline" target="_blank" rel="noopener">{{ parse_url($url, PHP_URL_PATH) }}</a></li>
+            @endforeach
+        </ul>
+        <p class="mt-4 text-xs text-archive-gray">Google uses a square favicon (48px+). Organization logo schema points to 512x512 PNG.</p>
+    </section>
+
     <section class="border border-archive-border p-6 lg:col-span-2">
-        <h2 class="section-label mb-4">Search Console checklist</h2>
+        <h2 class="section-label mb-4">Google Search Console checklist</h2>
         <ol class="list-inside list-decimal space-y-2 text-sm text-archive-gray">
-            <li>Verify property for <code>adsofiraq.com</code></li>
-            <li>Submit <code>{{ url('/sitemap.xml') }}</code></li>
-            <li>Review Index coverage for campaigns, agencies, and brands</li>
-            <li>Validate rich results (CreativeWork, Organization, Person, BreadcrumbList)</li>
-            <li>Confirm filtered listing URLs stay noindex with canonical to hub pages</li>
+            @foreach($googleSearchConsoleChecklist as $step)
+                <li>{{ $step }}</li>
+            @endforeach
         </ol>
     </section>
 </div>

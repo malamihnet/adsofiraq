@@ -20,7 +20,14 @@ class AgencyController extends Controller
             ->orderByDesc('ranking_score')
             ->paginate(48);
 
-        return view('agencies.index', compact('agencies'));
+        $schema = [
+            $this->structuredData->breadcrumb([
+                ['name' => 'Home', 'url' => url('/')],
+                ['name' => 'Agencies', 'url' => route('agencies.index')],
+            ]),
+        ];
+
+        return view('agencies.index', compact('agencies', 'schema'));
     }
 
     public function show(Agency $agency): View

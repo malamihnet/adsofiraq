@@ -14,6 +14,11 @@
 @section('content')
 <div class="agency-profile-page bg-white">
     <div class="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
+        <x-breadcrumbs :items="[
+            ['name' => 'Home', 'url' => url('/')],
+            ['name' => $parentLabel, 'url' => $parentUrl],
+            ['name' => $agency->name, 'url' => null],
+        ]" />
         @auth
             @if(auth()->user()->isAdmin())
                 <div class="mb-6 flex justify-end">

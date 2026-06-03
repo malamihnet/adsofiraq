@@ -77,8 +77,7 @@ class HomeController extends Controller
 
         $seo = $this->seo->forHomepage();
         $schema = [
-            $this->structuredData->website(),
-            $this->structuredData->siteOrganization(),
+            $this->structuredData->homePageGraph(),
         ];
 
         return view('home', compact(

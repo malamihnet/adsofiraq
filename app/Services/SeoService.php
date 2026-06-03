@@ -29,7 +29,7 @@ class SeoService
             'global',
         );
 
-        return $this->pack($title, $description, 'website', url(config('seo.default_og_image', '/favicon-96x96.png')));
+        return $this->pack($title, $description, 'website', url(config('seo.default_og_image', '/web-app-manifest-512x512.png')));
     }
 
     /**
@@ -218,7 +218,7 @@ class SeoService
 
     public function defaultOgImageUrl(): string
     {
-        return url(config('seo.default_og_image', '/favicon-96x96.png'));
+        return url(config('seo.default_og_image', '/web-app-manifest-512x512.png'));
     }
 
     /**

@@ -6,7 +6,6 @@ use App\Models\Agency;
 use App\Models\Brand;
 use App\Models\Campaign;
 use App\Models\Person;
-use Illuminate\Support\Collection;
 
 class StructuredDataService
 {
@@ -14,55 +13,83 @@ class StructuredDataService
         protected SeoService $seo,
     ) {}
 
-    public function website(): array
+    public function homePageGraph(): array
     {
+        $organizationId = $this->organizationId();
+        $websiteId = $this->websiteId();
+
         return [
             '@context' => 'https://schema.org',
-            '@type' => 'WebSite',
-            'name' => config('seo.site_name', 'Ads Of Iraq'),
-            'url' => url('/'),
-            'description' => $this->seo->withArabicContext(
-                'Iraqi advertising archive for campaigns, agencies, production houses, brands, and creative professionals.',
-                'global',
-            ),
-            'inLanguage' => ['en', 'ar'],
-            'potentialAction' => [
-                '@type' => 'SearchAction',
-                'target' => route('campaigns.index', ['search' => '{search_term_string}']),
-                'query-input' => 'required name=search_term_string',
+            '@graph' => [
+                [
+                    '@type' => 'Organization',
+                    '@id' => $organizationId,
+                    'name' => config('seo.site_name', 'Ads Of Iraq'),
+                    'url' => $this->siteUrl(),
+                    'description' => $this->seo->withArabicContext(
+                        'Independent archive documenting Iraqi advertising, film, design, and creative culture.',
+                        'global',
+                    ),
+                    'logo' => $this->organizationLogo(),
+                    'sameAs' => $this->organizationSameAs(),
+                ],
+                [
+                    '@type' => 'WebSite',
+                    '@id' => $websiteId,
+                    'name' => config('seo.site_name', 'Ads Of Iraq'),
+                    'url' => $this->siteUrl(),
+                    'description' => $this->seo->withArabicContext(
+                        'Iraqi advertising archive for campaigns, agencies, production houses, brands, and creative professionals.',
+                        'global',
+                    ),
+                    'inLanguage' => ['en', 'ar'],
+                    'publisher' => ['@id' => $organizationId],
+                    'potentialAction' => [
+                        '@type' => 'SearchAction',
+                        'target' => [
+                            '@type' => 'EntryPoint',
+                            'urlTemplate' => route('campaigns.index', ['search' => '{search_term_string}']),
+                        ],
+                        'query-input' => 'required name=search_term_string',
+                    ],
+                ],
             ],
         ];
     }
 
+    /** @deprecated Use homePageGraph() */
+    public function website(): array
+    {
+        return $this->homePageGraph();
+    }
+
+    /** @deprecated Use homePageGraph() */
     public function siteOrganization(): array
     {
-        return [
-            '@context' => 'https://schema.org',
-            '@type' => 'Organization',
-            'name' => config('seo.site_name', 'Ads Of Iraq'),
-            'url' => url('/'),
-            'description' => $this->seo->withArabicContext(
-                'Independent archive documenting Iraqi advertising, film, design, and creative culture.',
-                'global',
-            ),
-            'logo' => url(config('seo.default_og_image', '/favicon-96x96.png')),
-        ];
+        return $this->homePageGraph();
     }
 
     /**
-     * @param  list<array{name: string, url: string}>  $items
+     * @param  list<array{name: string, url: ?string}>  $items
      */
     public function breadcrumb(array $items): array
     {
         return [
             '@context' => 'https://schema.org',
             '@type' => 'BreadcrumbList',
-            'itemListElement' => collect($items)->values()->map(fn (array $item, int $i) => [
-                '@type' => 'ListItem',
-                'position' => $i + 1,
-                'name' => $item['name'],
-                'item' => $item['url'],
-            ])->all(),
+            'itemListElement' => collect($items)->values()->map(function (array $item, int $i) {
+                $element = [
+                    '@type' => 'ListItem',
+                    'position' => $i + 1,
+                    'name' => $item['name'],
+                ];
+
+                if (! empty($item['url'])) {
+                    $element['item'] = $item['url'];
+                }
+
+                return $element;
+            })->all(),
         ];
     }
 
@@ -74,12 +101,7 @@ class StructuredDataService
         $data = [
             '@context' => 'https://schema.org',
             '@type' => 'Organization',
-            'name' => match (true) {
-                $isAgency && $isProductionHouse => $agency->name.' Creative Agency & Production House',
-                $isProductionHouse => $agency->name.' Production House',
-                $isAgency => $agency->name.' Agency',
-                default => $agency->name,
-            },
+            'name' => $agency->name,
             'url' => $url,
             'description' => $this->seo->withArabicContext(
                 $agency->meta_description ?: sprintf(
@@ -87,7 +109,7 @@ class StructuredDataService
                     $agency->name,
                     config('seo.site_name', 'Ads Of Iraq'),
                 ),
-                $agency->isProductionHouse() && ! $agency->isAgency() ? 'production_houses' : 'agencies',
+                $isProductionHouse && ! $isAgency ? 'production_houses' : 'agencies',
             ),
         ];
 
@@ -97,15 +119,19 @@ class StructuredDataService
 
         if ($agency->hasLogo()) {
             $data['logo'] = $agency->logo_url;
+            $data['image'] = $agency->logo_url;
         }
 
-        if ($agency->website_url) {
-            $data['sameAs'] = array_values(array_filter([
-                $agency->website_url,
-                $agency->instagram_url,
-                $agency->linkedin_url,
-                $agency->twitter_url,
-            ]));
+        $sameAs = array_values(array_filter([
+            $agency->website_url,
+            $agency->instagram_url,
+            $agency->linkedin_url,
+            $agency->twitter_url,
+            $agency->facebook_url,
+        ]));
+
+        if ($sameAs !== []) {
+            $data['sameAs'] = $sameAs;
         }
 
         return $data;
@@ -129,6 +155,7 @@ class StructuredDataService
 
         if ($brand->hasLogo()) {
             $data['logo'] = $brand->logo_url;
+            $data['image'] = $brand->logo_url;
         }
 
         return $data;
@@ -150,6 +177,11 @@ class StructuredDataService
                 'people',
             ),
             'image' => $person->photo_url,
+            'worksFor' => [
+                '@type' => 'Organization',
+                '@id' => $this->organizationId(),
+                'name' => config('seo.site_name', 'Ads Of Iraq'),
+            ],
             'sameAs' => array_values(array_filter([
                 $person->website_url,
                 $person->official_profile_url,
@@ -162,24 +194,36 @@ class StructuredDataService
 
     public function creativeWork(Campaign $campaign, string $url): array
     {
+        $thumbnail = $campaign->thumbnail_url;
         $images = $campaign->galleryStills()
             ->map(fn ($asset) => $asset->url)
             ->filter()
             ->values()
             ->all();
 
-        if ($campaign->thumbnail_url) {
-            array_unshift($images, $campaign->thumbnail_url);
+        if ($thumbnail) {
+            array_unshift($images, $thumbnail);
         }
 
         $data = [
             '@context' => 'https://schema.org',
             '@type' => 'CreativeWork',
             'name' => $campaign->title,
+            'headline' => $campaign->title,
             'url' => $url,
+            'mainEntityOfPage' => $url,
             'description' => $this->seo->forCampaign($campaign)['description'],
-            'datePublished' => $campaign->published_at?->toDateString(),
-            'image' => $images ?: ($campaign->thumbnail_url ? [$campaign->thumbnail_url] : []),
+            'datePublished' => $campaign->published_at?->toIso8601String(),
+            'dateModified' => $campaign->updated_at?->toIso8601String(),
+            'thumbnailUrl' => $thumbnail,
+            'image' => $images ?: ($thumbnail ? [$thumbnail] : []),
+            'publisher' => [
+                '@type' => 'Organization',
+                '@id' => $this->organizationId(),
+                'name' => config('seo.site_name', 'Ads Of Iraq'),
+                'logo' => $this->organizationLogo(),
+            ],
+            'inLanguage' => 'en',
             'keywords' => $campaign->industries->pluck('name')
                 ->merge($campaign->mediumTypes->pluck('name'))
                 ->unique()
@@ -187,20 +231,13 @@ class StructuredDataService
                 ->all(),
         ];
 
-        if ($campaign->relationLoaded('agencies') && $campaign->agencies->isNotEmpty()) {
-            $data['creator'] = [
-                '@type' => 'Organization',
-                'name' => $campaign->agencies->first()->name,
-            ];
-        } elseif ($campaign->relationLoaded('productionHouses') && $campaign->productionHouses->isNotEmpty()) {
-            $data['creator'] = [
-                '@type' => 'Organization',
-                'name' => $campaign->productionHouses->first()->name,
-                'additionalType' => 'https://schema.org/ProductionCompany',
-            ];
+        $creator = $this->campaignCreator($campaign);
+
+        if ($creator !== null) {
+            $data['creator'] = $creator;
         }
 
-        return $data;
+        return array_filter($data, fn ($value) => $value !== null && $value !== [] && $value !== '');
     }
 
     /**
@@ -209,44 +246,43 @@ class StructuredDataService
     public function campaignMedia(Campaign $campaign): array
     {
         $graphs = [];
+        $description = $this->seo->forCampaign($campaign)['description'];
+        $publisher = [
+            '@type' => 'Organization',
+            '@id' => $this->organizationId(),
+            'name' => config('seo.site_name', 'Ads Of Iraq'),
+        ];
 
         foreach ($campaign->videos as $video) {
+            $base = [
+                '@context' => 'https://schema.org',
+                '@type' => 'VideoObject',
+                'name' => $campaign->title,
+                'description' => $description,
+                'thumbnailUrl' => $campaign->thumbnail_url,
+                'uploadDate' => $campaign->published_at?->toIso8601String(),
+                'publisher' => $publisher,
+            ];
+
             if ($video->type === 'direct' && $video->url) {
-                $graphs[] = [
-                    '@context' => 'https://schema.org',
-                    '@type' => 'VideoObject',
-                    'name' => $campaign->title,
-                    'contentUrl' => $video->url,
-                    'thumbnailUrl' => $campaign->thumbnail_url,
-                ];
+                $graphs[] = array_merge($base, ['contentUrl' => $video->url]);
             } elseif ($video->embed_url) {
-                $graphs[] = [
-                    '@context' => 'https://schema.org',
-                    '@type' => 'VideoObject',
-                    'name' => $campaign->title,
-                    'embedUrl' => $video->embed_url,
-                    'thumbnailUrl' => $campaign->thumbnail_url,
-                ];
+                $graphs[] = array_merge($base, ['embedUrl' => $video->embed_url]);
             } elseif ($video->file_url) {
-                $graphs[] = [
-                    '@context' => 'https://schema.org',
-                    '@type' => 'VideoObject',
-                    'name' => $campaign->title,
-                    'contentUrl' => $video->file_url,
-                    'thumbnailUrl' => $campaign->thumbnail_url,
-                ];
+                $graphs[] = array_merge($base, ['contentUrl' => $video->file_url]);
             }
         }
 
-        foreach ($campaign->galleryStills() as $still) {
-            if ($still->url) {
-                $graphs[] = [
-                    '@context' => 'https://schema.org',
-                    '@type' => 'ImageObject',
-                    'contentUrl' => $still->url,
-                    'name' => $campaign->title,
-                ];
-            }
+        if ($graphs === [] && $campaign->thumbnail_url) {
+            $graphs[] = [
+                '@context' => 'https://schema.org',
+                '@type' => 'VideoObject',
+                'name' => $campaign->title,
+                'description' => $description,
+                'thumbnailUrl' => $campaign->thumbnail_url,
+                'uploadDate' => $campaign->published_at?->toIso8601String(),
+                'publisher' => $publisher,
+            ];
         }
 
         return $graphs;
@@ -261,12 +297,116 @@ class StructuredDataService
             return '';
         }
 
-        $payload = count($graphs) === 1
-            ? $graphs[0]
-            : ['@context' => 'https://schema.org', '@graph' => $graphs];
+        $normalized = [];
+
+        foreach ($graphs as $graph) {
+            if (isset($graph['@graph']) && is_array($graph['@graph'])) {
+                $normalized = array_merge($normalized, $graph['@graph']);
+
+                continue;
+            }
+
+            $normalized[] = $graph;
+        }
+
+        $payload = count($normalized) === 1
+            ? $normalized[0]
+            : ['@context' => 'https://schema.org', '@graph' => $this->ensureContextOnGraphNodes($normalized)];
+
+        if (! isset($payload['@context']) && ! isset($payload['@graph'])) {
+            $payload['@context'] = 'https://schema.org';
+        }
 
         return '<script type="application/ld+json">'
             .json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             .'</script>';
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $nodes
+     * @return list<array<string, mixed>>
+     */
+    protected function ensureContextOnGraphNodes(array $nodes): array
+    {
+        return array_map(function (array $node) {
+            if (! isset($node['@context'])) {
+                unset($node['@context']);
+            }
+
+            return $node;
+        }, $nodes);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function campaignCreator(Campaign $campaign): ?array
+    {
+        if ($campaign->relationLoaded('agencies') && $campaign->agencies->isNotEmpty()) {
+            $agency = $campaign->agencies->first();
+
+            return [
+                '@type' => 'Organization',
+                'name' => $agency->name,
+                'url' => route('agency.show', $agency),
+            ];
+        }
+
+        if ($campaign->relationLoaded('productionHouses') && $campaign->productionHouses->isNotEmpty()) {
+            $house = $campaign->productionHouses->first();
+
+            return [
+                '@type' => 'Organization',
+                'name' => $house->name,
+                'url' => route('agency.show', $house),
+                'additionalType' => 'https://schema.org/ProductionCompany',
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function organizationLogo(): array
+    {
+        return [
+            '@type' => 'ImageObject',
+            'url' => $this->absoluteAsset(config('seo.organization.logo_path', '/web-app-manifest-512x512.png')),
+            'width' => (int) config('seo.organization.logo_width', 512),
+            'height' => (int) config('seo.organization.logo_height', 512),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function organizationSameAs(): array
+    {
+        return array_values(array_filter(
+            config('seo.organization.same_as', []),
+            static fn ($url) => is_string($url) && $url !== '',
+        ));
+    }
+
+    protected function siteUrl(): string
+    {
+        return rtrim((string) config('seo.site_url', config('app.url')), '/');
+    }
+
+    protected function organizationId(): string
+    {
+        return $this->siteUrl().'/#organization';
+    }
+
+    protected function websiteId(): string
+    {
+        return $this->siteUrl().'/#website';
+    }
+
+    protected function absoluteAsset(string $path): string
+    {
+        return $this->siteUrl().'/'.ltrim($path, '/');
     }
 }

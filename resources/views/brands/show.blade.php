@@ -14,19 +14,11 @@
 @section('content')
 <div class="agency-profile-page bg-white">
     <div class="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
-        <nav aria-label="Breadcrumb" class="mb-10 sm:mb-12">
-            <ol class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-archive-gray">
-                <li>
-                    <a href="{{ route('home') }}" class="transition-colors hover:text-archive-black">Home</a>
-                </li>
-                <li aria-hidden="true" class="text-archive-border">/</li>
-                <li>
-                    <a href="{{ route('brands.index') }}" class="transition-colors hover:text-archive-black">Brands</a>
-                </li>
-                <li aria-hidden="true" class="text-archive-border">/</li>
-                <li class="font-medium text-archive-black" aria-current="page">{{ $brand->name }}</li>
-            </ol>
-        </nav>
+        <x-breadcrumbs :items="[
+            ['name' => 'Home', 'url' => url('/')],
+            ['name' => 'Brands', 'url' => route('brands.index')],
+            ['name' => $brand->name, 'url' => null],
+        ]" />
 
         <x-brand-profile-header :brand="$brand" :stats="$stats" />
 

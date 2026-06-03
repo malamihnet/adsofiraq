@@ -11,6 +11,11 @@
 
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-12 md:px-8">
+    <x-breadcrumbs :items="[
+        ['name' => 'Home', 'url' => url('/')],
+        ['name' => 'People', 'url' => route('people.index')],
+        ['name' => $person->name, 'url' => null],
+    ]" />
     <div class="grid gap-12 border-b border-archive-border pb-12 lg:grid-cols-[320px_1fr]">
         <div class="flex flex-col items-center lg:items-start">
             <div class="h-40 w-40 shrink-0 overflow-hidden rounded-full border border-archive-border bg-archive-light sm:h-48 sm:w-48">

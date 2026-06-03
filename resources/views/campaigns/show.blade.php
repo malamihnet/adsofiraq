@@ -14,6 +14,11 @@
 
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-12 md:px-8">
+    <x-breadcrumbs :items="[
+        ['name' => 'Home', 'url' => url('/')],
+        ['name' => 'Campaigns', 'url' => route('campaigns.index')],
+        ['name' => $campaign->title, 'url' => null],
+    ]" />
     @if(auth()->check() && auth()->user()->can('update', $campaign))
         <div class="mb-8 flex flex-wrap items-center gap-4 border border-archive-border p-4">
             @if($campaign->status !== 'approved')
