@@ -175,6 +175,8 @@
         </aside>
     </div>
 
+    <x-campaign-credit-index :campaign="$campaign" />
+
     <x-campaign-related-sections :groups="$relatedGroups" />
 </div>
 @endsection

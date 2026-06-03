@@ -143,4 +143,49 @@ class RankingScoreService
             ->limit($limit)
             ->get();
     }
+
+    /**
+     * @return Collection<int, Brand>
+     */
+    public function topBrands(int $limit = 30): Collection
+    {
+        return Brand::query()
+            ->withCount(['campaigns' => fn ($q) => $q->approved()->where('is_draft', false)])
+            ->having('campaigns_count', '>', 0)
+            ->orderByDesc('ranking_score')
+            ->orderByDesc('campaigns_count')
+            ->orderBy('name')
+            ->limit($limit)
+            ->get()
+            ->map(function (Brand $brand) {
+                $stats = $brand->approvedCampaignsForScoring();
+                $brand->setAttribute('ranking_total_views', (int) $stats->sum('views_count'));
+                $brand->setAttribute('ranking_total_bookmarks', (int) $stats->sum('bookmarks_count'));
+                $brand->setAttribute('ranking_campaign_count', $brand->campaigns_count ?? 0);
+
+                return $brand;
+            });
+    }
+
+    /**
+     * @return Collection<int, Campaign>
+     */
+    public function topCommercials(int $limit = 36): Collection
+    {
+        return Campaign::public()
+            ->where(function ($query) {
+                $query->whereHas('mediumTypes', function ($q) {
+                    $q->where('name', 'like', '%commercial%')
+                        ->orWhere('name', 'like', '%tv%')
+                        ->orWhere('name', 'like', '%television%')
+                        ->orWhere('slug', 'like', '%commercial%')
+                        ->orWhere('slug', 'like', '%tv%');
+                });
+            })
+            ->with(['brands', 'agencies', 'mediumTypes'])
+            ->orderByDesc('ranking_score')
+            ->orderByDesc('views_count')
+            ->limit($limit)
+            ->get();
+    }
 }

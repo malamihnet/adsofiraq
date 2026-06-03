@@ -18,6 +18,13 @@ class CampaignAsset extends Model
         'source_url',
         'source_url_key',
         'content_hash',
+        'alt',
+        'title',
+        'caption',
+        'width',
+        'height',
+        'mime_type',
+        'webp_path',
     ];
 
     public function campaign(): BelongsTo
@@ -28,6 +35,35 @@ class CampaignAsset extends Model
     public function getUrlAttribute(): string
     {
         return $this->resolvedUrl() ?? $this->placeholderUrl();
+    }
+
+    public function getDisplayUrlAttribute(): string
+    {
+        $webp = $this->normalizedWebpPath();
+
+        if ($webp !== null && Storage::disk('public')->exists($webp)) {
+            return asset('storage/'.$webp);
+        }
+
+        return $this->url;
+    }
+
+    public function effectiveAlt(string $campaignTitle, int $index = 1): string
+    {
+        if ($this->alt) {
+            return $this->alt;
+        }
+
+        return $campaignTitle.' - still '.$index;
+    }
+
+    protected function normalizedWebpPath(): ?string
+    {
+        if (empty($this->webp_path)) {
+            return null;
+        }
+
+        return ltrim(str_replace('\\', '/', trim($this->webp_path)), '/');
     }
 
     public function resolvedUrl(): ?string

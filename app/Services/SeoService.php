@@ -38,15 +38,23 @@ class SeoService
     public function forCampaign(Campaign $campaign, ?string $canonical = null): array
     {
         $title = $campaign->title.' | '.$this->siteName();
-        $agencyName = $campaign->relationLoaded('agencies')
-            ? ($campaign->agencies->first()?->name ?? 'Iraqi creatives')
+
+        $campaign->loadMissing(['agencies', 'brands', 'mediumTypes']);
+
+        $agencyName = $campaign->agencies->first()?->name;
+        $brandName = $campaign->brands->first()?->name;
+        $categoryName = $campaign->mediumTypes->first()?->name;
+
+        $parts = array_filter([$agencyName, $brandName, $categoryName]);
+        $contextLine = $parts !== []
+            ? implode(' | ', $parts)
             : 'Iraqi creatives';
 
         $description = $this->withArabicContext(
             sprintf(
-                'Watch %s by %s. Explore credits, production details, and creative work on %s.',
+                'Watch %s (%s). Explore credits, production details, and creative work on %s.',
                 $campaign->title,
-                $agencyName,
+                $contextLine,
                 $this->siteName(),
             ),
             'campaigns',
@@ -84,7 +92,8 @@ class SeoService
         }
 
         $description = $agency->meta_description ?: sprintf(
-            'Explore campaigns, creative work, and profile information for %s on %s.',
+            'Explore %d campaigns, creative work, and profile information for %s on %s.',
+            $agency->approvedCampaignsForScoring()->count(),
             $agency->name,
             $this->siteName(),
         );
@@ -140,6 +149,40 @@ class SeoService
     /**
      * @return array{title: string, description: string, og_type: string, og_image: ?string, canonical: ?string, robots: ?string}
      */
+    public function forTag(\App\Models\Tag $tag, ?string $canonical = null): array
+    {
+        $title = $tag->name.' Tag | '.$this->siteName();
+        $description = $this->withArabicContext(
+            sprintf(
+                'Browse Iraqi advertising campaigns tagged %s on %s.',
+                $tag->name,
+                $this->siteName(),
+            ),
+            'campaigns',
+        );
+
+        return $this->pack($title, $description, 'website', null, $canonical ?? route('tags.show', $tag));
+    }
+
+    /**
+     * @return array{title: string, description: string, og_type: string, og_image: ?string, canonical: ?string, robots: ?string}
+     */
+    public function forRankingPage(string $title, string $description, ?string $canonical = null): array
+    {
+        return $this->pack($title, $this->withArabicContext($description, 'global'), 'website', null, $canonical);
+    }
+
+    /**
+     * @return array{title: string, description: string, og_type: string, og_image: ?string, canonical: ?string, robots: ?string}
+     */
+    public function forLandingPage(string $title, string $description, ?string $canonical = null): array
+    {
+        return $this->pack($title, $this->withArabicContext($description, 'global'), 'website', null, $canonical);
+    }
+
+    /**
+     * @return array{title: string, description: string, og_type: string, og_image: ?string, canonical: ?string, robots: ?string}
+     */
     public function forCategory(string $name, string $listingUrl): array
     {
         $title = $name.' Campaigns | '.$this->siteName();
@@ -179,6 +222,7 @@ class SeoService
             'brands.index',
             'people.index',
             'rankings.*',
+            'tags.show',
             'made-by-iraq.index',
             'featured.index',
             'awards.index',

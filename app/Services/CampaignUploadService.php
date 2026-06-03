@@ -45,6 +45,7 @@ class CampaignUploadService
     {
         $sortOrder = (int) ($campaign->assets()->max('sort_order') ?? 0);
         $firstAsset = null;
+        $stillIndex = (int) $campaign->assets()->count();
 
         foreach ($files as $file) {
             if (! $file instanceof UploadedFile) {
@@ -52,17 +53,74 @@ class CampaignUploadService
             }
 
             $path = $file->store(config('upload.campaign_path').'/'.$campaign->id.'/assets', 'public');
+            $stillIndex++;
 
-            $asset = $campaign->assets()->create([
-                'file_path' => $path,
-                'file_type' => 'image',
-                'sort_order' => ++$sortOrder,
-            ]);
+            $asset = $campaign->assets()->create(
+                $this->buildAssetMetadata($campaign, $file, $path, ++$sortOrder, $stillIndex)
+            );
 
             $firstAsset ??= $asset;
         }
 
         return $firstAsset;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildAssetMetadata(Campaign $campaign, UploadedFile $file, string $path, int $sortOrder, int $stillIndex): array
+    {
+        $meta = [
+            'file_path' => $path,
+            'file_type' => 'image',
+            'sort_order' => $sortOrder,
+            'mime_type' => $file->getMimeType() ?: null,
+            'alt' => $campaign->title.' - still '.$stillIndex,
+            'title' => $campaign->title,
+            'caption' => null,
+        ];
+
+        try {
+            $binary = Storage::disk('public')->get($path);
+            $image = $this->imageManager()->read($binary);
+            $meta['width'] = $image->width();
+            $meta['height'] = $image->height();
+
+            $webpPath = $this->storeWebpVariant($campaign, $binary, $stillIndex);
+
+            if ($webpPath) {
+                $meta['webp_path'] = $webpPath;
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return $meta;
+    }
+
+    protected function storeWebpVariant(Campaign $campaign, string $binary, int $stillIndex): ?string
+    {
+        $quality = (int) config('upload.webp_quality', 82);
+
+        try {
+            $image = $this->imageManager()->read($binary);
+            $dir = config('upload.campaign_path').'/'.$campaign->id.'/assets/webp';
+            Storage::disk('public')->makeDirectory($dir);
+
+            $filename = sprintf('still-%d-%d.webp', $stillIndex, now()->timestamp);
+            $path = $dir.'/'.$filename;
+
+            Storage::disk('public')->put(
+                $path,
+                (string) $image->encode(new WebpEncoder(quality: $quality)),
+            );
+
+            return Storage::disk('public')->exists($path) ? $path : null;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
     }
 
     /**

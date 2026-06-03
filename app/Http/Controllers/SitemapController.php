@@ -53,6 +53,21 @@ class SitemapController extends Controller
         return $this->urlset($this->sitemaps->staticPages());
     }
 
+    public function tags(): Response
+    {
+        return $this->urlset($this->sitemaps->tags());
+    }
+
+    public function rankings(): Response
+    {
+        return $this->urlset($this->sitemaps->rankings());
+    }
+
+    public function landingPages(): Response
+    {
+        return $this->urlset($this->sitemaps->landingPages());
+    }
+
     /**
      * @param  \Illuminate\Support\Collection<int, array<string, string>>|list<array<string, string>>  $urls
      */

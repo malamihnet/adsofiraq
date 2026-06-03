@@ -26,6 +26,7 @@
     :production-houses="$productionHouses ?? $agencies"
     :users="$users"
     :selected-taxonomies="$selectedTaxonomies"
+    :selected-people-credits="$selectedPeopleCredits ?? []"
     :default-user-id="$campaign->user_id"
 />
 @endsection

@@ -43,9 +43,9 @@
 
         $payload->push([
             'id' => $asset->id,
-            'url' => $url,
+            'url' => $asset->display_url,
             'hash' => $hash,
-            'alt' => $title.' — still '.($payload->count() + 1),
+            'alt' => $asset->effectiveAlt($title, $payload->count() + 1),
         ]);
     }
 

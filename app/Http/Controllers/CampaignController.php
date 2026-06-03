@@ -14,7 +14,8 @@ use App\Models\Industry;
 use App\Models\MediumType;
 use App\Services\CampaignArchiveOrderingService;
 use App\Services\SeoService;
-use App\Services\CampaignInternalLinksService;
+use App\Services\CampaignPeopleCreditService;
+use App\Services\CampaignTagService;
 use App\Services\StructuredDataService;
 use App\Services\CampaignRevisionUploadService;
 use App\Services\CampaignTaxonomySyncService;
@@ -40,6 +41,9 @@ class CampaignController extends Controller
         protected CampaignArchiveOrderingService $archiveOrdering,
         protected CampaignInternalLinksService $internalLinks,
         protected StructuredDataService $structuredData,
+        protected SeoService $seo,
+        protected CampaignPeopleCreditService $peopleCredits,
+        protected CampaignTagService $tagService,
     ) {}
 
     public function index(Request $request): View
@@ -168,7 +172,7 @@ class CampaignController extends Controller
             $campaign->increment('views_count');
         }
 
-        $campaign->load(['brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries', 'assets', 'videos']);
+        $campaign->load(['brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries', 'assets', 'videos', 'people', 'tags']);
 
         $relatedGroups = $this->internalLinks->groupedRelated($campaign);
 
@@ -273,6 +277,10 @@ class CampaignController extends Controller
 
             $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
 
+            if ($request->has('people_credits')) {
+                $this->peopleCredits->sync($campaign, $request->input('people_credits', []));
+            }
+
             Log::info('Campaign created', ['campaign_id' => $campaign->id, 'user_id' => $request->user()->id]);
 
             return $this->redirectToPendingReview($campaign->fresh(), 'submitted');
@@ -297,7 +305,7 @@ class CampaignController extends Controller
         $this->authorize('update', $campaign);
 
         return view('campaigns.edit', array_merge(
-            ['campaign' => $campaign->load(['assets', 'videos', 'agencies', 'productionHouses', 'brands', 'industries', 'mediumTypes', 'countries', 'pendingRevision'])],
+            ['campaign' => $campaign->load(['assets', 'videos', 'agencies', 'productionHouses', 'brands', 'industries', 'mediumTypes', 'countries', 'pendingRevision', 'people'])],
             $this->formData($campaign)
         ));
     }
@@ -339,6 +347,7 @@ class CampaignController extends Controller
                     'medium_types' => $request->input('medium_types', []),
                     'countries' => $request->input('countries', []),
                 ],
+                'people_credits' => $request->input('people_credits', []),
                 'thumbnail_path' => null,
                 'assets_paths' => [],
                 'videos' => [],
@@ -411,6 +420,10 @@ class CampaignController extends Controller
 
         $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
 
+        if ($request->has('people_credits')) {
+            $this->peopleCredits->sync($campaign, $request->input('people_credits', []));
+        }
+
         if ($campaign->status !== 'approved') {
             return $this->redirectToPendingReview($campaign->fresh(), 'updated');
         }
@@ -445,7 +458,17 @@ class CampaignController extends Controller
             'agencies' => Agency::orderBy('name')->get(),
             'productionHouses' => Agency::query()->forProductionHouseSelect()->orderBy('name')->get(),
             'selectedTaxonomies' => $selected,
+            'selectedPeopleCredits' => $campaign
+                ? ($this->hasOldPeopleCreditsInput()
+                    ? $this->peopleCredits->fromOldInput()
+                    : $this->peopleCredits->selectedForForm($campaign))
+                : $this->peopleCredits->fromOldInput(),
         ];
+    }
+
+    protected function hasOldPeopleCreditsInput(): bool
+    {
+        return old('people_credits') !== null;
     }
 
   /**

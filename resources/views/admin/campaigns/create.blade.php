@@ -18,6 +18,7 @@
     :production-houses="$productionHouses ?? $agencies"
     :users="$users"
     :selected-taxonomies="$selectedTaxonomies"
+    :selected-people-credits="$selectedPeopleCredits ?? []"
     :default-user-id="auth()->id()"
 />
 @endsection

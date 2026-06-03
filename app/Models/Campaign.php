@@ -126,6 +126,10 @@ class Campaign extends Model
             ])) {
                 app(\App\Services\CampaignArchiveOrderingService::class)->clearCache();
             }
+
+            if ($campaign->status === 'approved' && ! $campaign->is_draft) {
+                app(\App\Services\CampaignTagService::class)->syncForCampaign($campaign);
+            }
         });
 
         static::deleted(function () {
@@ -488,6 +492,19 @@ class Campaign extends Model
         }
 
         return null;
+    }
+
+    public function people(): BelongsToMany
+    {
+        return $this->belongsToMany(Person::class, 'campaign_person')
+            ->withPivot('role')
+            ->withTimestamps()
+            ->orderBy('campaign_person.role');
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'campaign_tag')->withTimestamps();
     }
 
     public function bookmarks(): HasMany

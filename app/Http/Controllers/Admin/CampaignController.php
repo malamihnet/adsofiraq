@@ -15,7 +15,8 @@ use App\Models\MediumType;
 use App\Models\User;
 use App\Services\CampaignArchiveOrderingService;
 use App\Services\CampaignArchivePlacementService;
-use App\Services\CampaignTaxonomySyncService;
+use App\Services\CampaignPeopleCreditService;
+use App\Services\CampaignTagService;
 use App\Services\CampaignUploadService;
 use App\Mail\CampaignWorkflowMail;
 use App\Services\CampaignVideoService;
@@ -39,6 +40,7 @@ class CampaignController extends Controller
         protected CampaignTaxonomySyncService $taxonomySyncService,
         protected CampaignArchivePlacementService $archivePlacement,
         protected CampaignArchiveOrderingService $archiveOrdering,
+        protected CampaignPeopleCreditService $peopleCredits,
     ) {}
 
     public function index(Request $request): View
@@ -127,6 +129,10 @@ class CampaignController extends Controller
 
         $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
 
+        if ($request->has('people_credits')) {
+            $this->peopleCredits->sync($campaign, $request->input('people_credits', []));
+        }
+
         if ($request->boolean('is_verified')) {
             $this->verificationService->update($campaign, $request->user(), true);
         }
@@ -139,7 +145,7 @@ class CampaignController extends Controller
 
     public function edit(Campaign $campaign): View
     {
-        $campaign->load(['assets', 'videos', 'brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries']);
+        $campaign->load(['assets', 'videos', 'brands', 'agencies', 'productionHouses', 'industries', 'mediumTypes', 'countries', 'people']);
 
         return view('admin.campaigns.edit', $this->formData($campaign));
     }
@@ -197,6 +203,10 @@ class CampaignController extends Controller
             : null;
 
         $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
+
+        if ($request->has('people_credits')) {
+            $this->peopleCredits->sync($campaign, $request->input('people_credits', []));
+        }
 
         if ($request->boolean('is_verified')) {
             $this->verificationService->update($campaign, $request->user(), true);
@@ -458,6 +468,11 @@ class CampaignController extends Controller
             'selectedTaxonomies' => $campaign
                 ? $this->taxonomySyncService->selectedForForm($campaign)
                 : $this->taxonomySyncService->oldInputSelections(),
+            'selectedPeopleCredits' => $campaign
+                ? (old('people_credits') !== null
+                    ? $this->peopleCredits->fromOldInput()
+                    : $this->peopleCredits->selectedForForm($campaign))
+                : $this->peopleCredits->fromOldInput(),
         ];
     }
 

@@ -18,7 +18,9 @@ use App\Http\Controllers\AwardsController;
 use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\MadeByIraqController;
-use App\Http\Controllers\RankingsController;
+use App\Http\Controllers\PersonCreditApiController;
+use App\Http\Controllers\SeoLandingController;
+use App\Http\Controllers\TagController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\FollowController;
@@ -48,6 +50,9 @@ Route::middleware(['auth', 'verified', 'noindex'])->group(function () {
     Route::get('/campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
     Route::post('/campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
     Route::get('/campaigns/{campaign:slug}/pending-review', [CampaignController::class, 'pendingReview'])->name('campaigns.pending-review');
+
+    Route::get('/api/people/search', [PersonCreditApiController::class, 'search'])->name('api.people.search');
+    Route::post('/api/people', [PersonCreditApiController::class, 'store'])->name('api.people.store');
 });
 
 Route::get('/campaigns/{campaign:slug}', [CampaignController::class, 'show'])->name('campaigns.show');
@@ -72,11 +77,25 @@ Route::get('/people/{person:slug}', fn (\App\Models\Person $person) => redirect(
 Route::get('/rankings', [RankingsController::class, 'index'])->name('rankings.index');
 Route::get('/top-agencies-iraq', [RankingsController::class, 'topAgencies'])->name('rankings.top-agencies');
 Route::get('/top-production-houses', [RankingsController::class, 'topProductionHouses'])->name('rankings.top-production-houses');
+Route::get('/top-directors-iraq', [RankingsController::class, 'topDirectors'])->name('rankings.top-directors');
+Route::get('/top-editors-iraq', [RankingsController::class, 'topEditors'])->name('rankings.top-editors');
+Route::get('/top-brands-iraq', [RankingsController::class, 'topBrands'])->name('rankings.top-brands');
+Route::get('/top-commercials-iraq', [RankingsController::class, 'topCommercials'])->name('rankings.top-commercials');
+Route::get('/top-creative-directors-iraq', [RankingsController::class, 'topCreativeDirectors'])->name('rankings.top-creative-directors');
 Route::get('/most-viewed-campaigns', [RankingsController::class, 'mostViewed'])->name('rankings.most-viewed');
 Route::get('/trending', [RankingsController::class, 'trending'])->name('rankings.trending');
 Route::get('/most-appreciated', [RankingsController::class, 'mostAppreciated'])->name('rankings.most-appreciated');
 
 Route::get('/made-by-iraq', [MadeByIraqController::class, 'index'])->name('made-by-iraq.index');
+
+Route::get('/iraqi-advertising', [SeoLandingController::class, 'iraqiAdvertising'])->name('landing.iraqi-advertising');
+Route::get('/iraq-agencies', [SeoLandingController::class, 'iraqAgencies'])->name('landing.iraq-agencies');
+Route::get('/iraq-production-houses', [SeoLandingController::class, 'iraqProductionHouses'])->name('landing.iraq-production-houses');
+Route::get('/iraq-commercials', [SeoLandingController::class, 'iraqCommercials'])->name('landing.iraq-commercials');
+Route::get('/iraq-tv-commercials', [SeoLandingController::class, 'iraqTvCommercials'])->name('landing.iraq-tv-commercials');
+Route::get('/iraq-creative-industry', [SeoLandingController::class, 'iraqCreativeIndustry'])->name('landing.iraq-creative-industry');
+
+Route::get('/tag/{tag:slug}', [TagController::class, 'show'])->name('tags.show');
 
 Route::get('/awards', [AwardsController::class, 'index'])->name('awards.index');
 Route::get('/awards/{award:slug}', [AwardsController::class, 'show'])->name('awards.show');
@@ -89,6 +108,9 @@ Route::get('/sitemap-brands.xml', [SitemapController::class, 'brands'])->name('s
 Route::get('/sitemap-people.xml', [SitemapController::class, 'people'])->name('sitemap.people');
 Route::get('/sitemap-categories.xml', [SitemapController::class, 'categories'])->name('sitemap.categories');
 Route::get('/sitemap-pages.xml', [SitemapController::class, 'pages'])->name('sitemap.pages');
+Route::get('/sitemap-tags.xml', [SitemapController::class, 'tags'])->name('sitemap.tags');
+Route::get('/sitemap-rankings.xml', [SitemapController::class, 'rankings'])->name('sitemap.rankings');
+Route::get('/sitemap-landing-pages.xml', [SitemapController::class, 'landingPages'])->name('sitemap.landing-pages');
 
 Route::get('/users/{user:username}', [UserProfileController::class, 'show'])->name('users.show');
 

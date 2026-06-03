@@ -17,6 +17,26 @@
             <h2 class="font-display text-xl">Top Production Houses</h2>
             <p class="mt-2 text-sm text-archive-gray">Post & film production leaders</p>
         </a>
+        <a href="{{ route('rankings.top-directors') }}" class="border border-archive-border p-6 hover:bg-archive-cream transition">
+            <h2 class="font-display text-xl">Top Directors</h2>
+            <p class="mt-2 text-sm text-archive-gray">Directors by campaign credits and engagement</p>
+        </a>
+        <a href="{{ route('rankings.top-editors') }}" class="border border-archive-border p-6 hover:bg-archive-cream transition">
+            <h2 class="font-display text-xl">Top Editors</h2>
+            <p class="mt-2 text-sm text-archive-gray">Editors ranked by credited work</p>
+        </a>
+        <a href="{{ route('rankings.top-creative-directors') }}" class="border border-archive-border p-6 hover:bg-archive-cream transition">
+            <h2 class="font-display text-xl">Top Creative Directors</h2>
+            <p class="mt-2 text-sm text-archive-gray">Creative leadership in Iraqi advertising</p>
+        </a>
+        <a href="{{ route('rankings.top-brands') }}" class="border border-archive-border p-6 hover:bg-archive-cream transition">
+            <h2 class="font-display text-xl">Top Brands</h2>
+            <p class="mt-2 text-sm text-archive-gray">Brands with the strongest campaign presence</p>
+        </a>
+        <a href="{{ route('rankings.top-commercials') }}" class="border border-archive-border p-6 hover:bg-archive-cream transition">
+            <h2 class="font-display text-xl">Top Commercials</h2>
+            <p class="mt-2 text-sm text-archive-gray">Leading TV and film commercials</p>
+        </a>
         <a href="{{ route('rankings.most-viewed') }}" class="border border-archive-border p-6 hover:bg-archive-cream transition">
             <h2 class="font-display text-xl">Most Viewed</h2>
             <p class="mt-2 text-sm text-archive-gray">Campaigns the industry is watching</p>

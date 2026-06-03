@@ -78,6 +78,16 @@
     </section>
 
     <section class="border border-archive-border p-6 lg:col-span-2">
+        <h2 class="section-label mb-4">Authority & SEO expansion</h2>
+        <ul class="list-inside list-disc space-y-1 text-sm text-archive-gray">
+            @foreach($authorityFeatures as $feature)
+                <li>{{ $feature }}</li>
+            @endforeach
+        </ul>
+        <p class="mt-4 text-xs text-archive-gray">Backfill tags for existing campaigns: <code class="text-archive-black">php artisan campaigns:sync-tags</code></p>
+    </section>
+
+    <section class="border border-archive-border p-6 lg:col-span-2">
         <h2 class="section-label mb-4">Google Search Console checklist</h2>
         <ol class="list-inside list-decimal space-y-2 text-sm text-archive-gray">
             @foreach($googleSearchConsoleChecklist as $step)

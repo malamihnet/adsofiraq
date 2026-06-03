@@ -9,6 +9,7 @@
     'users',
     'defaultUserId' => null,
     'selectedTaxonomies' => [],
+    'selectedPeopleCredits' => [],
 ])
 
 <form method="POST"
@@ -67,6 +68,10 @@
         <div class="md:col-span-2">
             <label class="section-label mb-2 block">Credits</label>
             <textarea name="credits" rows="4" class="input-field" placeholder="Creative team, production credits...">{{ old('credits', $campaign?->credits) }}</textarea>
+        </div>
+
+        <div class="md:col-span-2">
+            <x-people-credits-fields :selected="$selectedPeopleCredits ?? []" />
         </div>
 
         <x-campaign-videos-fields :campaign="$campaign" />

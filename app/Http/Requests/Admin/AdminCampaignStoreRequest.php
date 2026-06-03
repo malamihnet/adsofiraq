@@ -66,6 +66,9 @@ class AdminCampaignStoreRequest extends FormRequest
             'archive_placement_enabled' => ['sometimes', 'boolean'],
             'archive_page' => ['nullable', 'required_if:archive_placement_enabled,1,true', 'integer', 'min:1'],
             'archive_position' => ['nullable', 'required_if:archive_placement_enabled,1,true', 'integer', 'min:1', 'max:'.CampaignArchivePlacementService::MAX_POSITION],
+            'people_credits' => ['nullable', 'array'],
+            'people_credits.*.person_id' => ['required_with:people_credits', 'integer', 'exists:people,id'],
+            'people_credits.*.role' => ['required_with:people_credits', 'string', 'max:255'],
         ]);
     }
 

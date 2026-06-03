@@ -170,4 +170,71 @@ class SitemapService
 
         return $urls;
     }
+
+    /**
+     * @return Collection<int, array{loc: string, lastmod?: string, priority?: string}>
+     */
+    public function tags(): Collection
+    {
+        return \App\Models\Tag::query()
+            ->where('campaigns_count', '>', 0)
+            ->orderByDesc('campaigns_count')
+            ->orderBy('name')
+            ->get(['slug', 'updated_at'])
+            ->map(fn (\App\Models\Tag $tag) => [
+                'loc' => route('tags.show', $tag->slug),
+                'lastmod' => $tag->updated_at?->toAtomString(),
+                'priority' => '0.5',
+                'changefreq' => 'weekly',
+            ]);
+    }
+
+    /**
+     * @return Collection<int, array{loc: string, lastmod?: string, priority?: string}>
+     */
+    public function rankings(): Collection
+    {
+        $routes = [
+            'rankings.index',
+            'rankings.top-agencies',
+            'rankings.top-production-houses',
+            'rankings.most-viewed',
+            'rankings.trending',
+            'rankings.most-appreciated',
+            'rankings.top-directors',
+            'rankings.top-editors',
+            'rankings.top-brands',
+            'rankings.top-commercials',
+            'rankings.top-creative-directors',
+        ];
+
+        return collect($routes)->map(fn (string $route) => [
+            'loc' => route($route),
+            'lastmod' => now()->toAtomString(),
+            'priority' => '0.6',
+            'changefreq' => 'weekly',
+        ]);
+    }
+
+    /**
+     * @return Collection<int, array{loc: string, lastmod?: string, priority?: string}>
+     */
+    public function landingPages(): Collection
+    {
+        $routes = [
+            'landing.iraqi-advertising',
+            'landing.iraq-agencies',
+            'landing.iraq-production-houses',
+            'landing.iraq-commercials',
+            'landing.iraq-tv-commercials',
+            'landing.iraq-creative-industry',
+        ];
+
+        return collect($routes)->map(fn (string $route) => [
+            'loc' => route($route),
+            'lastmod' => now()->toAtomString(),
+            'priority' => '0.7',
+            'changefreq' => 'weekly',
+        ]);
+    }
 }
