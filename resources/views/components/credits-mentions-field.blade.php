@@ -13,6 +13,7 @@
     $peopleSearchUrl = auth()->check() && auth()->user()->isAdmin()
         ? route('admin.api.people.search')
         : route('api.people.search');
+    $showMentionsDebug = config('app.debug') || (auth()->check() && auth()->user()->isAdmin());
 @endphp
 
 <div
@@ -45,6 +46,26 @@
         >
 
     </div>
+
+    @if($showMentionsDebug)
+        <div
+            data-mentions-debug
+            class="mt-3 rounded border border-amber-300 bg-amber-50 p-3 font-mono text-xs text-archive-black"
+        >
+            <p class="mb-1 font-semibold text-amber-900">Mentions debug</p>
+            <p>Mentions JS loaded: <span data-debug-js>no</span></p>
+            <p>Textarea found: <span data-debug-textarea>no</span></p>
+            <p>Last query: <span data-debug-query>—</span></p>
+            <p>Results count: <span data-debug-results>0</span></p>
+            <button
+                type="button"
+                data-mentions-test-btn
+                class="mt-2 rounded border border-archive-border bg-white px-3 py-1.5 text-xs hover:bg-neutral-50"
+            >
+                Test people dropdown
+            </button>
+        </div>
+    @endif
 
     @error('credits')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     @error('credits_mentions_json')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror

@@ -6,7 +6,7 @@ import taxonomyMultiselect from './taxonomy-multiselect';
 import campaignVideosManager from './campaign-videos-manager';
 import setupPlyr from './plyr-init';
 import campaignGallery from './campaign-gallery';
-import { initCreditsMentionsVanilla } from './credits-mentions-vanilla';
+import { initCreditsMentions } from './credits-mentions-vanilla';
 
 window.Alpine = Alpine;
 Alpine.data('homeHeroSlider', homeHeroSlider);
@@ -15,8 +15,11 @@ Alpine.data('campaignVideosManager', campaignVideosManager);
 Alpine.data('campaignGallery', campaignGallery);
 Alpine.start();
 
-document.addEventListener('DOMContentLoaded', () => {
+function bootPageScripts() {
     setupPlyr();
-    initCreditsMentionsVanilla();
-});
+    initCreditsMentions();
+}
+
+bootPageScripts();
+document.addEventListener('DOMContentLoaded', bootPageScripts);
 
