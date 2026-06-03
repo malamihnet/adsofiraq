@@ -61,7 +61,7 @@
                     class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors"
                     :class="activeIndex === index ? 'bg-archive-light' : 'hover:bg-archive-light'"
                 >
-                    <img :src="item.person.photo_url" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover">
+                    <img :src="item.person.photo_url" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover bg-archive-light">
                     <span class="min-w-0">
                         <span class="block font-medium" x-text="item.person.name"></span>
                         <span class="block truncate text-xs text-archive-gray" x-text="item.person.position"></span>

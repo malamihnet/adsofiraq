@@ -127,15 +127,19 @@ class SeoService
     /**
      * @return array{title: string, description: string, og_type: string, og_image: ?string, canonical: ?string, robots: ?string}
      */
-    public function forPerson(Person $person, ?string $canonical = null): array
+    public function forPerson(Person $person, ?string $canonical = null, ?int $creditedCampaignsCount = null): array
     {
-        $role = $person->position ?: 'Creative Professional';
+        $role = $person->display_position ?? ($person->position ?: 'Creative Professional');
         $title = $person->name.' | '.$role.' | '.$this->siteName();
         $description = $person->meta_description ?: sprintf(
-            'Explore creative work, campaigns, and professional profile of %s on %s.',
+            'Explore campaigns and creative work by %s on %s.',
             $person->name,
             $this->siteName(),
         );
+
+        if ($creditedCampaignsCount !== null && $creditedCampaignsCount > 0) {
+            $description .= ' '.$creditedCampaignsCount.' credited campaign'.($creditedCampaignsCount === 1 ? '' : 's').'.';
+        }
 
         return $this->pack(
             $title,

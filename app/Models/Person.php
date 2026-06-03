@@ -110,6 +110,23 @@ class Person extends Model
         return $this->belongsTo(Position::class, 'position_id');
     }
 
+    public function getDisplayPositionAttribute(): string
+    {
+        if ($this->relationLoaded('positionRelation') && $this->positionRelation) {
+            return $this->positionRelation->name;
+        }
+
+        if ($this->position_id) {
+            $related = $this->positionRelation()->first();
+
+            if ($related) {
+                return $related->name;
+            }
+        }
+
+        return trim((string) $this->position) !== '' ? trim((string) $this->position) : 'Creative Professional';
+    }
+
     public function submittedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'submitted_by');

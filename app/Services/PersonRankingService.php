@@ -60,14 +60,12 @@ class PersonRankingService
             ->whereNull('campaigns.deleted_at')
             ->where(function ($query) use ($patterns) {
                 foreach ($patterns as $pattern) {
-                    $query->orWhere('campaign_person.role', 'like', '%'.$pattern.'%')
-                        ->orWhere('people.position', 'like', '%'.$pattern.'%');
+                    $query->orWhere('campaign_person.role', 'like', '%'.$pattern.'%');
                 }
             })
             ->when($excludePatterns !== [], function ($query) use ($excludePatterns) {
                 foreach ($excludePatterns as $pattern) {
-                    $query->where('campaign_person.role', 'not like', '%'.$pattern.'%')
-                        ->where('people.position', 'not like', '%'.$pattern.'%');
+                    $query->where('campaign_person.role', 'not like', '%'.$pattern.'%');
                 }
             })
             ->groupBy('people.id', 'people.name', 'people.slug', 'people.position', 'people.photo_path', 'people.ranking_score', 'people.is_verified')

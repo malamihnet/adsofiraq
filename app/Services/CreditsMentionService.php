@@ -54,17 +54,115 @@ class CreditsMentionService
     }
 
     /**
+     * @param  array<int, array{person_id: int, role: string, name: string}>  $clientMentions
+     * @return array<int, array{person_id: int, role: string}>
+     */
+    public function resolveMentionsForSync(string $credits, array $clientMentions): array
+    {
+        $credits = (string) $credits;
+        $byPersonId = [];
+
+        foreach ($this->parseRoleMentionsFromCredits($credits) as $row) {
+            if (! isset($byPersonId[$row['person_id']])) {
+                $byPersonId[$row['person_id']] = $row;
+            }
+        }
+
+        foreach ($this->filterMentionsInCredits($credits, $clientMentions) as $mention) {
+            $personId = $mention['person_id'];
+
+            if (! isset($byPersonId[$personId])) {
+                $byPersonId[$personId] = [
+                    'person_id' => $personId,
+                    'role' => $mention['role'],
+                ];
+            }
+        }
+
+        return array_values($byPersonId);
+    }
+
+    /**
+     * @return list<array{person_id: int, role: string}>
+     */
+    protected function parseRoleMentionsFromCredits(string $credits): array
+    {
+        $resolved = [];
+
+        foreach (preg_split("/\r\n|\n|\r/", $credits) ?: [] as $line) {
+            $line = trim($line);
+
+            if ($line === '' || ! str_contains($line, '@')) {
+                continue;
+            }
+
+            if (! preg_match('/^\s*([^:@\n]{2,60})\s*:\s*(.+)$/u', $line, $matches)) {
+                continue;
+            }
+
+            $role = trim($matches[1]);
+
+            if ($role === '') {
+                continue;
+            }
+
+            foreach ($this->extractMentionNames($matches[2]) as $name) {
+                $personId = $this->resolvePersonIdByName($name);
+
+                if ($personId < 1) {
+                    continue;
+                }
+
+                if (! isset($resolved[$personId])) {
+                    $resolved[$personId] = [
+                        'person_id' => $personId,
+                        'role' => $role,
+                    ];
+                }
+            }
+        }
+
+        return array_values($resolved);
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function extractMentionNames(string $segment): array
+    {
+        preg_match_all('/@([^\n@]+)/u', $segment, $matches);
+
+        $names = [];
+
+        foreach ($matches[1] ?? [] as $raw) {
+            $name = trim($raw);
+
+            if ($name !== '') {
+                $names[] = $name;
+            }
+        }
+
+        return $names;
+    }
+
+    protected function resolvePersonIdByName(string $name): int
+    {
+        $person = Person::query()
+            ->where('name', $name)
+            ->orderByRaw("CASE WHEN status = 'approved' THEN 0 ELSE 1 END")
+            ->first();
+
+        return $person?->id ?? 0;
+    }
+
+    /**
      * @param  array<int, array{person_id: int, role: string, name: string}>  $mentions
      */
     public function syncFromCredits(Campaign $campaign, ?string $credits, array $mentions): void
     {
-        $credits = (string) ($credits ?? '');
-        $active = $this->filterMentionsInCredits($credits, $mentions);
+        $resolved = $this->resolveMentionsForSync((string) ($credits ?? ''), $mentions);
 
-        $this->peopleCredits->sync($campaign, array_map(fn (array $row) => [
-            'person_id' => $row['person_id'],
-            'role' => $row['role'],
-        ], $active));
+        $this->peopleCredits->sync($campaign, $resolved);
     }
 
     /**
@@ -73,8 +171,20 @@ class CreditsMentionService
      */
     public function filterMentionsInCredits(string $credits, array $mentions): array
     {
-        return array_values(array_filter($mentions, function (array $mention) use ($credits) {
-            return $this->mentionTokenInCredits($credits, $mention['name']);
+        $seen = [];
+
+        return array_values(array_filter($mentions, function (array $mention) use ($credits, &$seen) {
+            if (! $this->mentionTokenInCredits($credits, $mention['name'])) {
+                return false;
+            }
+
+            if (isset($seen[$mention['person_id']])) {
+                return false;
+            }
+
+            $seen[$mention['person_id']] = true;
+
+            return true;
         }));
     }
 
@@ -172,7 +282,9 @@ class CreditsMentionService
      */
     protected function linkMentionsInLine(string $line, Collection $people): string
     {
-        foreach ($people as $person) {
+        $sorted = $people->sortByDesc(fn (Person $person) => strlen($person->name));
+
+        foreach ($sorted as $person) {
             $token = e($this->mentionToken($person->name));
 
             if (! str_contains($line, $token)) {

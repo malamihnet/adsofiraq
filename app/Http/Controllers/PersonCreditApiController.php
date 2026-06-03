@@ -29,7 +29,8 @@ class PersonCreditApiController extends Controller
             )
             ->when($query !== '', fn ($q) => $q->where(function ($builder) use ($query) {
                 $builder->where('name', 'like', '%'.$query.'%')
-                    ->orWhere('position', 'like', '%'.$query.'%');
+                    ->orWhere('position', 'like', '%'.$query.'%')
+                    ->orWhereHas('positionRelation', fn ($position) => $position->where('name', 'like', '%'.$query.'%'));
             }))
             ->orderBy('name')
             ->limit(15)

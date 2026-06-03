@@ -24,6 +24,19 @@
         <a href="{{ route('people.apply') }}" class="btn-outline shrink-0 text-xs">Apply for listing</a>
     </header>
 
+    <form method="GET" action="{{ route('people.index') }}" class="mb-8">
+        <div class="flex flex-wrap gap-4">
+            <input
+                type="search"
+                name="search"
+                value="{{ request('search') }}"
+                placeholder="Search people, positions, roles..."
+                class="input-field min-w-[200px] flex-1"
+            >
+            <button type="submit" class="btn-primary">Search</button>
+        </div>
+    </form>
+
     @if($people->count())
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             @foreach($people as $person)

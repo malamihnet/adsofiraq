@@ -43,7 +43,6 @@ class CampaignController extends Controller
         protected CampaignInternalLinksService $internalLinks,
         protected StructuredDataService $structuredData,
         protected SeoService $seo,
-        protected CampaignPeopleCreditService $peopleCredits,
         protected CreditsMentionService $creditsMentions,
         protected CampaignTagService $tagService,
     ) {}
@@ -58,9 +57,16 @@ class CampaignController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('credits', 'like', "%{$search}%")
                     ->orWhereHas('brands', fn ($b) => $b->where('name', 'like', "%{$search}%"))
                     ->orWhereHas('agencies', fn ($a) => $a->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('productionHouses', fn ($a) => $a->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('productionHouses', fn ($a) => $a->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('people', function ($people) use ($search) {
+                        $people->where('people.name', 'like', "%{$search}%")
+                            ->orWhere('people.position', 'like', "%{$search}%")
+                            ->orWhere('campaign_person.role', 'like', "%{$search}%")
+                            ->orWhereHas('positionRelation', fn ($position) => $position->where('name', 'like', "%{$search}%"));
+                    });
             });
         }
 

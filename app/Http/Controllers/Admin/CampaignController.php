@@ -41,7 +41,6 @@ class CampaignController extends Controller
         protected CampaignTaxonomySyncService $taxonomySyncService,
         protected CampaignArchivePlacementService $archivePlacement,
         protected CampaignArchiveOrderingService $archiveOrdering,
-        protected CampaignPeopleCreditService $peopleCredits,
         protected CreditsMentionService $creditsMentions,
     ) {}
 

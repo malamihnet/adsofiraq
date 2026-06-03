@@ -44,12 +44,24 @@ export default function creditsMentions({
         positionModalError: '',
 
         get mentionsJson() {
+            const seen = new Set();
+
             return JSON.stringify(
-                this.mentions.map((m) => ({
-                    person_id: m.person_id,
-                    name: m.name,
-                    role: m.role,
-                })),
+                this.mentions
+                    .filter((m) => {
+                        if (seen.has(m.person_id)) {
+                            return false;
+                        }
+
+                        seen.add(m.person_id);
+
+                        return true;
+                    })
+                    .map((m) => ({
+                        person_id: m.person_id,
+                        name: m.name,
+                        role: m.role,
+                    })),
             );
         },
 
@@ -176,9 +188,7 @@ export default function creditsMentions({
                 }
 
                 const payload = await response.json();
-                const linkedIds = this.mentions.map((m) => m.person_id);
-
-                this.results = (payload.data || []).filter((person) => !linkedIds.includes(person.id));
+                this.results = payload.data || [];
                 this.open = true;
             } catch (error) {
                 this.results = [];
@@ -201,15 +211,13 @@ export default function creditsMentions({
 
             const existing = this.mentions.find((m) => m.person_id === person.id);
 
-            if (existing) {
-                existing.role = role || existing.role;
-            } else {
+            if (!existing) {
                 this.mentions.push({
                     person_id: person.id,
                     name: person.name,
                     role: role || person.position || 'Credit',
                     slug: person.slug,
-                    photo_url: person.photo_url,
+                    photo_url: person.photo_url || '',
                     key: `person:${person.id}`,
                 });
             }
@@ -237,7 +245,21 @@ export default function creditsMentions({
         },
 
         pruneMentions() {
-            this.mentions = this.mentions.filter((mention) => this.text.includes(`@${mention.name}`));
+            const seen = new Set();
+
+            this.mentions = this.mentions.filter((mention) => {
+                if (!this.text.includes(`@${mention.name}`)) {
+                    return false;
+                }
+
+                if (seen.has(mention.person_id)) {
+                    return false;
+                }
+
+                seen.add(mention.person_id);
+
+                return true;
+            });
         },
 
         openCreateModal() {

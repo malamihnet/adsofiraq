@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('role');
             $table->timestamps();
 
-            $table->unique(['campaign_id', 'person_id', 'role']);
+            $table->unique(['campaign_id', 'person_id']);
             $table->index('person_id');
         });
     }

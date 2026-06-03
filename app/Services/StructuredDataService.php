@@ -161,22 +161,30 @@ class StructuredDataService
         return $data;
     }
 
-    public function person(Person $person, string $url): array
+    public function person(Person $person, string $url, ?int $creditedCampaignsCount = null): array
     {
         return array_filter([
             '@context' => 'https://schema.org',
             '@type' => 'Person',
             'name' => $person->name,
             'url' => $url,
-            'jobTitle' => $person->position,
+            'jobTitle' => $person->display_position ?? $person->position,
             'description' => $this->seo->withArabicContext(
                 $person->meta_description ?: sprintf(
-                    'Explore creative work, campaigns, and professional profile of %s.',
+                    'Explore campaigns and creative work by %s on Ads Of Iraq.',
                     $person->name,
                 ),
                 'people',
             ),
             'image' => $person->photo_url,
+            'knowsAbout' => $creditedCampaignsCount !== null && $creditedCampaignsCount > 0
+                ? ['Iraqi advertising', 'TV commercials', 'creative production']
+                : null,
+            'agentInteractionStatistic' => $creditedCampaignsCount !== null && $creditedCampaignsCount > 0 ? [
+                '@type' => 'InteractionCounter',
+                'interactionType' => 'https://schema.org/CreditAction',
+                'userInteractionCount' => $creditedCampaignsCount,
+            ] : null,
             'worksFor' => [
                 '@type' => 'Organization',
                 '@id' => $this->organizationId(),

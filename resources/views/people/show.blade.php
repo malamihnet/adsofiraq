@@ -31,7 +31,11 @@
                 {{ $person->name }}
                 <x-verified-badge :verified="$person->is_verified" />
             </h1>
-            <p class="mt-2 text-sm uppercase tracking-widest text-archive-gray">{{ $person->position }}</p>
+            <p class="mt-2 text-sm uppercase tracking-widest text-archive-gray">{{ $person->display_position }}</p>
+
+            @if($creditedCampaignsCount > 0)
+                <p class="mt-3 text-sm text-archive-gray">{{ $creditedCampaignsCount }} credited campaign{{ $creditedCampaignsCount === 1 ? '' : 's' }} on Ads Of Iraq</p>
+            @endif
 
             @if($person->production_house)
                 <p class="mt-4 text-sm">Production house: <span class="font-medium">{{ $person->production_house }}</span></p>
@@ -74,7 +78,25 @@
             <h2 class="section-label mb-8">Campaigns credited on</h2>
             <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach($creditedCampaigns as $credited)
-                    <x-campaign-card :campaign="$credited" />
+                    <div>
+                        <x-campaign-card :campaign="$credited" />
+                        @if($credited->pivot?->role)
+                            <p class="mt-2 text-xs uppercase tracking-widest text-archive-gray">
+                                Role: <span class="text-archive-black">{{ $credited->pivot->role }}</span>
+                            </p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    @if($relatedPeople->isNotEmpty())
+        <section class="mt-16 border-t border-archive-border pt-12">
+            <h2 class="section-label mb-8">Related People</h2>
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach($relatedPeople as $related)
+                    <x-person-card :person="$related" />
                 @endforeach
             </div>
         </section>
