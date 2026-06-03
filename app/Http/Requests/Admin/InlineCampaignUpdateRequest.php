@@ -14,9 +14,14 @@ class InlineCampaignUpdateRequest extends FormRequest
 
     public function rules(): array
     {
+        $field = $this->input('field');
+        $booleanFields = ['is_hero', 'is_verified', 'is_featured'];
+
         return [
-            'field' => ['required', 'string', Rule::in(['status', 'is_hero', 'is_verified', 'is_featured'])],
-            'value' => ['required'],
+            'field' => ['required', 'string', Rule::in(array_merge(['status'], $booleanFields))],
+            'value' => in_array($field, $booleanFields, true)
+                ? ['present', 'boolean']
+                : ['required', 'string'],
         ];
     }
 
@@ -24,10 +29,21 @@ class InlineCampaignUpdateRequest extends FormRequest
     {
         $field = $this->input('field');
 
-        if (in_array($field, ['is_hero', 'is_verified', 'is_featured'], true)) {
-            $this->merge([
-                'value' => filter_var($this->input('value'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
-            ]);
+        if (! in_array($field, ['is_hero', 'is_verified', 'is_featured'], true)) {
+            return;
+        }
+
+        $raw = $this->input('value');
+
+        if (is_bool($raw)) {
+            return;
+        }
+
+        if (is_string($raw) || is_int($raw)) {
+            $parsed = filter_var($raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($parsed !== null) {
+                $this->merge(['value' => $parsed]);
+            }
         }
     }
 

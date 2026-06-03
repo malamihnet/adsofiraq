@@ -27,6 +27,8 @@ use App\Services\TaxonomyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -219,7 +221,9 @@ class CampaignController extends Controller
 
     public function inlineUpdate(InlineCampaignUpdateRequest $request, Campaign $campaign): JsonResponse
     {
-        $this->authorize('moderate', $campaign);
+        if (! $request->user()?->isAdmin()) {
+            throw new AuthorizationException('Admin access required.');
+        }
 
         try {
             $field = $request->input('field');
@@ -230,26 +234,58 @@ class CampaignController extends Controller
                 'is_hero' => $this->inlineUpdates->updateHero($campaign, (bool) $value),
                 'is_verified' => $this->inlineUpdates->updateVerified($campaign, (bool) $value, $request->user()),
                 'is_featured' => $this->inlineUpdates->updateEditorsPick($campaign, (bool) $value),
-                default => $campaign,
+                default => throw ValidationException::withMessages([
+                    'field' => 'Unsupported field.',
+                ]),
+            };
+
+            $responseValue = match ($field) {
+                'status' => $campaign->status,
+                'is_hero' => $campaign->is_hero,
+                'is_verified' => $campaign->is_verified,
+                'is_featured' => $campaign->is_featured,
+                default => $value,
             };
 
             return response()->json([
+                'success' => true,
                 'ok' => true,
                 'message' => 'Saved.',
+                'campaign_id' => $campaign->id,
+                'field' => $field,
+                'value' => $responseValue,
                 'campaign' => [
                     'id' => $campaign->id,
                     'status' => $campaign->status,
-                    'is_hero' => $campaign->is_hero,
-                    'is_verified' => $campaign->is_verified,
-                    'is_featured' => $campaign->is_featured,
+                    'is_hero' => (bool) $campaign->is_hero,
+                    'is_verified' => (bool) $campaign->is_verified,
+                    'is_featured' => (bool) $campaign->is_featured,
                     'workflow_status_label' => $campaign->workflow_status_label,
                 ],
             ]);
         } catch (ValidationException $exception) {
+            Log::warning('Campaign inline update validation failed', [
+                'campaign_id' => $campaign->id,
+                'field' => $request->input('field'),
+                'errors' => $exception->errors(),
+            ]);
+
             return response()->json([
+                'success' => false,
                 'message' => collect($exception->errors())->flatten()->first() ?? 'Validation failed.',
                 'errors' => $exception->errors(),
             ], 422);
+        } catch (\Throwable $exception) {
+            Log::error('Campaign inline update failed', [
+                'campaign_id' => $campaign->id,
+                'field' => $request->input('field'),
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not save: '.$exception->getMessage(),
+            ], 500);
         }
     }
 

@@ -8,11 +8,29 @@ export default function initAdminCampaignInline() {
     }
 
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-    const baseUrl = table.dataset.inlineBaseUrl;
-
-    if (!csrf || !baseUrl) {
+    if (!csrf) {
+        console.error('Admin campaign inline: missing CSRF meta tag.');
         return;
     }
+
+    let errorBanner = document.getElementById('admin-campaign-inline-error');
+    if (!errorBanner) {
+        errorBanner = document.createElement('div');
+        errorBanner.id = 'admin-campaign-inline-error';
+        errorBanner.className = 'mb-4 hidden border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800';
+        errorBanner.setAttribute('role', 'alert');
+        table.parentElement?.insertBefore(errorBanner, table);
+    }
+
+    const showError = (message) => {
+        errorBanner.textContent = message;
+        errorBanner.classList.remove('hidden');
+    };
+
+    const clearError = () => {
+        errorBanner.textContent = '';
+        errorBanner.classList.add('hidden');
+    };
 
     const setRowState = (row, state) => {
         row?.classList.toggle('opacity-50', state === 'loading');
@@ -24,19 +42,35 @@ export default function initAdminCampaignInline() {
             return;
         }
         el.classList.remove('ring-2', 'ring-green-400', 'ring-red-400');
-        el.classList.add(ok ? 'ring-2' : 'ring-2', ok ? 'ring-green-400' : 'ring-red-400');
+        el.classList.add('ring-2', ok ? 'ring-green-400' : 'ring-red-400');
         window.setTimeout(() => {
             el.classList.remove('ring-2', 'ring-green-400', 'ring-red-400');
         }, 1200);
     };
 
-    const patch = async (campaignId, field, value, controlEl) => {
+    const parseResponse = async (response) => {
+        const contentType = response.headers.get('content-type') || '';
+
+        if (!contentType.includes('application/json')) {
+            const text = await response.text();
+            if (text.includes('login') || response.redirected) {
+                throw new Error('Session expired. Please refresh the page and log in again.');
+            }
+            throw new Error(`Server returned an unexpected response (${response.status}).`);
+        }
+
+        return response.json();
+    };
+
+    const patch = async (url, field, value, controlEl) => {
         const row = controlEl?.closest('[data-campaign-id]');
         setRowState(row, 'loading');
+        clearError();
 
         try {
-            const response = await fetch(`${baseUrl}/${campaignId}/inline`, {
+            const response = await fetch(url, {
                 method: 'PATCH',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
@@ -46,38 +80,46 @@ export default function initAdminCampaignInline() {
                 body: JSON.stringify({ field, value }),
             });
 
-            const data = await response.json().catch(() => ({}));
+            const data = await parseResponse(response);
 
-            if (!response.ok) {
+            if (!response.ok || data.success !== true) {
                 const message = data.message
                     || Object.values(data.errors || {}).flat().join(' ')
-                    || 'Could not save.';
+                    || `Could not save (${response.status}).`;
                 throw new Error(message);
             }
 
             flashCell(controlEl?.closest('td'), true);
 
-            if (row) {
+            if (row && data.campaign) {
                 if (field === 'is_verified') {
                     const badge = row.querySelector('[data-verified-badge]');
                     if (badge) {
-                        badge.classList.toggle('hidden', !data.campaign?.is_verified);
+                        badge.classList.toggle('hidden', !data.campaign.is_verified);
                     }
                 }
 
                 if (field === 'is_hero' || field === 'is_verified' || field === 'is_featured') {
                     const label = controlEl?.closest('label')?.querySelector('span');
                     if (label) {
-                        const on = data.campaign?.[field];
-                        label.textContent = on ? 'On' : 'Off';
+                        label.textContent = data.campaign[field] ? 'On' : 'Off';
                     }
+                    if (controlEl?.type === 'checkbox') {
+                        controlEl.checked = Boolean(data.campaign[field]);
+                        controlEl.dataset.previousChecked = controlEl.checked ? '1' : '0';
+                    }
+                }
+
+                if (field === 'status' && controlEl?.tagName === 'SELECT') {
+                    controlEl.value = data.campaign.status;
+                    controlEl.dataset.previousValue = data.campaign.status;
                 }
             }
 
             return data;
         } catch (error) {
             flashCell(controlEl?.closest('td'), false);
-            window.alert(error.message || 'Could not save.');
+            showError(error.message || 'Could not save.');
             throw error;
         } finally {
             setRowState(row, 'idle');
@@ -85,31 +127,35 @@ export default function initAdminCampaignInline() {
     };
 
     table.addEventListener('change', async (event) => {
-        const select = event.target.closest('[data-inline-field="status"]');
-        if (select) {
-            const previous = select.dataset.previousValue || select.value;
+        const control = event.target.closest('[data-inline-field]');
+        if (!control) {
+            return;
+        }
+
+        const url = control.dataset.inlineUrl;
+        if (!url) {
+            showError('Missing save URL for this control. Refresh the page.');
+            return;
+        }
+
+        const field = control.dataset.inlineField;
+
+        if (field === 'status') {
+            const previous = control.dataset.previousValue || control.value;
             try {
-                await patch(select.dataset.campaignId, 'status', select.value, select);
-                select.dataset.previousValue = select.value;
+                await patch(url, field, control.value, control);
             } catch {
-                select.value = previous;
+                control.value = previous;
             }
             return;
         }
 
-        const checkbox = event.target.closest('[data-inline-field]');
-        if (!checkbox || checkbox.matches('[data-inline-field="status"]')) {
-            return;
-        }
-
-        const field = checkbox.dataset.inlineField;
-        const previousChecked = checkbox.dataset.previousChecked === '1';
+        const previousChecked = control.dataset.previousChecked === '1';
 
         try {
-            await patch(checkbox.dataset.campaignId, field, checkbox.checked, checkbox);
-            checkbox.dataset.previousChecked = checkbox.checked ? '1' : '0';
+            await patch(url, field, control.checked, control);
         } catch {
-            checkbox.checked = previousChecked;
+            control.checked = previousChecked;
         }
     });
 }
