@@ -10,6 +10,10 @@ function log(...args) {
     }
 }
 
+function createPersonLog(...args) {
+    console.log('[create-person]', ...args);
+}
+
 export function initCreditsMentions() {
     window.__creditsMentionsScriptLoaded = true;
 
@@ -620,9 +624,10 @@ class CreatePersonModal {
         this.positionSearch = root.querySelector('#credits-mention-position-search');
         this.positionsUrl = root.dataset.positionsUrl;
         this.positionsStoreUrl = root.dataset.positionsStoreUrl;
+        this.defaultStoreUrl = root.dataset.peopleStoreUrl || '';
         this.onSaved = null;
-        this.storeUrl = '';
-        this.isAdmin = false;
+        this.storeUrl = this.defaultStoreUrl;
+        this.isAdmin = root.dataset.isAdmin === '1';
         this.positionsLoaded = false;
         this.allPositions = [];
         this.categoryLabels = {};
@@ -643,6 +648,13 @@ class CreatePersonModal {
 
         this.form?.addEventListener('submit', (event) => {
             event.preventDefault();
+            event.stopPropagation();
+            this.save();
+        });
+
+        this.saveBtn?.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             this.save();
         });
 
@@ -654,9 +666,10 @@ class CreatePersonModal {
     }
 
     async open({ name, storeUrl, isAdmin, onSaved }) {
-        this.storeUrl = storeUrl;
-        this.isAdmin = isAdmin;
+        this.storeUrl = storeUrl || this.defaultStoreUrl;
+        this.isAdmin = isAdmin ?? this.isAdmin;
         this.onSaved = onSaved;
+        createPersonLog('modal open', { storeUrl: this.storeUrl, isAdmin: this.isAdmin });
         this.clearMessages();
 
         if (this.nameInput) {
@@ -708,7 +721,10 @@ class CreatePersonModal {
         if (this.errorEl) {
             this.errorEl.textContent = message;
             this.errorEl.classList.remove('hidden');
+            this.errorEl.scrollIntoView({ block: 'nearest' });
         }
+
+        createPersonLog('error shown', message);
     }
 
     async loadPositions() {
@@ -855,8 +871,24 @@ class CreatePersonModal {
     }
 
     async save() {
+        createPersonLog('save clicked');
+
         const name = this.nameInput?.value?.trim();
         const positionId = this.positionSelect?.value;
+        const endpoint = this.storeUrl || this.defaultStoreUrl;
+        const token = csrfToken();
+
+        if (! endpoint) {
+            this.showError('Create profile URL is missing. Reload the page and try again.');
+
+            return;
+        }
+
+        if (! token) {
+            this.showError('CSRF token missing. Reload the page and try again.');
+
+            return;
+        }
 
         if (! name) {
             this.showError('Full name is required.');
@@ -865,66 +897,105 @@ class CreatePersonModal {
         }
 
         if (! positionId) {
-            this.showError('Please select a position.');
+            this.showError('Please select a position from the list (or add a new one).');
 
             return;
         }
 
         this.clearMessages();
-        this.saveBtn.disabled = true;
+
+        if (this.saveBtn) {
+            this.saveBtn.disabled = true;
+        }
 
         const formData = new FormData();
         formData.append('name', name);
         formData.append('position_id', positionId);
 
         if (this.isAdmin) {
-            formData.append('approve', 'true');
+            formData.append('approve', '1');
         }
 
         if (this.photoInput?.files?.[0]) {
             formData.append('photo', this.photoInput.files[0]);
         }
 
+        const payloadPreview = {
+            name,
+            position_id: positionId,
+            approve: this.isAdmin ? '1' : null,
+            photo: this.photoInput?.files?.[0]?.name || null,
+        };
+
+        createPersonLog('payload', payloadPreview);
+        createPersonLog('endpoint', endpoint);
+
         try {
-            const response = await fetch(this.storeUrl, {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     Accept: 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-CSRF-TOKEN': token,
                 },
                 credentials: 'same-origin',
                 body: formData,
             });
 
-            const json = await response.json().catch(() => ({}));
+            const responseText = await response.text();
+            createPersonLog('response status', response.status);
+            createPersonLog('response body', responseText);
+
+            let json = {};
+
+            if (responseText !== '') {
+                try {
+                    json = JSON.parse(responseText);
+                } catch (parseError) {
+                    throw new Error(`Server returned non-JSON (${response.status}). ${responseText.slice(0, 300)}`);
+                }
+            }
 
             if (! response.ok) {
-                let message = json.message || 'Could not create profile';
+                let message = json.message || `Request failed (${response.status})`;
 
                 if (json.errors && typeof json.errors === 'object') {
-                    message = Object.values(json.errors).flat().join(' ') || message;
+                    const fieldMessages = Object.entries(json.errors)
+                        .map(([field, messages]) => `${field}: ${[].concat(messages).join(', ')}`)
+                        .join('\n');
+
+                    message = fieldMessages || message;
                 }
 
                 throw new Error(message);
             }
 
-            const person = json.data;
+            const person = json.person || json.data;
+
+            if (! person?.id) {
+                throw new Error('Server response missing person id.');
+            }
+
+            createPersonLog('person created', person);
 
             if (this.successEl) {
                 this.successEl.textContent = 'Profile saved.';
                 this.successEl.classList.remove('hidden');
             }
 
-            if (this.onSaved && person) {
+            if (this.onSaved) {
                 this.onSaved(person);
             }
 
             setTimeout(() => this.close(), 400);
         } catch (error) {
-            this.showError(error.message || 'Could not create profile');
+            const message = error?.message || 'Could not create profile';
+            this.showError(message);
+            createPersonLog('save failed', message);
         } finally {
-            this.saveBtn.disabled = false;
+            if (this.saveBtn) {
+                this.saveBtn.disabled = false;
+            }
         }
     }
 }

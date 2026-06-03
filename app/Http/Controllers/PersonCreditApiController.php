@@ -78,16 +78,21 @@ class PersonCreditApiController extends Controller
         }
 
         $person = Person::create($data);
+        $person->load('positionRelation:id,name');
+
+        $payload = [
+            'id' => $person->id,
+            'name' => $person->name,
+            'position' => $person->positionRelation?->name ?? $person->position,
+            'slug' => $person->slug,
+            'photo_url' => $person->photo_url,
+            'status' => $person->status,
+        ];
 
         return response()->json([
-            'data' => [
-                'id' => $person->id,
-                'name' => $person->name,
-                'position' => $person->position,
-                'slug' => $person->slug,
-                'photo_url' => $person->photo_url,
-                'status' => $person->status,
-            ],
+            'ok' => true,
+            'person' => $payload,
+            'data' => $payload,
         ], 201);
     }
 }
