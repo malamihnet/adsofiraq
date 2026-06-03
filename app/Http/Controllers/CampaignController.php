@@ -137,7 +137,7 @@ class CampaignController extends Controller
         ]);
     }
 
-    public function show(Campaign $campaign): View|RedirectResponse
+    public function show(Campaign $campaign): View|RedirectResponse|Response
     {
         if ($campaign->status !== 'approved') {
             $user = auth()->user();
@@ -190,20 +190,13 @@ class CampaignController extends Controller
         ));
     }
 
-    public function pendingReview(Campaign $campaign): View|RedirectResponse
+    public function pendingReview(Campaign $campaign): View|RedirectResponse|Response
     {
         $user = auth()->user();
 
-        Log::info('Pending review access check', [
-            'campaign_id' => $campaign->id,
-            'campaign_user_id' => $campaign->user_id ?? null,
-            'submitted_by' => $campaign->getAttribute('submitted_by'),
-            'created_by' => $campaign->getAttribute('created_by'),
-            'auth_id' => auth()->id(),
-            'is_admin' => $user?->isAdmin(),
-        ]);
-
-        $this->authorize('viewPendingReview', $campaign);
+        if (! $user || ! $user->can('viewPendingReview', $campaign)) {
+            return $this->campaignAccessDenied($campaign);
+        }
 
         $campaign->loadMissing('pendingRevision');
 
@@ -419,6 +412,13 @@ class CampaignController extends Controller
         return redirect()
             ->route('campaigns.pending-review', $campaign)
             ->with('pending_review_notice', $notice);
+    }
+
+    protected function campaignAccessDenied(?Campaign $campaign = null): Response
+    {
+        return response()->view('campaigns.access-denied', [
+            'campaign' => $campaign,
+        ], Response::HTTP_FORBIDDEN);
     }
 
     protected function formData(?Campaign $campaign = null): array
