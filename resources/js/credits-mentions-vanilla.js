@@ -1,17 +1,19 @@
-console.log('CREDITS MENTIONS FILE LOADED');
-console.log('[mentions] script loaded');
-
-insertMentionsLoadMarker();
-
 /**
- * Vanilla JS credits @mention autocomplete (does not depend on Alpine).
+ * Vanilla JS credits @mention autocomplete (bundled in app.js).
  */
+
+const MENTIONS_DEBUG = document.querySelector('[data-mentions-debug="1"]') !== null;
+
+function log(...args) {
+    if (MENTIONS_DEBUG) {
+        console.log('[mentions]', ...args);
+    }
+}
+
 export function initCreditsMentions() {
     window.__creditsMentionsScriptLoaded = true;
 
-    const fields = document.querySelectorAll('.credits-mentions-field');
-
-    fields.forEach((root) => {
+    document.querySelectorAll('.credits-mentions-field').forEach((root) => {
         bindCreditsMentionsRoot(root);
     });
 
@@ -30,34 +32,14 @@ export function initCreditsMentions() {
 
         setupCreditsMentionsField(textarea, null);
     });
-
-    document.querySelectorAll('[data-mentions-debug]').forEach((panel) => {
-        setDebug(panel, {
-            jsLoaded: true,
-            markerFound: Boolean(document.getElementById('mentions-script-loaded')),
-        });
-    });
 }
 
-/** @deprecated use initCreditsMentions */
 export const initCreditsMentionsVanilla = initCreditsMentions;
 
 function bindCreditsMentionsRoot(root) {
     const textarea = findCreditsTextarea(root);
 
     if (! textarea || textarea.dataset.mentionsBound === 'true') {
-        if (textarea) {
-            setDebug(root.querySelector('[data-mentions-debug]'), {
-                textareaFound: true,
-                jsLoaded: true,
-            });
-        } else {
-            setDebug(root.querySelector('[data-mentions-debug]'), {
-                textareaFound: false,
-                jsLoaded: true,
-            });
-        }
-
         return;
     }
 
@@ -72,56 +54,6 @@ function findCreditsTextarea(root) {
     return root.querySelector('#credits') || root.querySelector('textarea[name="credits"]');
 }
 
-function log(...args) {
-    console.log('[mentions]', ...args);
-}
-
-function setDebug(panel, state) {
-    if (! panel) {
-        return;
-    }
-
-    if (state.jsLoaded !== undefined) {
-        const el = panel.querySelector('[data-debug-js]');
-
-        if (el) {
-            el.textContent = state.jsLoaded ? 'yes' : 'no';
-        }
-    }
-
-    if (state.textareaFound !== undefined) {
-        const el = panel.querySelector('[data-debug-textarea]');
-
-        if (el) {
-            el.textContent = state.textareaFound ? 'yes' : 'no';
-        }
-    }
-
-    if (state.lastQuery !== undefined) {
-        const el = panel.querySelector('[data-debug-query]');
-
-        if (el) {
-            el.textContent = state.lastQuery === '' ? '—' : state.lastQuery;
-        }
-    }
-
-    if (state.resultsCount !== undefined) {
-        const el = panel.querySelector('[data-debug-results]');
-
-        if (el) {
-            el.textContent = String(state.resultsCount);
-        }
-    }
-
-    if (state.markerFound !== undefined) {
-        const el = panel.querySelector('[data-debug-marker]');
-
-        if (el) {
-            el.textContent = state.markerFound ? 'yes' : 'no';
-        }
-    }
-}
-
 function setupCreditsMentionsField(textarea, root) {
     if (textarea.dataset.mentionsBound === 'true') {
         return;
@@ -133,27 +65,21 @@ function setupCreditsMentionsField(textarea, root) {
         root.dataset.mentionsBound = 'true';
     }
 
-    const debugPanel = root?.querySelector('[data-mentions-debug]') ?? textarea
-        .closest('.credits-mentions-field')
-        ?.querySelector('[data-mentions-debug]');
-
     const searchUrl = root?.dataset.peopleSearchUrl
         || textarea.closest('[data-people-search-url]')?.dataset.peopleSearchUrl
         || '/api/people/search';
+
+    const peopleStoreUrl = root?.dataset.peopleStoreUrl
+        || textarea.closest('[data-people-store-url]')?.dataset.peopleStoreUrl
+        || '/api/people';
+
+    const isAdmin = (root?.dataset.isAdmin || textarea.closest('[data-is-admin]')?.dataset.isAdmin) === '1';
 
     const hiddenInput = (root || textarea.closest('.credits-mentions-field'))?.querySelector('input[name="credits_mentions_json"]')
         || document.querySelector('#credits_mentions_json')
         || document.querySelector('input[name="credits_mentions_json"]');
 
-    setDebug(debugPanel, {
-        jsLoaded: true,
-        textareaFound: true,
-        lastQuery: '—',
-        resultsCount: 0,
-        markerFound: Boolean(document.getElementById('mentions-script-loaded')),
-    });
-
-    log('bound to textarea', textarea.id || textarea.name);
+    const modal = getCreatePersonModal();
 
     let mentions = parseMentionsJson(hiddenInput?.value || '[]');
     let mentionStart = null;
@@ -170,15 +96,6 @@ function setupCreditsMentionsField(textarea, root) {
     dropdown.className = 'credits-mentions-dropdown';
     applyDropdownBaseStyles(dropdown);
     document.body.appendChild(dropdown);
-
-    const updateDebugState = (extra = {}) => {
-        setDebug(debugPanel, {
-            jsLoaded: true,
-            textareaFound: true,
-            lastQuery: extra.lastQuery ?? query,
-            resultsCount: extra.resultsCount ?? results.length,
-        });
-    };
 
     const syncHidden = () => {
         if (! hiddenInput) {
@@ -209,8 +126,23 @@ function setupCreditsMentionsField(textarea, root) {
         const rect = textarea.getBoundingClientRect();
 
         dropdown.style.left = `${rect.left}px`;
-        dropdown.style.top = `${rect.bottom}px`;
-        dropdown.style.width = `${rect.width}px`;
+        dropdown.style.top = `${rect.bottom + 4}px`;
+        dropdown.style.width = `${Math.max(rect.width, 280)}px`;
+    };
+
+    const dismissMention = () => {
+        mentionStart = null;
+        query = '';
+        results = [];
+        loading = false;
+        activeIndex = -1;
+
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+            debounceTimer = null;
+        }
+
+        hideDropdown();
     };
 
     const hideDropdown = () => {
@@ -223,8 +155,11 @@ function setupCreditsMentionsField(textarea, root) {
         positionDropdown();
         dropdown.style.setProperty('display', 'block', 'important');
         dropdownOpen = true;
-        log('dropdown visible');
     };
+
+    const hasCreateRow = () => query.trim() !== '';
+
+    const navigableCount = () => results.length + (hasCreateRow() ? 1 : 0);
 
     const roleBeforeCursor = () => {
         const cursor = textarea.selectionStart;
@@ -241,74 +176,79 @@ function setupCreditsMentionsField(textarea, root) {
         const match = before.match(/@([^\n@]*)$/);
 
         if (! match) {
-            mentionStart = null;
-            query = '';
-            updateDebugState({ lastQuery: '—' });
-
             return false;
         }
 
         mentionStart = cursor - match[0].length;
         query = match[1];
-        log('input detected');
-        log('query:', query);
-        updateDebugState();
+        log('input detected', query);
 
         return true;
     };
 
-    const renderDropdown = (forceShow = false) => {
+    const openCreateProfile = () => {
+        const name = query.trim();
+
+        if (! name || ! modal) {
+            return;
+        }
+
+        hideDropdown();
+
+        modal.open({
+            name,
+            storeUrl: peopleStoreUrl,
+            isAdmin,
+            onSaved: (person) => {
+                selectPerson(person);
+                showToast('Profile created and added to credits.');
+            },
+        });
+    };
+
+    const renderDropdown = () => {
         dropdown.innerHTML = '';
 
         if (loading) {
-            dropdown.appendChild(createMessage('Searching...'));
+            dropdown.appendChild(createMessage('Searching…'));
             showDropdown();
 
             return;
         }
 
-        if (query.trim() === '' && ! forceShow) {
-            dropdown.appendChild(createMessage('Type a name after @ to search'));
+        if (query.trim() === '' && results.length === 0) {
+            dropdown.appendChild(createMessage('Type a name after @'));
+            showDropdown();
+
+            return;
         }
 
         results.forEach((person, index) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.style.cssText = 'display:flex;width:100%;align-items:center;gap:12px;padding:10px 16px;text-align:left;font-size:14px;border:none;background:transparent;cursor:pointer';
-            if (index === activeIndex) {
-                btn.style.backgroundColor = '#f5f5f5';
-            }
-
-            btn.innerHTML = `
-                <img src="${escapeAttr(person.photo_url || '')}" alt="" style="width:36px;height:36px;border-radius:9999px;object-fit:cover;background:#f5f5f5" onerror="this.style.visibility='hidden'">
-                <span style="min-width:0">
-                    <span style="display:block;font-weight:500">${escapeHtml(person.name)}</span>
-                    <span style="display:block;font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(person.position || '')}</span>
-                </span>
-            `;
-
-            btn.addEventListener('mousedown', (event) => {
-                event.preventDefault();
-                selectPerson(person);
-            });
-
-            dropdown.appendChild(btn);
+            dropdown.appendChild(createResultRow(
+                person,
+                index === activeIndex,
+                () => selectPerson(person),
+                () => {
+                    activeIndex = index;
+                    renderDropdown();
+                },
+            ));
         });
 
-        if (query.trim() !== '') {
-            const createBtn = document.createElement('button');
-            createBtn.type = 'button';
-            createBtn.style.cssText = 'display:block;width:100%;border-top:1px solid #e5e5e5;padding:12px 16px;text-align:left;font-size:14px;background:#fff;cursor:pointer';
-            createBtn.textContent = `Create profile: ${query.trim()}`;
-            createBtn.addEventListener('mousedown', (event) => {
-                event.preventDefault();
-                hideDropdown();
-                log('create profile requested:', query.trim());
-            });
-            dropdown.appendChild(createBtn);
+        if (hasCreateRow()) {
+            const createIndex = results.length;
+            dropdown.appendChild(createCreateRow(
+                query.trim(),
+                activeIndex === createIndex,
+                openCreateProfile,
+                () => {
+                    activeIndex = createIndex;
+                    renderDropdown();
+                },
+            ));
         }
 
-        if (dropdown.innerHTML === '') {
+        if (results.length === 0 && ! hasCreateRow()) {
             dropdown.appendChild(createMessage('No people found'));
         }
 
@@ -334,10 +274,7 @@ function setupCreditsMentionsField(textarea, root) {
         }
 
         syncHidden();
-        hideDropdown();
-        mentionStart = null;
-        query = '';
-        updateDebugState({ lastQuery: '—', resultsCount: 0 });
+        dismissMention();
 
         const pos = before.length + token.length + 1;
         textarea.focus();
@@ -352,7 +289,7 @@ function setupCreditsMentionsField(textarea, root) {
             url.searchParams.set('q', q);
 
             return url.toString();
-        } catch (error) {
+        } catch {
             const separator = searchUrl.includes('?') ? '&' : '?';
 
             return `${searchUrl}${separator}q=${encodeURIComponent(q)}`;
@@ -363,10 +300,9 @@ function setupCreditsMentionsField(textarea, root) {
         const q = searchQuery;
         const url = buildSearchUrl(q);
 
-        log('fetching:', url);
+        log('fetching', url);
         loading = true;
         query = q;
-        updateDebugState();
         renderDropdown();
 
         try {
@@ -379,24 +315,23 @@ function setupCreditsMentionsField(textarea, root) {
             });
 
             if (! response.ok) {
-                const text = await response.text();
-                console.error('[mentions] API failed', response.status, text);
                 results = [];
-                updateDebugState({ resultsCount: 0 });
 
                 return;
             }
 
             const json = await response.json();
             results = json.data || [];
-            log('results:', results.length);
-            updateDebugState({ resultsCount: results.length });
+            log('results', results.length);
         } catch (error) {
-            console.error('[mentions] fetch error', error);
+            if (MENTIONS_DEBUG) {
+                console.error('[mentions] fetch error', error);
+            }
+
             results = [];
-            updateDebugState({ resultsCount: 0 });
         } finally {
             loading = false;
+            activeIndex = results.length > 0 ? 0 : (hasCreateRow() ? 0 : -1);
             renderDropdown();
         }
     };
@@ -412,6 +347,8 @@ function setupCreditsMentionsField(textarea, root) {
     const handleMentionInput = () => {
         if (detectMention()) {
             scheduleSearch();
+        } else {
+            dismissMention();
         }
 
         const seen = new Set();
@@ -440,11 +377,11 @@ function setupCreditsMentionsField(textarea, root) {
             return;
         }
 
-        const itemCount = results.length;
+        const total = navigableCount();
 
         if (event.key === 'ArrowDown') {
             event.preventDefault();
-            activeIndex = Math.min(activeIndex + 1, Math.max(itemCount - 1, 0));
+            activeIndex = activeIndex < 0 ? 0 : Math.min(activeIndex + 1, total - 1);
             renderDropdown();
 
             return;
@@ -452,21 +389,30 @@ function setupCreditsMentionsField(textarea, root) {
 
         if (event.key === 'ArrowUp') {
             event.preventDefault();
-            activeIndex = Math.max(activeIndex - 1, 0);
+            activeIndex = activeIndex <= 0 ? total - 1 : activeIndex - 1;
             renderDropdown();
 
             return;
         }
 
-        if (event.key === 'Enter' && activeIndex >= 0 && activeIndex < results.length) {
+        if (event.key === 'Enter') {
             event.preventDefault();
-            selectPerson(results[activeIndex]);
+
+            if (activeIndex >= 0 && activeIndex < results.length) {
+                selectPerson(results[activeIndex]);
+
+                return;
+            }
+
+            if (activeIndex === results.length && hasCreateRow()) {
+                openCreateProfile();
+            }
 
             return;
         }
 
         if (event.key === 'Escape') {
-            hideDropdown();
+            dismissMention();
         }
     });
 
@@ -483,40 +429,23 @@ function setupCreditsMentionsField(textarea, root) {
     });
 
     document.addEventListener('mousedown', (event) => {
-        if (dropdown.contains(event.target) || textarea.contains(event.target)) {
+        const modalEl = document.getElementById('credits-mention-create-modal');
+
+        if (
+            dropdown.contains(event.target)
+            || textarea.contains(event.target)
+            || modalEl?.contains(event.target)
+        ) {
             return;
         }
 
-        if (root?.contains(event.target)) {
-            return;
-        }
-
-        if (document.activeElement === textarea) {
-            return;
-        }
-
-        hideDropdown();
+        dismissMention();
     });
-
-    const testBtn = debugPanel?.querySelector('[data-mentions-test-btn]');
-
-    if (testBtn) {
-        testBtn.addEventListener('click', async (event) => {
-            event.preventDefault();
-            query = 'm';
-            mentionStart = null;
-            updateDebugState({ lastQuery: 'm (test)' });
-            log('test button clicked');
-            await fetchPeople('m');
-        });
-    }
 
     const form = textarea.closest('form');
 
     if (form) {
-        form.addEventListener('submit', () => {
-            syncHidden();
-        });
+        form.addEventListener('submit', syncHidden);
     }
 
     syncHidden();
@@ -527,21 +456,388 @@ function applyDropdownBaseStyles(dropdown) {
     dropdown.style.cssText = [
         'display:none',
         'position:fixed',
-        'z-index:999999',
-        'max-height:16rem',
+        'z-index:99999',
+        'max-height:280px',
         'overflow-y:auto',
+        'overflow-x:hidden',
         'background:#fff',
-        'border:2px solid red',
-        'box-shadow:0 8px 24px rgba(0,0,0,0.12)',
+        'border:1px solid #e5e5e5',
+        'border-radius:12px',
+        'box-shadow:0 4px 24px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06)',
+        'padding:4px 0',
+        'font-family:inherit',
     ].join(';');
 }
 
 function createMessage(text) {
     const el = document.createElement('p');
-    el.style.cssText = 'padding:12px 16px;font-size:12px;color:#666;margin:0';
+    el.style.cssText = 'margin:0;padding:10px 14px;font-size:13px;color:#737373;line-height:1.4';
     el.textContent = text;
 
     return el;
+}
+
+function createResultRow(person, isActive, onSelect, onHover) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('role', 'option');
+    btn.style.cssText = rowButtonStyle(isActive);
+
+    const avatar = person.photo_url
+        ? `<img src="${escapeAttr(person.photo_url)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:#f5f5f5;flex-shrink:0" onerror="this.style.visibility='hidden'">`
+        : `<span style="width:32px;height:32px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#a3a3a3;flex-shrink:0">${escapeHtml((person.name || '?').charAt(0))}</span>`;
+
+    btn.innerHTML = `
+        ${avatar}
+        <span style="min-width:0;flex:1">
+            <span style="display:block;font-size:14px;font-weight:500;color:#171717;line-height:1.3">${escapeHtml(person.name)}</span>
+            <span style="display:block;font-size:12px;color:#737373;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">${escapeHtml(person.position || '')}</span>
+        </span>
+    `;
+
+    btn.addEventListener('mouseenter', onHover);
+    btn.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        onSelect();
+    });
+
+    return btn;
+}
+
+function createCreateRow(name, isActive, onSelect, onHover) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('role', 'option');
+    btn.style.cssText = `${rowButtonStyle(isActive)}border-top:1px solid #f0f0f0;margin-top:2px`;
+
+    btn.innerHTML = `
+        <span style="width:32px;height:32px;border-radius:50%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:#525252;flex-shrink:0;line-height:1">+</span>
+        <span style="min-width:0;flex:1">
+            <span style="display:block;font-size:13px;color:#737373">Create profile</span>
+            <span style="display:block;font-size:14px;font-weight:600;color:#171717;margin-top:1px">${escapeHtml(name)}</span>
+        </span>
+    `;
+
+    btn.addEventListener('mouseenter', onHover);
+    btn.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        onSelect();
+    });
+
+    return btn;
+}
+
+function rowButtonStyle(isActive) {
+    return [
+        'display:flex',
+        'width:100%',
+        'align-items:center',
+        'gap:10px',
+        'padding:8px 12px',
+        'text-align:left',
+        'border:none',
+        'background:' + (isActive ? '#f5f5f5' : 'transparent'),
+        'cursor:pointer',
+        'transition:background 0.1s',
+    ].join(';');
+}
+
+function showToast(message) {
+    const existing = document.getElementById('credits-mention-toast');
+
+    if (existing) {
+        existing.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.id = 'credits-mention-toast';
+    toast.setAttribute('role', 'status');
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:100001;padding:10px 18px;background:#171717;color:#fff;font-size:13px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => toast.remove(), 3200);
+}
+
+let createPersonModalInstance = null;
+
+function getCreatePersonModal() {
+    if (createPersonModalInstance) {
+        return createPersonModalInstance;
+    }
+
+    const el = document.getElementById('credits-mention-create-modal');
+
+    if (! el) {
+        return null;
+    }
+
+    createPersonModalInstance = new CreatePersonModal(el);
+
+    return createPersonModalInstance;
+}
+
+class CreatePersonModal {
+    constructor(root) {
+        this.root = root;
+        this.form = root.querySelector('#credits-mention-create-form');
+        this.nameInput = root.querySelector('#credits-mention-create-name');
+        this.positionSelect = root.querySelector('#credits-mention-create-position');
+        this.photoInput = root.querySelector('#credits-mention-create-photo');
+        this.errorEl = root.querySelector('#credits-mention-create-error');
+        this.successEl = root.querySelector('#credits-mention-create-success');
+        this.saveBtn = root.querySelector('#credits-mention-create-save');
+        this.newPositionWrap = root.querySelector('#credits-mention-new-position-wrap');
+        this.newPositionInput = root.querySelector('#credits-mention-new-position-name');
+        this.togglePositionBtn = root.querySelector('#credits-mention-toggle-position-btn');
+        this.addPositionBtn = root.querySelector('#credits-mention-add-position-btn');
+        this.positionsUrl = root.dataset.positionsUrl;
+        this.positionsStoreUrl = root.dataset.positionsStoreUrl;
+        this.onSaved = null;
+        this.storeUrl = '';
+        this.isAdmin = false;
+        this.positionsLoaded = false;
+
+        root.querySelectorAll('[data-credits-mention-modal-close]').forEach((btn) => {
+            btn.addEventListener('click', () => this.close());
+        });
+
+        this.togglePositionBtn?.addEventListener('click', () => {
+            this.newPositionWrap?.classList.toggle('hidden');
+        });
+
+        this.addPositionBtn?.addEventListener('click', () => this.addPosition());
+
+        this.form?.addEventListener('submit', (event) => {
+            event.preventDefault();
+            this.save();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && ! this.root.classList.contains('hidden')) {
+                this.close();
+            }
+        });
+    }
+
+    async open({ name, storeUrl, isAdmin, onSaved }) {
+        this.storeUrl = storeUrl;
+        this.isAdmin = isAdmin;
+        this.onSaved = onSaved;
+        this.clearMessages();
+
+        if (this.nameInput) {
+            this.nameInput.value = name;
+        }
+
+        if (this.photoInput) {
+            this.photoInput.value = '';
+        }
+
+        this.newPositionWrap?.classList.add('hidden');
+
+        if (this.newPositionInput) {
+            this.newPositionInput.value = '';
+        }
+
+        this.root.classList.remove('hidden');
+        this.root.classList.add('flex');
+        this.root.setAttribute('aria-hidden', 'false');
+
+        await this.loadPositions();
+        this.nameInput?.focus();
+    }
+
+    close() {
+        this.root.classList.add('hidden');
+        this.root.classList.remove('flex');
+        this.root.setAttribute('aria-hidden', 'true');
+        this.onSaved = null;
+    }
+
+    clearMessages() {
+        if (this.errorEl) {
+            this.errorEl.classList.add('hidden');
+            this.errorEl.textContent = '';
+        }
+
+        if (this.successEl) {
+            this.successEl.classList.add('hidden');
+            this.successEl.textContent = '';
+        }
+    }
+
+    showError(message) {
+        if (this.errorEl) {
+            this.errorEl.textContent = message;
+            this.errorEl.classList.remove('hidden');
+        }
+    }
+
+    async loadPositions() {
+        if (! this.positionSelect) {
+            return;
+        }
+
+        this.positionSelect.innerHTML = '<option value="">Loading…</option>';
+
+        try {
+            const response = await fetch(this.positionsUrl, {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            });
+
+            if (! response.ok) {
+                throw new Error('Could not load positions');
+            }
+
+            const json = await response.json();
+            const positions = json.data || [];
+
+            this.positionSelect.innerHTML = '<option value="">Select position</option>';
+            positions.forEach((position) => {
+                const option = document.createElement('option');
+                option.value = String(position.id);
+                option.textContent = position.name;
+                this.positionSelect.appendChild(option);
+            });
+
+            this.positionsLoaded = true;
+        } catch {
+            this.positionSelect.innerHTML = '<option value="">Failed to load positions</option>';
+        }
+    }
+
+    async addPosition() {
+        const name = this.newPositionInput?.value?.trim();
+
+        if (! name) {
+            this.showError('Enter a position name.');
+
+            return;
+        }
+
+        this.addPositionBtn.disabled = true;
+
+        try {
+            const response = await fetch(this.positionsStoreUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ name }),
+            });
+
+            if (! response.ok) {
+                const payload = await response.json().catch(() => ({}));
+                throw new Error(payload.message || 'Could not add position');
+            }
+
+            const json = await response.json();
+            const position = json.data;
+
+            if (! this.positionsLoaded) {
+                await this.loadPositions();
+            }
+
+            const option = document.createElement('option');
+            option.value = String(position.id);
+            option.textContent = position.name;
+            this.positionSelect.appendChild(option);
+            this.positionSelect.value = String(position.id);
+            this.newPositionWrap?.classList.add('hidden');
+
+            if (this.newPositionInput) {
+                this.newPositionInput.value = '';
+            }
+        } catch (error) {
+            this.showError(error.message || 'Could not add position');
+        } finally {
+            this.addPositionBtn.disabled = false;
+        }
+    }
+
+    async save() {
+        const name = this.nameInput?.value?.trim();
+        const positionId = this.positionSelect?.value;
+
+        if (! name) {
+            this.showError('Full name is required.');
+
+            return;
+        }
+
+        if (! positionId) {
+            this.showError('Please select a position.');
+
+            return;
+        }
+
+        this.clearMessages();
+        this.saveBtn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('position_id', positionId);
+
+        if (this.isAdmin) {
+            formData.append('approve', '1');
+        }
+
+        if (this.photoInput?.files?.[0]) {
+            formData.append('photo', this.photoInput.files[0]);
+        }
+
+        try {
+            const response = await fetch(this.storeUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+                credentials: 'same-origin',
+                body: formData,
+            });
+
+            const json = await response.json().catch(() => ({}));
+
+            if (! response.ok) {
+                let message = json.message || 'Could not create profile';
+
+                if (json.errors && typeof json.errors === 'object') {
+                    message = Object.values(json.errors).flat().join(' ') || message;
+                }
+
+                throw new Error(message);
+            }
+
+            const person = json.data;
+
+            if (this.successEl) {
+                this.successEl.textContent = 'Profile saved.';
+                this.successEl.classList.remove('hidden');
+            }
+
+            if (this.onSaved && person) {
+                this.onSaved(person);
+            }
+
+            setTimeout(() => this.close(), 400);
+        } catch (error) {
+            this.showError(error.message || 'Could not create profile');
+        } finally {
+            this.saveBtn.disabled = false;
+        }
+    }
+}
+
+function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 }
 
 function parseMentionsJson(raw) {
@@ -553,9 +849,7 @@ function parseMentionsJson(raw) {
         const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
         return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-        log('invalid mentions json', error);
-
+    } catch {
         return [];
     }
 }
@@ -570,25 +864,6 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
     return escapeHtml(value).replace(/'/g, '&#39;');
-}
-
-function insertMentionsLoadMarker() {
-    const place = () => {
-        if (document.getElementById('mentions-script-loaded')) {
-            return;
-        }
-
-        document.body?.insertAdjacentHTML(
-            'beforeend',
-            '<div id="mentions-script-loaded" style="position:fixed;bottom:8px;right:8px;z-index:999999;padding:6px 10px;background:#dc2626;color:#fff;font:12px/1.2 monospace;border-radius:4px;pointer-events:none">mentions script loaded</div>',
-        );
-    };
-
-    if (document.body) {
-        place();
-    } else {
-        document.addEventListener('DOMContentLoaded', place);
-    }
 }
 
 function bootCreditsMentions() {
