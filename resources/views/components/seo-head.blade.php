@@ -5,6 +5,11 @@
 
 @php
     $defaultOg = app(\App\Services\SeoService::class)->defaultOgImageUrl();
+    $ogImageSection = trim($__env->yieldContent('og_image'));
+    $resolvedOgImage = $ogImageSection !== '' ? $ogImageSection : $defaultOg;
+    $pageTitle = trim($__env->yieldContent('title') ?: config('seo.site_name', 'Ads Of Iraq'));
+    $pageDescription = trim($__env->yieldContent('meta_description') ?: 'Explore Iraqi advertising campaigns on Ads Of Iraq.');
+    $ogType = trim($__env->yieldContent('og_type') ?: 'website');
 @endphp
 
 @if($noindex)
@@ -14,18 +19,6 @@
 @if($canonical)
     <link rel="canonical" href="{{ $canonical }}">
 @endif
-
-@hasSection('og_image')
-    @php($resolvedOgImage = trim($__env->yieldContent('og_image')))
-@else
-    @php($resolvedOgImage = $defaultOg)
-@endif
-
-@php
-    $pageTitle = trim($__env->yieldContent('title') ?: config('seo.site_name', 'Ads Of Iraq'));
-    $pageDescription = trim($__env->yieldContent('meta_description') ?: 'Explore Iraqi advertising campaigns on Ads Of Iraq.');
-    $ogType = trim($__env->yieldContent('og_type') ?: 'website');
-@endphp
 
 <meta property="og:site_name" content="{{ config('seo.site_name', 'Ads Of Iraq') }}">
 <meta property="og:locale" content="en_US">
