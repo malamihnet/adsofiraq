@@ -78,6 +78,29 @@ class CampaignArchiveOrderingService
     }
 
     /**
+     * First N campaigns from archive page 1 (same ordering as /campaigns latest, default per page 24).
+     *
+     * @param  array<int, string>  $eagerLoads
+     */
+    public function take(Builder $baseQuery, int $limit, int $perPage = 24, array $eagerLoads = []): Collection
+    {
+        if ($limit < 1) {
+            return collect();
+        }
+
+        $matchingIds = (clone $baseQuery)->pluck('campaigns.id')->map(fn ($id) => (int) $id)->all();
+        $matchingLookup = array_fill_keys($matchingIds, true);
+
+        $placementsByPage = $this->filterPlacementsForMatching($matchingLookup);
+        $automaticIds = $this->filterAutomaticIdsForMatching($matchingLookup);
+
+        $pageIds = $this->buildPageIds($placementsByPage, $automaticIds, 1, $perPage);
+        $sliceIds = array_slice($pageIds, 0, $limit);
+
+        return $this->loadCampaignsInOrder($sliceIds, $eagerLoads);
+    }
+
+    /**
      * First N public archive campaigns in automatic latest order (ignores archive placement).
      *
      * @param  array<int, string>  $eagerLoads

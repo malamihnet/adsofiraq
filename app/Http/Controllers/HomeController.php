@@ -6,10 +6,15 @@ use App\Models\Agency;
 use App\Models\Campaign;
 use App\Models\MediumType;
 use App\Models\Person;
+use App\Services\CampaignArchiveOrderingService;
 use Illuminate\View\View;
 
 class HomeController extends Controller
 {
+    public function __construct(
+        protected CampaignArchiveOrderingService $archiveOrdering,
+    ) {}
+
     public function index(): View
     {
         $heroCampaigns = Campaign::public()
@@ -26,11 +31,12 @@ class HomeController extends Controller
             ->take(6)
             ->get();
 
-        $latestCampaigns = Campaign::public()
-            ->with(['brands', 'agencies', 'mediumTypes'])
-            ->latestOnPlatform()
-            ->take(16)
-            ->get();
+        $latestCampaigns = $this->archiveOrdering->take(
+            Campaign::public(),
+            limit: 16,
+            perPage: 24,
+            eagerLoads: ['brands', 'agencies', 'mediumTypes'],
+        );
 
         $popularCategories = MediumType::withCount(['campaigns' => fn ($q) => $q->approved()])
             ->orderByDesc('campaigns_count')
