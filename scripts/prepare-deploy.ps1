@@ -10,7 +10,12 @@ git add resources/css resources/js resources/views public/build
 
 Write-Host ""
 Write-Host "Done. Review with: git status"
-Write-Host "Then commit and push. Checklist:"
+Write-Host "Then commit and push. On production after git pull:"
+Write-Host "  php artisan optimize:clear"
+Write-Host "  php artisan vite:verify-build"
+Write-Host "  If using public_html docroot, sync public/build to public_html/build"
+Write-Host ""
+Write-Host "Checklist:"
 Write-Host "  - npm run build: done"
 Write-Host "  - public/build committed: (after you commit)"
 Write-Host "  - pushed to GitHub: (after git push)"

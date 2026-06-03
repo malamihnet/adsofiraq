@@ -14,12 +14,10 @@
         ? route('admin.api.people.search')
         : route('api.people.search');
     $showMentionsDebug = config('app.debug') || (auth()->check() && auth()->user()->isAdmin());
-    $viteManifest = null;
-    $manifestPath = public_path('build/manifest.json');
-    if (is_readable($manifestPath)) {
-        $viteManifest = json_decode((string) file_get_contents($manifestPath), true);
-    }
-    $appJsBuild = $viteManifest['resources/js/app.js']['file'] ?? 'missing from manifest';
+    $viteDiagnostics = $showMentionsDebug ? \App\Support\ViteBuildDiagnostics::collect() : null;
+    $appJsBuild = $viteDiagnostics['manifest_app_file'] ?? 'missing from manifest';
+    $viteAppAsset = $viteDiagnostics['vite_asset_url'] ?? null;
+    $viteAppAssetError = $viteDiagnostics['vite_asset_error'] ?? null;
 @endphp
 
 <div
@@ -63,7 +61,30 @@
             <p>Textarea found: <span data-debug-textarea>no</span></p>
             <p>Last query: <span data-debug-query>—</span></p>
             <p>Results count: <span data-debug-results>0</span></p>
-            <p>Expected app.js build: <code>{{ $appJsBuild }}</code> (mentions bundled in app.js)</p>
+            <p class="mt-2 font-semibold text-amber-900">Vite build (Laravel)</p>
+            <p>Manifest path: <code class="break-all">{{ $viteDiagnostics['manifest_path'] }}</code></p>
+            <p>Manifest app.js file: <code>{{ $appJsBuild }}</code></p>
+            <p>Manifest asset on disk: <strong>{{ $viteDiagnostics['manifest_asset_exists'] ? 'yes' : 'no' }}</strong></p>
+            <p>Current app asset (Vite::asset): <code class="break-all">{{ $viteAppAsset ?? ('ERROR: '.$viteAppAssetError) }}</code></p>
+            <p>Vite URL matches manifest: <strong>{{ $viteDiagnostics['vite_matches_manifest'] ? 'yes' : 'no' }}</strong></p>
+            <p>Laravel public_path(): <code class="break-all">{{ $viteDiagnostics['public_path'] }}</code></p>
+            <p class="mt-2 font-semibold text-amber-900">Build folders on server</p>
+            <ul class="list-inside list-disc space-y-1">
+                @foreach($viteDiagnostics['directory_checks'] as $label => $check)
+                    <li>
+                        <span class="font-medium">{{ $label }}</span>:
+                        @if(! $check['exists'])
+                            missing
+                        @elseif(! $check['manifest_readable'])
+                            no manifest
+                        @else
+                            <code>{{ $check['manifest_app_js'] ?? '?' }}</code>
+                            — asset {{ $check['asset_file_exists'] ? 'exists' : 'MISSING' }}
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+            <p class="mt-2 text-amber-950">Page source should load exactly one app-*.js matching Vite::asset above. Search console for <code>CREDITS MENTIONS FILE LOADED</code>.</p>
             <p>Load marker in DOM: <span data-debug-marker>no</span></p>
             <button
                 type="button"

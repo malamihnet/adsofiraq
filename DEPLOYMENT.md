@@ -24,7 +24,29 @@ git push origin main
 - [ ] `public/build` committed: yes
 - [ ] pushed to GitHub: yes
 
-**After `git pull` on production**, confirm the deployed hash matches `public/build/manifest.json` (View Source → `app-*.js` from `resources/js/app.js`). Credits mentions are bundled inside that file. If the page still references an older filename, run `php artisan optimize:clear` and hard-refresh.
+**After `git pull` on production**, run:
+
+```bash
+php artisan optimize:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+php artisan vite:verify-build
+```
+
+Confirm View Source loads the same `app-*.js` as **Vite::asset** on the campaign form debug panel. Credits mentions are bundled inside that file.
+
+### cPanel `public_html` docroot (common mismatch)
+
+If Laravel lives in `/home/user/adsofiraq/` but the site serves `/home/user/public_html/`, the browser loads `/build/assets/...` from **public_html**, while Laravel reads the manifest from **adsofiraq/public/build**. A stale `public_html/build` causes 404 JS and “Mentions JS loaded: no”.
+
+After every deploy:
+
+```bash
+rsync -a public/build/ ../public_html/build/
+# or: cp -r public/build/* ../public_html/build/
+php artisan vite:verify-build
+```
 
 Do **not** commit: `node_modules/`, `.env`, `storage/logs/`, temporary HTML/debug files under `storage/app/`.
 
