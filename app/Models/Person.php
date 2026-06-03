@@ -22,6 +22,7 @@ class Person extends Model
         'name',
         'slug',
         'position',
+        'position_id',
         'photo_path',
         'bio',
         'website_url',
@@ -102,6 +103,11 @@ class Person extends Model
         return $this->belongsToMany(Campaign::class, 'campaign_person')
             ->withPivot('role')
             ->withTimestamps();
+    }
+
+    public function positionRelation(): BelongsTo
+    {
+        return $this->belongsTo(Position::class, 'position_id');
     }
 
     public function submittedBy(): BelongsTo

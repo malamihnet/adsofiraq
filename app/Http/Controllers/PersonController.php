@@ -49,6 +49,13 @@ class PersonController extends Controller
 
         $seo = $this->seo->forPerson($person, $canonicalUrl);
 
-        return view('people.show', compact('person', 'canonicalUrl', 'schema', 'seo'));
+        $creditedCampaigns = $person->campaigns()
+            ->public()
+            ->with(['brands', 'agencies'])
+            ->orderByDesc('campaigns.published_at')
+            ->orderByDesc('campaigns.id')
+            ->get();
+
+        return view('people.show', compact('person', 'canonicalUrl', 'schema', 'seo', 'creditedCampaigns'));
     }
 }

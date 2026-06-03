@@ -55,9 +55,7 @@ class StoreCampaignRequest extends FormRequest
             'submission_notes' => ['nullable', 'string', 'max:1000'],
             'is_student' => ['sometimes', 'boolean'],
             'is_nsfw' => ['sometimes', 'boolean'],
-            'people_credits' => ['nullable', 'array'],
-            'people_credits.*.person_id' => ['required_with:people_credits', 'integer', 'exists:people,id'],
-            'people_credits.*.role' => ['required_with:people_credits', 'string', 'max:255'],
+            'credit_mentions' => ['nullable', 'string', 'max:65535'],
         ]);
     }
 

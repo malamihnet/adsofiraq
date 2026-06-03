@@ -6,14 +6,14 @@ import taxonomyMultiselect from './taxonomy-multiselect';
 import campaignVideosManager from './campaign-videos-manager';
 import setupPlyr from './plyr-init';
 import campaignGallery from './campaign-gallery';
-import peopleCreditsManager from './people-credits-manager';
+import creditsMentions from './credits-mentions';
 
 window.Alpine = Alpine;
 Alpine.data('homeHeroSlider', homeHeroSlider);
 Alpine.data('taxonomyMultiselect', taxonomyMultiselect);
 Alpine.data('campaignVideosManager', campaignVideosManager);
 Alpine.data('campaignGallery', campaignGallery);
-Alpine.data('peopleCreditsManager', peopleCreditsManager);
+Alpine.data('creditsMentions', creditsMentions);
 Alpine.start();
 
 document.addEventListener('DOMContentLoaded', () => {

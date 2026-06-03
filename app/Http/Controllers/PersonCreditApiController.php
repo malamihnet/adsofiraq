@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePersonCreditRequest;
 use App\Models\Person;
+use App\Models\Position;
+use App\Services\CreditsMentionService;
 use App\Services\PersonPhotoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +14,7 @@ class PersonCreditApiController extends Controller
 {
     public function __construct(
         protected PersonPhotoService $photos,
+        protected CreditsMentionService $mentions,
     ) {}
 
     public function search(Request $request): JsonResponse
@@ -30,13 +33,14 @@ class PersonCreditApiController extends Controller
             }))
             ->orderBy('name')
             ->limit(15)
-            ->get(['id', 'name', 'position', 'slug', 'photo_path']);
+            ->with('positionRelation:id,name')
+            ->get(['id', 'name', 'position', 'position_id', 'slug', 'photo_path']);
 
         return response()->json([
             'data' => $people->map(fn (Person $person) => [
                 'id' => $person->id,
                 'name' => $person->name,
-                'position' => $person->position,
+                'position' => $person->positionRelation?->name ?? $person->position,
                 'slug' => $person->slug,
                 'photo_url' => $person->photo_url,
             ]),
@@ -49,9 +53,15 @@ class PersonCreditApiController extends Controller
             ? 'approved'
             : 'pending';
 
+        $positionName = $this->mentions->resolvePositionName(
+            $request->integer('position_id'),
+            $request->input('position'),
+        );
+
         $data = [
             'name' => $request->name,
-            'position' => $request->position,
+            'position' => $positionName,
+            'position_id' => $request->integer('position_id'),
             'slug' => Person::generateUniqueSlug($request->name),
             'status' => $status,
             'submitted_by' => $request->user()->id,

@@ -85,7 +85,7 @@
 
                 @if($campaign->credits)
                     <h2 class="section-label mb-4 mt-12">Credits</h2>
-                    <div class="leading-relaxed whitespace-pre-line text-sm">{!! nl2br(e($campaign->credits)) !!}</div>
+                    <div class="leading-relaxed text-sm">{!! $creditsHtml !!}</div>
                 @endif
             </div>
 

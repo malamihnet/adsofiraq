@@ -1,4 +1,4 @@
-@props(['campaign' => null, 'industries', 'mediumTypes', 'countries', 'brands', 'agencies', 'productionHouses' => null, 'selectedTaxonomies' => [], 'selectedPeopleCredits' => []])
+@props(['campaign' => null, 'industries', 'mediumTypes', 'countries', 'brands', 'agencies', 'productionHouses' => null, 'selectedTaxonomies' => [], 'creditMentions' => []])
 
 <form method="POST" action="{{ $campaign ? route('campaigns.update', $campaign) : route('campaigns.store') }}"
       enctype="multipart/form-data" class="space-y-8">
@@ -70,12 +70,10 @@
         </div>
 
         <div class="md:col-span-2">
-            <label class="section-label mb-2 block">Credits</label>
-            <textarea name="credits" rows="4" class="input-field" placeholder="Creative team, production credits...">{{ old('credits', $campaign?->credits) }}</textarea>
-        </div>
-
-        <div class="md:col-span-2">
-            <x-people-credits-fields :selected="$selectedPeopleCredits ?? []" />
+            <x-credits-mentions-field
+                :credits="old('credits', $campaign?->credits)"
+                :mentions="$creditMentions ?? []"
+            />
         </div>
 
         <x-campaign-videos-fields :campaign="$campaign" />

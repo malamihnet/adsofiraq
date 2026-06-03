@@ -68,5 +68,16 @@
             @endif
         </div>
     </div>
+
+    @if($creditedCampaigns->isNotEmpty())
+        <section class="mt-16 border-t border-archive-border pt-12">
+            <h2 class="section-label mb-8">Campaigns credited on</h2>
+            <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach($creditedCampaigns as $credited)
+                    <x-campaign-card :campaign="$credited" />
+                @endforeach
+            </div>
+        </section>
+    @endif
 </div>
 @endsection

@@ -57,37 +57,12 @@ class CampaignPeopleCreditService
     }
 
     /**
+     * @deprecated Use credit_mentions JSON via CreditsMentionService
      * @return array<int, array{person_id: int, role: string}>
      */
     public function fromOldInput(): array
     {
-        $raw = old('people_credits');
-
-        if (! is_array($raw)) {
-            return [];
-        }
-
-        $credits = [];
-
-        foreach ($raw as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-
-            $personId = isset($item['person_id']) ? (int) $item['person_id'] : 0;
-            $role = trim((string) ($item['role'] ?? ''));
-
-            if ($personId < 1 || $role === '') {
-                continue;
-            }
-
-            $credits[] = [
-                'person_id' => $personId,
-                'role' => $role,
-            ];
-        }
-
-        return $credits;
+        return [];
     }
 
     /**

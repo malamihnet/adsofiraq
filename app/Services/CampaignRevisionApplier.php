@@ -13,6 +13,7 @@ class CampaignRevisionApplier
 {
     public function __construct(
         protected CampaignTaxonomySyncService $taxonomySyncService,
+        protected CreditsMentionService $creditsMentions,
     ) {}
 
     public function apply(CampaignRevision $revision): void
@@ -34,6 +35,7 @@ class CampaignRevisionApplier
             ]);
 
             $this->applyTaxonomies($campaign, $payload);
+            $this->applyPeopleCredits($campaign, $payload);
             $this->applyMedia($campaign, $revision, $payload);
         });
     }
@@ -51,6 +53,42 @@ class CampaignRevisionApplier
             mediumTypes: (array) ($tax['medium_types'] ?? []),
             countries: (array) ($tax['countries'] ?? []),
         );
+    }
+
+    protected function applyPeopleCredits(Campaign $campaign, array $payload): void
+    {
+        if (! array_key_exists('credit_mentions', $payload) && ! array_key_exists('people_credits', $payload)) {
+            return;
+        }
+
+        $credits = (string) ($payload['credits'] ?? $campaign->credits ?? '');
+
+        if (array_key_exists('credit_mentions', $payload)) {
+            $mentions = $this->creditsMentions->decodeMentionsInput($payload['credit_mentions']);
+            $this->creditsMentions->syncFromCredits($campaign, $credits, $mentions);
+
+            return;
+        }
+
+        $legacy = (array) ($payload['people_credits'] ?? []);
+        $sync = [];
+
+        foreach ($legacy as $credit) {
+            if (! is_array($credit)) {
+                continue;
+            }
+
+            $personId = isset($credit['person_id']) ? (int) $credit['person_id'] : 0;
+            $role = trim((string) ($credit['role'] ?? ''));
+
+            if ($personId < 1 || $role === '') {
+                continue;
+            }
+
+            $sync[$personId] = ['role' => $role];
+        }
+
+        $campaign->people()->sync($sync);
     }
 
     protected function applyMedia(Campaign $campaign, CampaignRevision $revision, array $payload): void

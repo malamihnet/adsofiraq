@@ -15,7 +15,8 @@ use App\Models\MediumType;
 use App\Models\User;
 use App\Services\CampaignArchiveOrderingService;
 use App\Services\CampaignArchivePlacementService;
-use App\Services\CampaignPeopleCreditService;
+use App\Services\CampaignTaxonomySyncService;
+use App\Services\CreditsMentionService;
 use App\Services\CampaignTagService;
 use App\Services\CampaignUploadService;
 use App\Mail\CampaignWorkflowMail;
@@ -41,6 +42,7 @@ class CampaignController extends Controller
         protected CampaignArchivePlacementService $archivePlacement,
         protected CampaignArchiveOrderingService $archiveOrdering,
         protected CampaignPeopleCreditService $peopleCredits,
+        protected CreditsMentionService $creditsMentions,
     ) {}
 
     public function index(Request $request): View
@@ -129,9 +131,7 @@ class CampaignController extends Controller
 
         $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
 
-        if ($request->has('people_credits')) {
-            $this->peopleCredits->sync($campaign, $request->input('people_credits', []));
-        }
+        $this->syncCreditMentions($campaign, $request);
 
         if ($request->boolean('is_verified')) {
             $this->verificationService->update($campaign, $request->user(), true);
@@ -204,9 +204,7 @@ class CampaignController extends Controller
 
         $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
 
-        if ($request->has('people_credits')) {
-            $this->peopleCredits->sync($campaign, $request->input('people_credits', []));
-        }
+        $this->syncCreditMentions($campaign, $request);
 
         if ($request->boolean('is_verified')) {
             $this->verificationService->update($campaign, $request->user(), true);
@@ -468,12 +466,30 @@ class CampaignController extends Controller
             'selectedTaxonomies' => $campaign
                 ? $this->taxonomySyncService->selectedForForm($campaign)
                 : $this->taxonomySyncService->oldInputSelections(),
-            'selectedPeopleCredits' => $campaign
-                ? (old('people_credits') !== null
-                    ? $this->peopleCredits->fromOldInput()
-                    : $this->peopleCredits->selectedForForm($campaign))
-                : $this->peopleCredits->fromOldInput(),
+            'creditMentions' => $this->creditMentionsForForm($campaign),
         ];
+    }
+
+    /**
+     * @return array<int, array{person_id: int, role: string, name: string, slug: string, photo_url: string}>
+     */
+    protected function creditMentionsForForm(?Campaign $campaign): array
+    {
+        if (old('credit_mentions') !== null) {
+            return $this->creditsMentions->hydrateMentionsForForm(
+                $this->creditsMentions->decodeMentionsInput(old('credit_mentions')),
+            );
+        }
+
+        return $campaign
+            ? $this->creditsMentions->mentionsForForm($campaign)
+            : [];
+    }
+
+    protected function syncCreditMentions(Campaign $campaign, Request $request): void
+    {
+        $mentions = $this->creditsMentions->decodeMentionsInput($request->input('credit_mentions'));
+        $this->creditsMentions->syncFromCredits($campaign, $request->input('credits'), $mentions);
     }
 
     protected function syncArchivePlacementFromRequest(AdminCampaignStoreRequest $request, Campaign $campaign): void

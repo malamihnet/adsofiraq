@@ -53,9 +53,7 @@ class UpdateCampaignRequest extends FormRequest
             'status' => ['sometimes', 'in:pending,approved,rejected'],
             'is_featured' => ['sometimes', 'boolean'],
             'admin_notes' => ['nullable', 'string'],
-            'people_credits' => ['nullable', 'array'],
-            'people_credits.*.person_id' => ['required_with:people_credits', 'integer', 'exists:people,id'],
-            'people_credits.*.role' => ['required_with:people_credits', 'string', 'max:255'],
+            'credit_mentions' => ['nullable', 'string', 'max:65535'],
         ]);
     }
 

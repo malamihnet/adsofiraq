@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             IndustrySeeder::class,
             MediumTypeSeeder::class,
             CountrySeeder::class,
+            PositionSeeder::class,
             AdminUserSeeder::class,
         ]);
     }

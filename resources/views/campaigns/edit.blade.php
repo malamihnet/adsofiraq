@@ -15,7 +15,7 @@
         :agencies="$agencies"
         :production-houses="$productionHouses ?? $agencies"
         :selected-taxonomies="$selectedTaxonomies"
-        :selected-people-credits="$selectedPeopleCredits ?? []"
+        :credit-mentions="$creditMentions ?? []"
     />
 </div>
 @endsection
