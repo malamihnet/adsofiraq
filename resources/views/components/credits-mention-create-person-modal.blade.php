@@ -46,7 +46,7 @@
                     placeholder="Search positions…"
                     autocomplete="off"
                 >
-                <select id="credits-mention-create-position" name="position_id" required class="input-field max-h-48 text-sm" size="8">
+                <select id="credits-mention-create-position" name="position_id" required class="input-field text-sm">
                     <option value="">Loading positions…</option>
                 </select>
             </div>

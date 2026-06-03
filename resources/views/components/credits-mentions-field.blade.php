@@ -54,5 +54,9 @@
 </div>
 
 @auth
-    <x-credits-mention-create-person-modal />
+    @push('modals')
+        @once('credits-mention-create-person-modal')
+            <x-credits-mention-create-person-modal />
+        @endonce
+    @endpush
 @endauth

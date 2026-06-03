@@ -79,8 +79,6 @@ function setupCreditsMentionsField(textarea, root) {
         || document.querySelector('#credits_mentions_json')
         || document.querySelector('input[name="credits_mentions_json"]');
 
-    const modal = getCreatePersonModal();
-
     let mentions = parseMentionsJson(hiddenInput?.value || '[]');
     let mentionStart = null;
     let query = '';
@@ -188,8 +186,16 @@ function setupCreditsMentionsField(textarea, root) {
 
     const openCreateProfile = () => {
         const name = query.trim();
+        const modal = getCreatePersonModal();
 
-        if (! name || ! modal) {
+        if (! name) {
+            return;
+        }
+
+        if (! modal) {
+            showToast('Sign in to create a person profile.');
+            log('create profile blocked: modal not found');
+
             return;
         }
 
@@ -498,6 +504,11 @@ function createResultRow(person, isActive, onSelect, onHover) {
     btn.addEventListener('mouseenter', onHover);
     btn.addEventListener('mousedown', (event) => {
         event.preventDefault();
+        event.stopPropagation();
+    });
+    btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         onSelect();
     });
 
@@ -521,6 +532,11 @@ function createCreateRow(name, isActive, onSelect, onHover) {
     btn.addEventListener('mouseenter', onHover);
     btn.addEventListener('mousedown', (event) => {
         event.preventDefault();
+        event.stopPropagation();
+    });
+    btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         onSelect();
     });
 
@@ -862,7 +878,7 @@ class CreatePersonModal {
         formData.append('position_id', positionId);
 
         if (this.isAdmin) {
-            formData.append('approve', '1');
+            formData.append('approve', 'true');
         }
 
         if (this.photoInput?.files?.[0]) {
