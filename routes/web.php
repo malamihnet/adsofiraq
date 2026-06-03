@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\PersonController as AdminPersonController;
+use App\Http\Controllers\Admin\PositionController as AdminPositionController;
 use App\Http\Controllers\Admin\ArchivePlacementController;
 use App\Http\Controllers\Admin\CampaignController as AdminCampaignController;
 use App\Http\Controllers\Admin\CheckNewCampaignsController;
@@ -270,6 +271,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'admin',
     Route::post('/people/{person}/approve', [AdminPersonController::class, 'approve'])->name('people.approve');
     Route::post('/people/{person}/reject', [AdminPersonController::class, 'reject'])->name('people.reject');
     Route::delete('/people/{person}', [AdminPersonController::class, 'destroy'])->name('people.destroy');
+
+    Route::get('/positions', [AdminPositionController::class, 'index'])->name('positions.index');
+    Route::get('/positions/create', [AdminPositionController::class, 'create'])->name('positions.create');
+    Route::post('/positions', [AdminPositionController::class, 'store'])->name('positions.store');
+    Route::get('/positions/{position}/edit', [AdminPositionController::class, 'edit'])->name('positions.edit');
+    Route::put('/positions/{position}', [AdminPositionController::class, 'update'])->name('positions.update');
+    Route::delete('/positions/{position}', [AdminPositionController::class, 'destroy'])->name('positions.destroy');
 });
 
 require __DIR__.'/auth.php';

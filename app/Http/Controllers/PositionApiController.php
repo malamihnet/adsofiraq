@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PositionCategory;
 use App\Http\Requests\StorePositionRequest;
 use App\Models\Position;
 use Illuminate\Http\JsonResponse;
@@ -15,13 +16,19 @@ class PositionApiController extends Controller
 
         $positions = Position::query()
             ->when($query !== '', fn ($q) => $q->where('name', 'like', '%'.$query.'%'))
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->limit(30)
-            ->get(['id', 'name', 'slug']);
+            ->ordered()
+            ->when($query !== '', fn ($q) => $q->limit(50), fn ($q) => $q->limit(500))
+            ->get(['id', 'name', 'slug', 'category', 'sort_order']);
 
         return response()->json([
-            'data' => $positions,
+            'data' => $positions->map(fn (Position $position) => [
+                'id' => $position->id,
+                'name' => $position->name,
+                'slug' => $position->slug,
+                'category' => $position->category,
+                'category_label' => $position->categoryLabel(),
+            ]),
+            'categories' => PositionCategory::options(),
         ]);
     }
 
@@ -30,6 +37,7 @@ class PositionApiController extends Controller
         $position = Position::create([
             'name' => $request->name,
             'slug' => Position::generateUniqueSlug($request->name),
+            'category' => $request->input('category', PositionCategory::Other->value),
             'sort_order' => (int) (Position::query()->max('sort_order') ?? 0) + 1,
         ]);
 
@@ -38,6 +46,8 @@ class PositionApiController extends Controller
                 'id' => $position->id,
                 'name' => $position->name,
                 'slug' => $position->slug,
+                'category' => $position->category,
+                'category_label' => $position->categoryLabel(),
             ],
         ], 201);
     }

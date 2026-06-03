@@ -15,6 +15,7 @@
         <a href="{{ route('admin.brands.index') }}" class="block py-2 hover:underline">Brands</a>
         <a href="{{ route('admin.agencies.index') }}" class="block py-2 hover:underline">Agencies</a>
         <a href="{{ route('admin.people.index') }}" class="block py-2 hover:underline">People</a>
+        <a href="{{ route('admin.positions.index') }}" class="block py-2 pl-4 text-archive-gray hover:underline">Positions</a>
         <a href="{{ route('admin.industries.index') }}" class="block py-2 hover:underline">Industries</a>
         <a href="{{ route('admin.medium-types.index') }}" class="block py-2 hover:underline">Medium Types</a>
         <a href="{{ route('admin.countries.index') }}" class="block py-2 hover:underline">Countries</a>

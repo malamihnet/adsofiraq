@@ -18,7 +18,7 @@
     data-positions-store-url="{{ $positionsStoreUrl }}"
 >
     <div class="absolute inset-0 bg-black/40" data-credits-mention-modal-close></div>
-    <div class="relative w-full max-w-md rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
+    <div class="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
         <h3 id="credits-mention-create-title" class="font-display text-lg font-medium text-archive-black">
             Create person profile
         </h3>
@@ -38,13 +38,20 @@
             </div>
 
             <div>
-                <label class="section-label mb-1 block text-xs" for="credits-mention-create-position">Position</label>
-                <select id="credits-mention-create-position" name="position_id" required class="input-field text-sm">
+                <label class="section-label mb-1 block text-xs" for="credits-mention-position-search">Position</label>
+                <input
+                    type="search"
+                    id="credits-mention-position-search"
+                    class="input-field mb-2 text-sm"
+                    placeholder="Search positions…"
+                    autocomplete="off"
+                >
+                <select id="credits-mention-create-position" name="position_id" required class="input-field max-h-48 text-sm" size="8">
                     <option value="">Loading positions…</option>
                 </select>
             </div>
 
-            <div class="hidden space-y-2" id="credits-mention-new-position-wrap">
+            <div class="hidden space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3" id="credits-mention-new-position-wrap">
                 <label class="section-label mb-1 block text-xs" for="credits-mention-new-position-name">New position name</label>
                 <div class="flex gap-2">
                     <input

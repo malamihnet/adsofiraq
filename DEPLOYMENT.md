@@ -27,6 +27,8 @@ git push origin main
 **After `git pull` on production**, run:
 
 ```bash
+php artisan migrate --force
+php artisan db:seed --class=PositionSeeder
 php artisan optimize:clear
 php artisan config:clear
 php artisan route:clear

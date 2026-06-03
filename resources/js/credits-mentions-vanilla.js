@@ -559,6 +559,16 @@ function showToast(message) {
     setTimeout(() => toast.remove(), 3200);
 }
 
+const POSITION_CATEGORY_ORDER = [
+    'production',
+    'camera_lighting',
+    'art_styling',
+    'post_production',
+    'agency_creative',
+    'brand_client',
+    'other',
+];
+
 let createPersonModalInstance = null;
 
 function getCreatePersonModal() {
@@ -591,12 +601,19 @@ class CreatePersonModal {
         this.newPositionInput = root.querySelector('#credits-mention-new-position-name');
         this.togglePositionBtn = root.querySelector('#credits-mention-toggle-position-btn');
         this.addPositionBtn = root.querySelector('#credits-mention-add-position-btn');
+        this.positionSearch = root.querySelector('#credits-mention-position-search');
         this.positionsUrl = root.dataset.positionsUrl;
         this.positionsStoreUrl = root.dataset.positionsStoreUrl;
         this.onSaved = null;
         this.storeUrl = '';
         this.isAdmin = false;
         this.positionsLoaded = false;
+        this.allPositions = [];
+        this.categoryLabels = {};
+
+        this.positionSearch?.addEventListener('input', () => {
+            this.renderPositionOptions(this.positionSearch?.value?.trim() || '');
+        });
 
         root.querySelectorAll('[data-credits-mention-modal-close]').forEach((btn) => {
             btn.addEventListener('click', () => this.close());
@@ -638,6 +655,10 @@ class CreatePersonModal {
 
         if (this.newPositionInput) {
             this.newPositionInput.value = '';
+        }
+
+        if (this.positionSearch) {
+            this.positionSearch.value = '';
         }
 
         this.root.classList.remove('hidden');
@@ -692,19 +713,76 @@ class CreatePersonModal {
             }
 
             const json = await response.json();
-            const positions = json.data || [];
+            this.allPositions = json.data || [];
+            this.categoryLabels = json.categories || {};
+            this.positionsLoaded = true;
+            this.renderPositionOptions(this.positionSearch?.value?.trim() || '');
+        } catch {
+            this.positionSelect.innerHTML = '<option value="">Failed to load positions</option>';
+        }
+    }
 
-            this.positionSelect.innerHTML = '<option value="">Select position</option>';
-            positions.forEach((position) => {
+    renderPositionOptions(filter = '') {
+        if (! this.positionSelect) {
+            return;
+        }
+
+        const previous = this.positionSelect.value;
+        const needle = filter.toLowerCase();
+        const filtered = this.allPositions.filter((position) => {
+            if (needle === '') {
+                return true;
+            }
+
+            return position.name.toLowerCase().includes(needle)
+                || (position.category_label || '').toLowerCase().includes(needle);
+        });
+
+        this.positionSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = filtered.length === 0
+            ? (needle ? 'No positions match your search' : 'Select position')
+            : 'Select position';
+        this.positionSelect.appendChild(placeholder);
+
+        const grouped = {};
+
+        filtered.forEach((position) => {
+            const key = position.category || 'other';
+
+            if (! grouped[key]) {
+                grouped[key] = [];
+            }
+
+            grouped[key].push(position);
+        });
+
+        POSITION_CATEGORY_ORDER.forEach((categoryKey) => {
+            const items = grouped[categoryKey];
+
+            if (! items?.length) {
+                return;
+            }
+
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = this.categoryLabels[categoryKey]
+                || items[0].category_label
+                || categoryKey;
+
+            items.forEach((position) => {
                 const option = document.createElement('option');
                 option.value = String(position.id);
                 option.textContent = position.name;
-                this.positionSelect.appendChild(option);
+                optgroup.appendChild(option);
             });
 
-            this.positionsLoaded = true;
-        } catch {
-            this.positionSelect.innerHTML = '<option value="">Failed to load positions</option>';
+            this.positionSelect.appendChild(optgroup);
+        });
+
+        if (previous && [...this.positionSelect.options].some((option) => option.value === previous)) {
+            this.positionSelect.value = previous;
         }
     }
 
@@ -729,7 +807,7 @@ class CreatePersonModal {
                     'X-CSRF-TOKEN': csrfToken(),
                 },
                 credentials: 'same-origin',
-                body: JSON.stringify({ name }),
+                body: JSON.stringify({ name, category: 'other' }),
             });
 
             if (! response.ok) {
@@ -742,12 +820,11 @@ class CreatePersonModal {
 
             if (! this.positionsLoaded) {
                 await this.loadPositions();
+            } else {
+                this.allPositions.push(position);
+                this.renderPositionOptions(this.positionSearch?.value?.trim() || '');
             }
 
-            const option = document.createElement('option');
-            option.value = String(position.id);
-            option.textContent = position.name;
-            this.positionSelect.appendChild(option);
             this.positionSelect.value = String(position.id);
             this.newPositionWrap?.classList.add('hidden');
 
