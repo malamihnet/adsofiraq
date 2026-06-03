@@ -259,7 +259,7 @@ class CampaignController extends Controller
 
             Log::info('Campaign created', ['campaign_id' => $campaign->id, 'user_id' => $request->user()->id]);
 
-            return redirect()->route('campaigns.pending-review', $campaign->fresh());
+            return $this->redirectToPendingReview($campaign->fresh(), 'submitted');
         } catch (\Throwable $e) {
             report($e);
 
@@ -342,7 +342,7 @@ class CampaignController extends Controller
                 'revision_payload' => $payload,
             ]);
 
-            return redirect()->route('campaigns.pending-review', $campaign);
+            return $this->redirectToPendingReview($campaign, 'updated');
         }
 
         $data = [
@@ -395,12 +395,19 @@ class CampaignController extends Controller
 
         $this->uploadService->resolveThumbnail($campaign->fresh(), $manualThumbnail, $firstNewAsset);
 
-        if (! $request->user()->isAdmin()) {
-            return redirect()->route('campaigns.pending-review', $campaign);
+        if ($campaign->status !== 'approved') {
+            return $this->redirectToPendingReview($campaign->fresh(), 'updated');
         }
 
-        return redirect()->route('campaigns.show', $campaign)
+        return redirect()->route('campaigns.show', $campaign->fresh())
             ->with('success', 'Campaign updated successfully.');
+    }
+
+    protected function redirectToPendingReview(Campaign $campaign, string $notice = 'updated'): RedirectResponse
+    {
+        return redirect()
+            ->route('campaigns.pending-review', $campaign)
+            ->with('pending_review_notice', $notice);
     }
 
     protected function formData(?Campaign $campaign = null): array

@@ -9,7 +9,11 @@
 
     <div class="border border-archive-border bg-white p-8 text-center">
         <p class="text-lg leading-relaxed text-archive-black">
-            @if($campaign->status === 'approved' && $campaign->pendingRevision)
+            @if(session('pending_review_notice') === 'updated')
+                Your campaign has been updated and is pending review. Please wait for our team to review your changes.
+            @elseif(session('pending_review_notice') === 'submitted')
+                Your campaign has been submitted successfully and is pending review.
+            @elseif($campaign->status === 'approved' && $campaign->pendingRevision)
                 Your campaign update has been submitted for review. The currently published version remains live until approval.
             @else
                 Your campaign has been submitted successfully and is pending review.
